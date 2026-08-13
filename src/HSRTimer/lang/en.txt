@@ -1,0 +1,108 @@
+# ===========================================================================
+# HSRTimer English base language file (authoritative key set)
+# ===========================================================================
+# This is the source of truth for all UI strings. Translators should copy
+# this file as <lang-code>.txt and translate the right-hand side of each line.
+# Format:  KEY:Translation
+#   - Lines starting with '#' are comments and are ignored.
+#   - Blank lines are ignored.
+#   - Use an explicit \n escape for a literal newline inside a value.
+#   - File encoding: UTF-8 (no BOM).
+# See docs/LOCALIZATION.md for the full specification.
+# ===========================================================================
+
+# ===== Special: display name shown in the language selector =====
+__LANG_NAME__:English
+
+# ===== Timer panel row labels (R2.1) =====
+TIMER_GAME_TIME:Game Time
+TIMER_SEGMENT_TIME:Segment Time
+TIMER_LAST_TOTAL:Total at Last Segment
+TIMER_LAST_SEGMENT:Last Segment
+TIMER_LAST_RUN:Last Run
+TIMER_CURRENT_STATE:State
+
+# ===== Current-state display (R2.1.1, debug) =====
+STATE_INACTIVE:Inactive
+STATE_PAUSED:Paused
+STATE_LOADING:Loading
+STATE_PLAYING:Playing
+STATE_UNKNOWN:Unknown
+
+# ===== Settings panel =====
+SETTINGS_LANGUAGE:Language
+SETTINGS_RESET_KEY:Reset Key
+SETTINGS_RETRY_KEY:Retry Key
+SETTINGS_MENU_KEY:Settings Panel Key
+SETTINGS_COUNT_IN_PAUSE:Count time while paused
+SETTINGS_COUNT_IN_MENU:Count time in menu
+SETTINGS_AUTO_RESET:Auto-reset run
+SETTINGS_RESTART_CLEARS_FORGIVABLE:Clear forgivable flags on pause-menu restart
+SETTINGS_RETRY_MIN_DWELL:Retry empty-scene dwell (s)
+SETTINGS_SHOW_HUD:Show timer HUD
+
+# ===== Settings panel (GUI) =====
+PANEL_TAB_GENERAL:General
+PANEL_TAB_INTERFACE:Interface
+PANEL_TAB_CATEGORY:Category
+PANEL_TIMING:Timing
+PANEL_HUD:HUD
+PANEL_TAGS:Rule tags (multi-select)
+PANEL_NO_TAGS:No tag rules registered.
+PANEL_KEYBINDS:Keybinds
+PANEL_OFFSET_X:Offset X
+PANEL_OFFSET_Y:Offset Y
+PANEL_FONT_SIZE:Font size
+PANEL_COLOR_A:Color A
+PANEL_COLOR_B:Color B
+PANEL_COLOR_HEX:Hex
+PANEL_RELOAD_LANGUAGE:Reload language files
+PANEL_PRESS_KEY:Press a key...
+PANEL_SAVE:Save
+PANEL_CLOSE:Close
+PANEL_FOOTER:Changes apply live. Saved on Close or game exit.
+
+# ===== Tags (R3.3 - R3.6) =====
+HUD_TAGS_LABEL:Tags
+TAG_CHECKPOINT:Checkpoint
+TAG_NO_CHECKPOINT:No Checkpoint
+TAG_JUMPLESS:Jumpless
+TAG_VOICELINE:Voiceline
+
+# ===== Validity reasons (R5) =====
+INVALID_RUN:RUN IS INVALID
+INVALID_CHEAT_CODE:CHEAT CODES ENABLED
+INVALID_TIME_SCALE:GAME SPEED WAS CHANGED
+INVALID_DRIFT:GAME CLOCK TAMPERING DETECTED
+INVALID_CHECKPOINT_SKIP:CHECKPOINT SKIPPED
+INVALID_CHECKPOINT_FINAL:WRONG FINAL CHECKPOINT
+INVALID_NO_CHECKPOINT:CHECKPOINT WAS TRIGGERED
+INVALID_JUMPLESS:JUMPED
+INVALID_VOICELINE:VOICELINE SKIPPED
+SEVERITY_UNFORGIVABLE:unforgivable
+SEVERITY_FORGIVABLE:forgivable
+
+# ===== Voiceline tag display (R3.6.3) =====
+VOICELINE_ALL_DONE:All voicelines triggered
+
+# ===== Checkpoint tag display (R3.3.3) =====
+CHECKPOINT_CURRENT:Checkpoint
+
+# ===== HUD panel labels / template defaults =====
+HUD_PANEL_TITLE:HSRTimer
+HUD_TOTAL_TIME:Total
+
+# ===== Notifications =====
+NOTIFY_LANGUAGE_RELOADED:Language files reloaded.
+NOTIFY_LANGUAGE_NOT_FOUND:Language not found; keeping current language.
+NOTIFY_LANGUAGE_SWITCHED:Switched language to {0}.
+NOTIFY_RUN_RESET:Run reset.
+NOTIFY_LEVEL_RESTARTED:Level restarted.
+NOTIFY_CAMPAIGN_RESTARTED:Restarted from the level you entered the run on.
+NOTIFY_COLLECTION_RESTARTED:Collection restarted from level 1.
+NOTIFY_RETRY_BLOCKED_INPUT:Retry blocked: a text input is open.
+NOTIFY_RETRY_BLOCKED_STATE:Retry blocked: cannot restart right now.
+
+# ===== Template variable fallbacks (R2.4.2) =====
+TEMPLATE_NO_COLLECTION:(no collection)
+TEMPLATE_NO_TAGS:(no tags)

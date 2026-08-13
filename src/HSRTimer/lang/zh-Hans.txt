@@ -1,0 +1,108 @@
+# ===========================================================================
+# HSRTimer 简体中文语言文件（示例翻译 / 社区贡献起点）
+# ===========================================================================
+# 这是除英文基准 (en.txt) 外内置的一份示例翻译，既是格式范例，也方便社区贡献者
+# 在此基础上完善或新增其他语言。
+# 格式:  键名:译文
+#   - 以 '#' 开头的行是注释，会被忽略。
+#   - 空行被忽略。
+#   - 如需在译文中换行，使用显式的 \n 转义序列。
+#   - 文件编码: UTF-8(无 BOM)。
+# 完整规范见 docs/zh/LOCALIZATION.md。
+# ===========================================================================
+
+# ===== 特殊: 语言选择器中显示的名称 =====
+__LANG_NAME__:简体中文
+
+# ===== 计时器面板行标签 (R2.1) =====
+TIMER_GAME_TIME:游戏总时间
+TIMER_SEGMENT_TIME:当前分段时间
+TIMER_LAST_TOTAL:上段完成总时
+TIMER_LAST_SEGMENT:单段时间(上一段)
+TIMER_LAST_RUN:上一局游戏时间
+TIMER_CURRENT_STATE:当前状态
+
+# ===== 当前状态显示 (R2.1.1, 调试) =====
+STATE_INACTIVE:无效(菜单)
+STATE_PAUSED:暂停
+STATE_LOADING:加载中
+STATE_PLAYING:游戏中
+STATE_UNKNOWN:未知
+
+# ===== 设置面板 =====
+SETTINGS_LANGUAGE:语言
+SETTINGS_RESET_KEY:重置键
+SETTINGS_RETRY_KEY:重试键
+SETTINGS_MENU_KEY:设置面板键
+SETTINGS_COUNT_IN_PAUSE:暂停时计时
+SETTINGS_COUNT_IN_MENU:菜单中计时
+SETTINGS_AUTO_RESET:自动重置
+SETTINGS_RESTART_CLEARS_FORGIVABLE:暂停菜单重启时清除可原谅标记
+SETTINGS_RETRY_MIN_DWELL:重试空场景停留(秒)
+SETTINGS_SHOW_HUD:显示计时器面板
+
+# ===== 设置面板 (GUI) =====
+PANEL_TAB_GENERAL:常规
+PANEL_TAB_INTERFACE:界面
+PANEL_TAB_CATEGORY:类别
+PANEL_TIMING:计时
+PANEL_HUD:面板
+PANEL_TAGS:规则标签(多选)
+PANEL_NO_TAGS:没有已注册的规则标签。
+PANEL_KEYBINDS:按键绑定
+PANEL_OFFSET_X:横向偏移
+PANEL_OFFSET_Y:纵向偏移
+PANEL_FONT_SIZE:字号
+PANEL_COLOR_A:颜色 A
+PANEL_COLOR_B:颜色 B
+PANEL_COLOR_HEX:色值
+PANEL_RELOAD_LANGUAGE:重新加载语言文件
+PANEL_PRESS_KEY:请按键...
+PANEL_SAVE:保存
+PANEL_CLOSE:关闭
+PANEL_FOOTER:改动实时生效。关闭面板或退出游戏时写入磁盘。
+
+# ===== 标签 (R3.3 - R3.6) =====
+HUD_TAGS_LABEL:规则标签
+TAG_CHECKPOINT:检查点
+TAG_NO_CHECKPOINT:无检查点
+TAG_JUMPLESS:禁跳
+TAG_VOICELINE:旁白
+
+# ===== 无效原因 (R5) =====
+INVALID_RUN:成绩无效
+INVALID_CHEAT_CODE:启用了作弊码
+INVALID_TIME_SCALE:游戏速度被改动
+INVALID_DRIFT:检测到游戏时钟被篡改
+INVALID_CHECKPOINT_SKIP:跳过了检查点
+INVALID_CHECKPOINT_FINAL:最终检查点不符
+INVALID_NO_CHECKPOINT:触发了检查点
+INVALID_JUMPLESS:发生了跳跃
+INVALID_VOICELINE:跳过了旁白
+SEVERITY_UNFORGIVABLE:不可原谅
+SEVERITY_FORGIVABLE:可原谅
+
+# ===== 旁白标签显示 (R3.6.3) =====
+VOICELINE_ALL_DONE:全部旁白已达成
+
+# ===== 检查点标签显示 (R3.3.3) =====
+CHECKPOINT_CURRENT:检查点
+
+# ===== 面板标签 / 模板默认值 =====
+HUD_PANEL_TITLE:速通计时器
+HUD_TOTAL_TIME:总计
+
+# ===== 提示信息 =====
+NOTIFY_LANGUAGE_RELOADED:语言文件已重新加载。
+NOTIFY_LANGUAGE_NOT_FOUND:未找到该语言，保持当前语言。
+NOTIFY_LANGUAGE_SWITCHED:已切换语言为 {0}。
+NOTIFY_RUN_RESET:成绩已重置。
+NOTIFY_LEVEL_RESTARTED:关卡已重启。
+NOTIFY_CAMPAIGN_RESTARTED:已从本次进入的关卡重启。
+NOTIFY_COLLECTION_RESTARTED:地图包已从第 1 关重启。
+NOTIFY_RETRY_BLOCKED_INPUT:重试被阻止:有文本输入框打开。
+NOTIFY_RETRY_BLOCKED_STATE:重试被阻止:当前无法重启。
+
+# ===== 模板变量兜底 (R2.4.2) =====
+TEMPLATE_NO_COLLECTION:(无地图包)
+TEMPLATE_NO_TAGS:(无标签)
