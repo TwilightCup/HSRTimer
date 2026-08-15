@@ -37,7 +37,7 @@ HSRTimer 维护一个精确的 **游戏时间** 时钟（以游戏物理帧为�
 
 ### 可选: Level Collections
 
-若安装了 [Level Collections](https://github.com/)(`LevelCollections`)插件，HSRTimer 会
+若安装了 [Level Collections](https://github.com/HeyBlack233/LevelCollections)(`LevelCollections`)插件，HSRTimer 会
 与之集成，将地图包的最后一关视为整局结束。HSRTimer 在没有该插件时也能正常工作(声明为
 可选依赖 / soft dependency)。
 

@@ -43,7 +43,7 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for the full specification.
 
 ### Optional: Level Collections
 
-If the [Level Collections](https://github.com/) (`LevelCollections`) plugin is
+If the [Level Collections](https://github.com/HeyBlack233/LevelCollections) (`LevelCollections`) plugin is
 installed, HSRTimer integrates with it to treat a collection's final level as
 the end of a full run. HSRTimer works fine without it (declared as a soft
 dependency).
