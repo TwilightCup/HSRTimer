@@ -92,7 +92,7 @@ enabled = NoFall
 ## Custom invalid reasons
 
 The built-in `InvalidReason` enum covers the standard reasons. For a fully
-custom reason, you can either reuse a built-in (e.g. `Drift`) or model your own
+custom reason, you can either reuse a built-in (e.g. `CheatCode`) or model your own
 flag separately and surface it via the HUD custom-text mechanism. (A future
 revision will expose a generic reason-registry; for v1, reuse built-ins.)
 

@@ -15,7 +15,6 @@ HSRTimer 所需的几乎所有信号都是游戏类的**公共字段或属性**:
 | 本地/主机/客户端 | `NetGame.isLocal`、`NetGame.isServer`、`NetGame.isClient` |
 | 当前检查点 | `Game.currentCheckpointNumber` |
 | 作弊 | `CheatCodes.climbCheat`、`CheatCodes.throwCheat` |
-| 游戏速度 | `Time.timeScale` |
 | 跳跃 | `Human.Localplayer.jump` |
 
 由于计时 / 分段 / 重置 / 检查点 / 有效性的规则都定义在这些字段的*转换*上,单个轮询循环(`TimerCore.FixedUpdate`)通过比较当前帧与缓存上一帧即可算出一切 —— 既廉价,又对游戏更新中重命名或内联私有方法具有鲁棒性。
@@ -35,7 +34,7 @@ Core/
 Validation/
   InvalidReason.cs        枚举 + 严重度映射
   ValidityFlags.cs        不可原谅 / 可原谅标记集合
-  GenericValidators.cs    作弊 / timeScale / 漂移检测
+  GenericValidators.cs    作弊码检测
 Tags/
   ITagRule.cs             标签规则接口 + ValidationContext
   TagRuleRegistry.cs      扩展注册表(R3.7)
@@ -73,7 +72,7 @@ LcIntegration.cs          可选的 LevelCollections 软集成
 3. **菜单补回** —— 当 `CountInMenu` 开启时,在 `Inactive` 或大厅期间额外加 `fixedDeltaTime`。
 4. **规则** —— 运行当前类别各标签规则的 `OnTick`。
 
-`Update`(每渲染帧)负责:作弊 / timeScale 检查、**在任意非游玩间隙重置漂移窗口**(避免暂停 / 菜单间隔污染下一个窗口 —— 暂停时 `FixedUpdate` 不运行)、**暂停补回**(因 `timeScale=0` 会使 `FixedUpdate` 停止,故在 `Paused` 期间加 `unscaledDeltaTime`),以及按键处理。
+`Update`(每渲染帧)负责:作弊码检查、**暂停补回**(因 `timeScale=0` 会使 `FixedUpdate` 停止,故在 `Paused` 期间加 `unscaledDeltaTime`),以及按键处理。
 
 关卡加载屏(`LoadingLevel`)与客户端等待主机间隙(`ClientWaitServerLoad`)**始终不计入**,且无开关可补回。
 
@@ -86,7 +85,7 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 3. **停留** —— 在空场景内停留至距按键已过 `retry_min_dwell` 秒(默认 0.5),用 `Time.unscaledTime` 计量。这让过快的重载得以喘息;`0` 表示不强制停留。空场景期间的时间绝不计入(`Retrying` 标志抑制累计)。
 4. `App.instance.LaunchSinglePlayer(level, type, 0, 0)` 重新启动**重试目标关卡**(见下文 R6.4 —— 从菜单进入的战役运行中,该目标是本次运行的起点关卡,而非当前关卡)。其 `LoadLevel` 协程**仅当 `currentLevelNumber != levelNumber` 时**才重载场景 —— 因此第 1 步的卸载才是第 4 步真正重载的关键。协程依次执行 `SignalManager.BeginReset` → 重载场景 → `AfterLoad`(`state = PlayingLevel`、`RespawnAllPlayers`、`Level.Reset(0, 0)`)。全程不显示菜单(App 状态机即 R6.2.1.4 所述的隐藏流程跳板)。对 BuiltIn / EditorPick / Workshop 关卡通用。
 
-省掉第 1 步,重新启动当前关卡会悄悄退化成检查点重生 —— 正是暂停菜单"Restart"按钮的行为,而这是 R6 明令禁止的。这里**不**用 `Game.RestartLevel(true)`(检查点重生、不重载场景),也**不**用 `Game.ReloadBundle()`(仅 Workshop 可用:它解引用 `workshopLevel.dataPath`,在内置关卡上抛异常,且在设置 `timeScale = 0` 之后崩溃,游戏卡在 "Empty" 场景、画面冻结,并触发 R5.1.2 的 timeScale 检测)。
+省掉第 1 步,重新启动当前关卡会悄悄退化成检查点重生 —— 正是暂停菜单"Restart"按钮的行为,而这是 R6 明令禁止的。这里**不**用 `Game.RestartLevel(true)`(检查点重生、不重载场景),也**不**用 `Game.ReloadBundle()`(仅 Workshop 可用:它解引用 `workshopLevel.dataPath`,在内置关卡上抛异常,且在设置 `timeScale = 0` 之后崩溃,游戏卡在 "Empty" 场景、画面冻结)。
 
 这是关卡级重启。重试即重新挑战当前关卡,因此两个实时计时器(游戏总时间与当前分段)都清零、关卡从头计时。它与 R1.7 整局重置相互独立,体现在它**不**清零本局的记录(已完成分段、`LastRun`)与无效标记。重载过程会让关卡经历 `PlayingLevel → Inactive → LoadingLevel → PlayingLevel`;为避免这被误判为整局退出,`RetryAction` 将 `GameTime`/`SegmentStart` 清零并置位 `RunState.Retrying`,引擎在重载期间据此处理:
 

@@ -17,7 +17,6 @@ game's classes:
 | Local/server/client | `NetGame.isLocal`, `NetGame.isServer`, `NetGame.isClient` |
 | Current checkpoint | `Game.currentCheckpointNumber` |
 | Cheats | `CheatCodes.climbCheat`, `CheatCodes.throwCheat` |
-| Game speed | `Time.timeScale` |
 | Jump | `Human.Localplayer.jump` |
 
 Because the timing/segment/reset/checkpoint/validity rules are defined on
@@ -43,7 +42,7 @@ Core/
 Validation/
   InvalidReason.cs        enum + severity map
   ValidityFlags.cs        unforgivable/forgivable flag sets
-  GenericValidators.cs    cheat / timeScale / drift detector
+  GenericValidators.cs    cheat-code detector
 Tags/
   ITagRule.cs             tag rule interface + ValidationContext
   TagRuleRegistry.cs      extension registry (R3.7)
@@ -81,9 +80,7 @@ Each physics frame (`FixedUpdate`), in order:
 3. **Menu supplement** — additionally `fixedDeltaTime` while `Inactive` or in a lobby, when `CountInMenu` is on.
 4. **Rules** — run each active category's tag rules' `OnTick`.
 
-`Update` (per render frame) handles: cheat/timeScale checks, **resetting the
-drift window during any non-playing gap** (so a pause/menu interval can't
-poison the next window — `FixedUpdate` doesn't run while paused), the **pause
+`Update` (per render frame) handles: the cheat-code check, the **pause
 supplement** (`unscaledDeltaTime` while `Paused`, since `timeScale=0` halts
 `FixedUpdate`), and keybinds.
 
@@ -118,8 +115,7 @@ checkpoint respawn — exactly the pause-menu "Restart" button behavior, which i
 what R6 forbids. This is intentionally **not** `Game.RestartLevel(true)`
 (checkpoint respawn, no scene reload) and **not** `Game.ReloadBundle()`
 (Workshop-only: dereferences `workshopLevel.dataPath` and crashes on BuiltIn
-levels after setting `timeScale = 0`, freezing the game in the "Empty" scene and
-tripping the R5.1.2 timeScale detector).
+levels after setting `timeScale = 0`, freezing the game in the "Empty" scene).
 
 This is a level-level restart. A retry re-attempts the current level, so both
 live timers (total game time and the current segment) reset to zero and the

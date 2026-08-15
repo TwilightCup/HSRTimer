@@ -10,9 +10,9 @@ namespace HSRTimer
     ///
     /// <see cref="FixedUpdate"/>: accumulation + state-transition detection
     /// (Appendix B) + per-tick tag rules on segment end.
-    /// <see cref="Update"/>: keybinds (reset/retry/toggle/cycle/reload), generic
-    /// validators (cheat/timescale/drift), and the pause-supplement step (which
-    /// runs in Update because timeScale=0 halts FixedUpdate while paused).
+    /// <see cref="Update"/>: keybinds (reset/retry/toggle/cycle/reload), the
+    /// cheat-code validator, and the pause-supplement step (which runs in
+    /// Update because timeScale=0 halts FixedUpdate while paused).
     /// </summary>
     public class TimerCore : MonoBehaviour
     {
@@ -23,14 +23,12 @@ namespace HSRTimer
 
         private ConfigService _cfg;
         private TimingOptions _opt;
-        private DriftDetector _drift;
 
         private void Awake()
         {
             Instance = this;
             State = new RunState();
             _cfg = ConfigService.Instance;
-            _drift = new DriftDetector();
             UpdateOptions();
         }
 
@@ -78,13 +76,6 @@ namespace HSRTimer
                 HandleTransitions(game, gState, aState, isLocal);
                 Accumulate(game, gState, aState);
                 RunRules(game, gState);
-
-                // Drift sampling here: one Sample() == one physics step, so the
-                // accumulated physics time equals fixedDeltaTime * step count.
-                if (gState == GameState.PlayingLevel)
-                    _drift.Sample(State.Flags, playing: true);
-                else
-                    _drift.Reset();
             }
 
             State.PrevGameState = gState;
@@ -100,17 +91,8 @@ namespace HSRTimer
 
             GameState gState = Game.instance != null ? Game.instance.state : GameState.Inactive;
 
-            // Generic always-on validity checks (R5.1). timeScale only flagged while playing.
-            GenericValidators.CheckCheatAndSpeed(State.Flags, gState);
-
-            // The drift window must be reopened after any non-playing gap (pause,
-            // menu, loading). FixedUpdate — where the window is sampled — does not
-            // run while paused (timeScale = 0), so without this the first post-
-            // pause sample would compare fresh physics ticks against a window start
-            // from before the pause and trip a false positive. Update runs every
-            // frame regardless of timeScale, so it reliably catches the gap.
-            if (gState != GameState.PlayingLevel)
-                _drift.Reset();
+            // Generic always-on validity check (R5.1): cheat codes.
+            GenericValidators.CheckCheat(State.Flags);
 
             // B.2 pause supplement (runs here because FixedUpdate is paused when timeScale=0).
             if (SegmentLogic.ShouldAccumulatePause(gState, State.TimingActive, _opt))

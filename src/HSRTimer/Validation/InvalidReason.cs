@@ -11,13 +11,7 @@ namespace HSRTimer
         /// <summary>A built-in cheat code is active (CheatCodes.climbCheat/throwCheat).</summary>
         CheatCode,
 
-        /// <summary>Game speed was changed (Time.timeScale != 1).</summary>
-        TimeScale,
-
         // ── Forgivable ──
-        /// <summary>Wall-clock drift between physics and real time exceeded tolerance (R5.1.3).</summary>
-        Drift,
-
         /// <summary>A checkpoint was skipped (R4.1).</summary>
         CheckpointSkip,
 
@@ -48,7 +42,7 @@ namespace HSRTimer
     public static class InvalidReasons
     {
         public static Severity SeverityOf(InvalidReason r)
-            => (r == InvalidReason.CheatCode || r == InvalidReason.TimeScale)
+            => r == InvalidReason.CheatCode
                 ? Severity.Unforgivable
                 : Severity.Forgivable;
 
@@ -58,8 +52,6 @@ namespace HSRTimer
             switch (r)
             {
                 case InvalidReason.CheatCode: return "INVALID_CHEAT_CODE";
-                case InvalidReason.TimeScale: return "INVALID_TIME_SCALE";
-                case InvalidReason.Drift: return "INVALID_DRIFT";
                 case InvalidReason.CheckpointSkip: return "INVALID_CHECKPOINT_SKIP";
                 case InvalidReason.CheckpointFinal: return "INVALID_CHECKPOINT_FINAL";
                 case InvalidReason.NoCheckpointHit: return "INVALID_NO_CHECKPOINT";

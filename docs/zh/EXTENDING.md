@@ -81,6 +81,6 @@ enabled = NoFall
 
 ## 自定义无效原因
 
-内置 `InvalidReason` 枚举覆盖标准原因。若需完全自定义原因,可复用内置原因(如 `Drift`),或另行建模自己的标记,并通过面板自定义文本机制呈现。(未来版本将提供通用原因注册表;v1 暂请复用内置项。)
+内置 `InvalidReason` 枚举覆盖标准原因。若需完全自定义原因,可复用内置原因(如 `CheatCode`),或另行建模自己的标记,并通过面板自定义文本机制呈现。(未来版本将提供通用原因注册表;v1 暂请复用内置项。)
 
 内置标签见 [CATEGORIES.md](CATEGORIES.md),引擎生命周期见 [ARCHITECTURE.md](ARCHITECTURE.md)。
