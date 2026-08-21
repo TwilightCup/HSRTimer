@@ -15,7 +15,7 @@ Tags **stack**: enable any combination, and all their rules apply simultaneously
 |--------|--------|-----------|
 | `Checkpoint` (R3.3) | Pass every checkpoint, in order | Skip detection (R4.1) + final-checkpoint validation (R4.2); HUD shows the current checkpoint |
 | `NoCheckpoint` (R3.4) | Trigger **no** checkpoint | Invalid if `currentCheckpointNumber > 0` |
-| `Jumpless` (R3.5) | Never jump | Invalid on `Human.Localplayer.jump` false→true |
+| `Jumpless` (R3.5) | Never jump | Invalid on `Human.Localplayer.jump` false→true — and enforced: while the tag is on, the jump key is physically disabled at the game's input layer (see [ARCHITECTURE.md](ARCHITECTURE.md)) |
 | `Voiceline` (R3.6) | Trigger every voiceline | Invalid if any `NarrativeBlock` is missed or the Easter voiceline is skipped (see [VOICELINE.md](VOICELINE.md)) |
 
 With no tags enabled (plain Any%), the run is constrained only by the generic

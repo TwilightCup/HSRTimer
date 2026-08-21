@@ -26,8 +26,15 @@ cheaply, and resilient to game updates that rename or inline private methods.
 
 **Harmony is used only where no field exposes the event**: the two voiceline
 hooks (`NarrativeBlock.Play` and `SubtitleManager.PlayNarrative`, see
-[VOICELINE.md](VOICELINE.md)) and the pause-menu restart hook
-(`PauseMenu.RestartClick`, which fires the `restart_clears_forgivable` option).
+[VOICELINE.md](VOICELINE.md)), the pause-menu restart hook
+(`PauseMenu.RestartClick`, which fires the `restart_clears_forgivable` option),
+and the Jumpless jump-key suppression (`HumanControls.HandleInput`, R3.5.3).
+The last one is a deliberate exception: a pollable field *does* exist
+(`HumanControls.jump`), but enforcement is a *write* into a chain the game both
+writes and consumes within one physics frame (`NetPlayer.PreFixedUpdate` →
+`Human.FixedUpdate`); writing it from this plugin's own `FixedUpdate` would race
+on undefined script execution order. Polling covers *observation* — suppression
+of an input the game consumes same-frame must hook inside the chain.
 
 ## Module layout
 
@@ -54,6 +61,7 @@ Patches/
   NarrativeBlockPatches.cs    postfix on NarrativeBlock.Play
   SubtitleManagerPatches.cs   postfix on SubtitleManager.PlayNarrative
   PauseMenuPatches.cs         postfix on PauseMenu.RestartClick
+  HumanControlsPatches.cs     postfix on HumanControls.HandleInput (Jumpless enforcement)
 Hud/
   TimerHud.cs             IMGUI panel (R2)
   GradientText.cs         color hex/alpha + gradient helper

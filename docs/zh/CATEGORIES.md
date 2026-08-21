@@ -13,7 +13,7 @@ HSRTimer **没有类别预设**。当前的规则集就是你启用的**标签**
 |---------|------|------|
 | `Checkpoint`(R3.3) | 依次通过全部检查点 | 跳关检测(R4.1)+ 终点检查点校验(R4.2);面板显示当前检查点 |
 | `NoCheckpoint`(R3.4) | **不**触发任何检查点 | `currentCheckpointNumber > 0` 即判无效 |
-| `Jumpless`(R3.5) | 全程不跳跃 | `Human.Localplayer.jump` 由假变真即判无效 |
+| `Jumpless`(R3.5) | 全程不跳跃 | `Human.Localplayer.jump` 由假变真即判无效;标签启用期间同时在游戏输入层强制禁用跳跃键(见 [ARCHITECTURE.md](ARCHITECTURE.md)) |
 | `Voiceline`(R3.6) | 触发全部旁白 | 遗漏任何 `NarrativeBlock` 或跳过 Easter 旁白即判无效(见 [VOICELINE.md](VOICELINE.md)) |
 
 不启用任何标签(纯任意%)时,仅受通用有效性检测(R5.1:作弊、变速、漂移)约束 —— 成绩被标记时面板显示红色提示。

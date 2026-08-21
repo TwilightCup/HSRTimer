@@ -4,8 +4,10 @@ namespace HSRTimer
 {
     /// <summary>
     /// Applies all HSRTimer Harmony patches with a stable instance id. Only the
-    /// voiceline hooks (NarrativeBlock.Play, SubtitleManager.PlayNarrative) are
-    /// patched — everything else is polled from public game fields for resilience.
+    /// voiceline hooks (NarrativeBlock.Play, SubtitleManager.PlayNarrative), the
+    /// pause-menu restart hook (PauseMenu.RestartClick), and the Jumpless
+    /// jump-key suppression (HumanControls.HandleInput) are patched — everything
+    /// else is polled from public game fields for resilience.
     /// </summary>
     internal static class PatchModule
     {

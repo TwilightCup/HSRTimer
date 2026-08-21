@@ -19,7 +19,7 @@ HSRTimer 所需的几乎所有信号都是游戏类的**公共字段或属性**:
 
 由于计时 / 分段 / 重置 / 检查点 / 有效性的规则都定义在这些字段的*转换*上,单个轮询循环(`TimerCore.FixedUpdate`)通过比较当前帧与缓存上一帧即可算出一切 —— 既廉价,又对游戏更新中重命名或内联私有方法具有鲁棒性。
 
-**Harmony 仅用于没有字段能直接暴露事件的地方**:两个旁白 hook(`NarrativeBlock.Play` 与 `SubtitleManager.PlayNarrative`,见 [VOICELINE.md](VOICELINE.md)),以及暂停菜单重启 hook(`PauseMenu.RestartClick`,触发 `restart_clears_forgivable` 选项)。
+**Harmony 仅用于没有字段能直接暴露事件的地方**:两个旁白 hook(`NarrativeBlock.Play` 与 `SubtitleManager.PlayNarrative`,见 [VOICELINE.md](VOICELINE.md))、暂停菜单重启 hook(`PauseMenu.RestartClick`,触发 `restart_clears_forgivable` 选项),以及禁跳跳跃键抑制 hook(`HumanControls.HandleInput`,R3.5.3)。最后一个是有意为之的例外:虽然存在可轮询的字段(`HumanControls.jump`),但强制执行是对游戏**同一物理帧内写入并消费**的链路(`NetPlayer.PreFixedUpdate` → `Human.FixedUpdate`)的*写入*;从插件自身的 `FixedUpdate` 写该字段会陷入未定义的脚本执行顺序竞态。轮询覆盖的是*观察*——抑制一个游戏同帧消费的输入,必须挂钩进链路内部。
 
 ## 模块布局
 
@@ -46,6 +46,7 @@ Patches/
   NarrativeBlockPatches.cs    NarrativeBlock.Play 后缀
   SubtitleManagerPatches.cs   SubtitleManager.PlayNarrative 后缀
   PauseMenuPatches.cs         PauseMenu.RestartClick 后缀
+  HumanControlsPatches.cs     HumanControls.HandleInput 后缀(禁跳强制)
 Hud/
   TimerHud.cs             IMGUI 面板(R2)
   GradientText.cs         颜色十六进制/透明度 + 渐变助手
