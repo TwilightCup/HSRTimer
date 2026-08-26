@@ -176,19 +176,25 @@ namespace HSRTimer
         /// the "last segment / last run" snapshots too — use this for a manual
         /// reset (the reset key).
         /// </summary>
-        public void Reset() => Reset(keepLastValues: false);
+        public void Reset() => Reset(keepLastValues: false, keepLastRun: false);
+
+        /// <summary>
+        /// Compatibility overload: clears everything, including the previous
+        /// run's total.
+        /// </summary>
+        public void Reset(bool keepLastValues) => Reset(keepLastValues, keepLastRun: false);
 
         /// <summary>
         /// Full-run reset. When <paramref name="keepLastValues"/> is true the
-        /// "last segment / last run" snapshots (<see cref="LastSegment"/>,
-        /// <see cref="TotalAtLastSegment"/>, <see cref="LastRun"/>) are preserved
-        /// — these are reference values for the HUD ("how did the previous
-        /// attempt compare") that should persist across an auto-reset (R1.7),
-        /// updating only when a new value is recorded (a segment end) or a manual
-        /// reset clears them. Everything else (live timers, segment/transition
-        /// caches, flags are cleared by the engine) is zeroed regardless.
+        /// segment snapshots (<see cref="LastSegment"/> and
+        /// <see cref="TotalAtLastSegment"/>) are preserved. When
+        /// <paramref name="keepLastRun"/> is true, the previous run's total
+        /// (<see cref="LastRun"/>) is preserved separately — auto-reset and
+        /// menu-entry reset keep it as the "previous completed run" reference,
+        /// while the manual reset clears everything. Live timers and
+        /// segment/transition caches are zeroed regardless.
         /// </summary>
-        public void Reset(bool keepLastValues)
+        public void Reset(bool keepLastValues, bool keepLastRun)
         {
             GameTime = 0d;
             SegmentStart = 0d;
@@ -196,8 +202,9 @@ namespace HSRTimer
             {
                 LastSegment = null;
                 TotalAtLastSegment = null;
-                LastRun = null;
             }
+            if (!keepLastRun)
+                LastRun = null;
             TimingActive = false;
             InSegment = false;
             PrevGameState = GameState.Inactive;

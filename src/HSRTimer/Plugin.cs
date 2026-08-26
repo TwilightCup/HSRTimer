@@ -57,6 +57,7 @@ namespace HSRTimer
             var hudGo = new GameObject("HSRTimer.Hud");
             Object.DontDestroyOnLoad(hudGo);
             hudGo.AddComponent<TimerHud>();
+            hudGo.AddComponent<ProgressIndicatorMover>();
 
             var panelGo = new GameObject("HSRTimer.Panel");
             Object.DontDestroyOnLoad(panelGo);

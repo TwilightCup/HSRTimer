@@ -4,15 +4,15 @@ using UnityEngine;
 namespace HSRTimer
 {
     /// <summary>
-    /// All user-tunable settings (R1.8/R1.9 toggles, R5.4 retry-clear, drift
-    /// tolerance, HUD visibility, language, current category). Persisted to
-    /// settings.ini as human-readable text; missing keys fall back to defaults.
+    /// All user-tunable settings (auto-reset, retry-clear, HUD visibility,
+    /// language, current category). Persisted to settings.ini as human-readable
+    /// text; missing keys fall back to defaults.
     /// </summary>
     public sealed class SettingsModel
     {
         // ── Timing toggles ──
-        public bool CountInPause = true;          // R1.8 (default on)
-        public bool CountInMenu = false;          // R1.9 (default off)
+        // Pause time is always counted and menu/lobby time is never counted;
+        // those are no longer user settings.
         public bool AutoReset = true;             // R1.7.2 (default on)
         public bool RestartClearsForgivable = false; // R5.4.3 — pause-menu Restart clears forgivable flags (default off); the one-key retry always clears them (R5.4.2, fixed)
         public float RetryMinDwell = 0.5f;        // R6 minimum empty-scene dwell (seconds)
@@ -23,6 +23,10 @@ namespace HSRTimer
 
         // ── HUD ──
         public bool ShowHud = true;               // R2.5.1
+
+        // Move the game's own top-right Loading/Saving progress indicator to
+        // the top-center of the screen (default off).
+        public bool CenterLoadingSaving = false;
 
         // ── Identity / selection ──
         // Note: there are no category presets; the enabled tag set is stored in
@@ -52,12 +56,11 @@ namespace HSRTimer
             {
                 switch (key)
                 {
-                    case "count_in_pause": CountInPause = ParseBool(value, CountInPause); break;
-                    case "count_in_menu": CountInMenu = ParseBool(value, CountInMenu); break;
                     case "auto_reset": AutoReset = ParseBool(value, AutoReset); break;
                     case "restart_clears_forgivable": RestartClearsForgivable = ParseBool(value, RestartClearsForgivable); break;
                     case "retry_min_dwell": RetryMinDwell = ParseFloat(value, RetryMinDwell); break;
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
+                    case "center_loading_saving": CenterLoadingSaving = ParseBool(value, CenterLoadingSaving); break;
                     case "language": CurrentLang = value; break;
                     case "reset_key": ResetKey = ParseKeyCode(value, ResetKey); break;
                     case "retry_key": RetryKey = ParseKeyCode(value, RetryKey); break;
@@ -77,12 +80,11 @@ namespace HSRTimer
         {
             var kv = new Dictionary<string, string>
             {
-                ["count_in_pause"] = CountInPause ? "true" : "false",
-                ["count_in_menu"] = CountInMenu ? "true" : "false",
                 ["auto_reset"] = AutoReset ? "true" : "false",
                 ["restart_clears_forgivable"] = RestartClearsForgivable ? "true" : "false",
                 ["retry_min_dwell"] = RetryMinDwell.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                 ["show_hud"] = ShowHud ? "true" : "false",
+                ["center_loading_saving"] = CenterLoadingSaving ? "true" : "false",
                 ["language"] = CurrentLang,
                 ["reset_key"] = ResetKey.ToString(),
                 ["retry_key"] = RetryKey.ToString(),

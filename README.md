@@ -15,8 +15,8 @@ and is fully localizable.
 ## Features (v1)
 
 - **Game-time engine** — discrete `Time.fixedDeltaTime` accumulation; auto
-  start/stop per level; segment and full-run tracking; pause/menu counting
-  toggles; auto-reset on menu/lobby transitions.
+  start/stop per level; segment and full-run tracking; pause time always counted
+  and menu/lobby time never counted; auto-reset on menu/lobby transitions.
 - **Standard-style HUD** — configurable ordered rows, per-character two-color
   gradient with alpha, arbitrary custom texts at any position, draggable panel.
 - **Categories & tags** — define rule sets via tags. Built-in: `Checkpoint`,

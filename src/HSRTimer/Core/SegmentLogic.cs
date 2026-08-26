@@ -8,14 +8,10 @@ namespace HSRTimer
     /// </summary>
     public struct TimingOptions
     {
-        public bool CountInPause;
-        public bool CountInMenu;
         public bool AutoReset;
 
         public static TimingOptions FromSettings(SettingsModel s) => new TimingOptions
         {
-            CountInPause = s.CountInPause,
-            CountInMenu = s.CountInMenu,
             AutoReset = s.AutoReset,
         };
     }
@@ -46,26 +42,10 @@ namespace HSRTimer
             return true;
         }
 
-        /// <summary>B.3: should the clock accumulate during menu/lobby (fixed step)?</summary>
-        public static bool ShouldAccumulateMenu(
-            GameState state, AppSate appState, bool timingActive, TimingOptions opt, bool retrying)
-        {
-            // A retry dwells in Inactive while reloading — never count that.
-            if (retrying)
-                return false;
-            if (!timingActive || !opt.CountInMenu)
-                return false;
-            if (state == GameState.Inactive)
-                return true;
-            if (appState == AppSate.ServerLobby || appState == AppSate.ClientLobby)
-                return true;
-            return false;
-        }
-
         /// <summary>B.2: should the clock accumulate during pause (unscaled step)?</summary>
         public static bool ShouldAccumulatePause(
-            GameState state, bool timingActive, TimingOptions opt)
-            => timingActive && opt.CountInPause && state == GameState.Paused;
+            GameState state, bool timingActive)
+            => timingActive && state == GameState.Paused;
 
         // ── R1.2: segment (level) start ───────────────────────────────
         /// <summary>

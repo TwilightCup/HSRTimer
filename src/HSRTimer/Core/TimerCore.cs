@@ -94,8 +94,9 @@ namespace HSRTimer
             // Generic always-on validity check (R5.1): cheat codes.
             GenericValidators.CheckCheat(State.Flags);
 
-            // B.2 pause supplement (runs here because FixedUpdate is paused when timeScale=0).
-            if (SegmentLogic.ShouldAccumulatePause(gState, State.TimingActive, _opt))
+            // B.2 pause supplement (always on; runs here because FixedUpdate is
+            // paused when timeScale=0).
+            if (SegmentLogic.ShouldAccumulatePause(gState, State.TimingActive))
                 State.GameTime += Time.unscaledDeltaTime;
 
             HandleKeybinds();
@@ -104,6 +105,10 @@ namespace HSRTimer
         // ── Transition handling (Appendix B + R1.7 resets) ──────────────────
         private void HandleTransitions(Game game, GameState gState, AppSate aState, bool isLocal)
         {
+            // Refresh timing options from the live settings model so toggles made
+            // in the settings panel take effect without requiring a reset/retry.
+            UpdateOptions();
+
             GameState prevG = State.PrevGameState;
             AppSate prevA = State.PrevAppState;
 
@@ -117,14 +122,12 @@ namespace HSRTimer
 
             // R1.7 auto-reset (honored only when the option is on). Suppressed
             // during a retry (R6) so reloading the level does not clear the run.
-            // keepLastValues: an auto-reset clears the live run but preserves the
-            // "last segment / last run" HUD snapshots (LastSegment /
-            // TotalAtLastSegment / LastRun) — those are reference values that
-            // update only when a new value is recorded or a manual reset clears
-            // them, not on every auto-reset.
+            // It clears the live timers and the last-segment HUD snapshots too,
+            // so leaving to the menu gives a fresh baseline while keeping the
+            // previous completed run's total as a reference.
             if (_opt.AutoReset && SegmentLogic.IsAutoReset(prevG, gState, prevA, aState, isLocal, State.Retrying))
             {
-                DoFullReset(keepLastValues: true);
+                DoFullReset(keepLastValues: false, keepLastRun: true);
                 return;
             }
 
@@ -133,8 +136,15 @@ namespace HSRTimer
             // retry's reload never pass through Menu — see SegmentLogic.IsMenuEntry),
             // so the soon-to-start level is the one to remember as the campaign
             // retry target. The edge is consumed at segment start below.
+            //
+            // A level entered from the menu always begins a brand-new run,
+            // regardless of the AutoReset option, so reset the timer here
+            // (keeping the previous completed run's total as a reference).
             if (SegmentLogic.IsMenuEntry(prevA, aState))
+            {
+                DoFullReset(keepLastValues: false, keepLastRun: true);
                 State.MenuEntryPending = true;
+            }
 
             // R1.2 segment start (level entered / became playable).
             if (SegmentLogic.IsSegmentStart(prevG, gState, aState))
@@ -238,12 +248,10 @@ namespace HSRTimer
                 _cfg.SaveSettings();
         }
 
-        // ── Accumulation (B.1 + B.3) ────────────────────────────────────────
+        // ── Accumulation (B.1) ─────────────────────────────────────────────
         private void Accumulate(Game game, GameState gState, AppSate aState)
         {
             if (SegmentLogic.ShouldAccumulateFixed(gState, aState, State.TimingActive))
-                State.GameTime += Time.fixedDeltaTime;
-            else if (SegmentLogic.ShouldAccumulateMenu(gState, aState, State.TimingActive, _opt, State.Retrying))
                 State.GameTime += Time.fixedDeltaTime;
         }
 
@@ -323,9 +331,9 @@ namespace HSRTimer
             }
         }
 
-        private void DoFullReset(bool keepLastValues)
+        private void DoFullReset(bool keepLastValues, bool keepLastRun = false)
         {
-            State.Reset(keepLastValues);
+            State.Reset(keepLastValues, keepLastRun);
             State.Flags.ClearAll();
             _cpEdgeInit = false;
             UpdateOptions();

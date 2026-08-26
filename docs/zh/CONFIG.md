@@ -12,12 +12,11 @@
 
 ```ini
 [settings]
-count_in_pause = true
-count_in_menu = false
 auto_reset = true
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
 show_hud = true
+center_loading_saving = false
 language = en
 reset_key = Backspace
 retry_key = R
@@ -26,16 +25,17 @@ menu_key = Home
 
 | 键 | 取值 | 默认 | 说明 |
 |----|------|------|------|
-| `count_in_pause` | true/false | true | R1.8 暂停时计时 |
-| `count_in_menu` | true/false | false | R1.9 菜单/大厅时计时 |
-| `auto_reset` | true/false | true | R1.7.2 |
+| `auto_reset` | true/false | true | R1.7.2 —— 退出到菜单 / 大厅时清零实时计时器与上一段快照,并保留上一局总时间 |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 —— 在关卡内**暂停菜单**点击"重新开始"时清除可原谅的有效性标记(计时器继续计时,不重置)。一键重试则无条件清除(固定行为);整局重置会清除全部标记。 |
 | `retry_min_dwell` | 秒(≥0) | 0.5 | R6 重试时在空场景强制停留的最短时间,从按下重试键开始计。若关卡重载快于该值,则在空场景内等待到该时间后再重载;`0` 表示不强制停留。 |
 | `show_hud` | true/false | true | R2.5.1 |
+| `center_loading_saving` | true/false | false | 将游戏自带的右上角"加载/保存"进度提示移动到画面顶部居中 |
 | `language` | BCP-47 代码 | en | 对应一个 `lang/<code>.txt` |
 | `reset_key` | KeyCode | Backspace | 重置成绩键 |
 | `retry_key` | KeyCode | R | 重试关卡键 |
 | `menu_key` | KeyCode | Home | 打开/关闭设置面板键 |
+
+> **暂停 / 菜单行为为固定行为**:暂停期间始终计时,菜单 / 大厅期间始终不计时。不存在 `count_in_pause` 或 `count_in_menu` 设置。
 
 > **作弊 / 变速 / 漂移检测(R5.1)始终开启,阈值为硬编码,刻意不可配置** —— `settings.ini` 中没有 `drift_tolerance` 或任何其他反作弊选项。
 

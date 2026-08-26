@@ -86,6 +86,13 @@ appear anywhere on screen regardless of the main block's offset.
 Toggle the whole timer via the settings panel (default key `Home`), or set
 `show_hud = false` in `settings.ini`.
 
+## Game Loading/Saving indicator
+
+The game shows its own "Loading"/"Saving" progress indicator in the top-right
+corner. If you prefer it at the top-center, enable `center_loading_saving` in
+`settings.ini` or toggle **Center Loading/Saving prompts** on the settings
+panel's Interface tab.
+
 ## Invalid banner
 
 When a run is flagged invalid (R5), a red banner appears inside the panel

@@ -169,8 +169,6 @@ namespace HSRTimer
         private void DrawGeneral(ConfigService cfg, SettingsModel s, LocalizationService loc)
         {
             Section(loc.Get("PANEL_TIMING"));
-            s.CountInPause = Toggle(loc.Get("SETTINGS_COUNT_IN_PAUSE"), s.CountInPause);
-            s.CountInMenu = Toggle(loc.Get("SETTINGS_COUNT_IN_MENU"), s.CountInMenu);
             s.AutoReset = Toggle(loc.Get("SETTINGS_AUTO_RESET"), s.AutoReset);
             s.RestartClearsForgivable = Toggle(loc.Get("SETTINGS_RESTART_CLEARS_FORGIVABLE"), s.RestartClearsForgivable);
             // Free-form input (clamped ≥0 on apply); the slider's 5s cap was
@@ -199,6 +197,7 @@ namespace HSRTimer
             //  hardcoded thresholds — intentionally not user-configurable.)
             Section(loc.Get("PANEL_HUD"));
             cfg.Settings.ShowHud = Toggle(loc.Get("SETTINGS_SHOW_HUD"), cfg.Settings.ShowHud);
+            cfg.Settings.CenterLoadingSaving = Toggle(loc.Get("SETTINGS_CENTER_LOADING_SAVING"), cfg.Settings.CenterLoadingSaving);
             cfg.Layout.OffsetX = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), cfg.Layout.OffsetX);
             cfg.Layout.OffsetY = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), cfg.Layout.OffsetY);
             cfg.Layout.FontSize = Mathf.RoundToInt(SliderRow(loc.Get("PANEL_FONT_SIZE"), cfg.Layout.FontSize, 8, 72));

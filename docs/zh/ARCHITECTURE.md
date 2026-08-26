@@ -70,12 +70,11 @@ LcIntegration.cs          可选的 LevelCollections 软集成
    - **分段起点(R1.2)**:`LoadingLevel/Inactive → PlayingLevel`,且不在大厅。
    - **暂停恢复(R1.3)**:`Paused → PlayingLevel` 且此前计时已停止。
 2. **累计** —— 当 `PlayingLevel` 且不在大厅 / 不在等待主机时 `GameTime += Time.fixedDeltaTime`。
-3. **菜单补回** —— 当 `CountInMenu` 开启时,在 `Inactive` 或大厅期间额外加 `fixedDeltaTime`。
-4. **规则** —— 运行当前类别各标签规则的 `OnTick`。
+3. **规则** —— 运行当前类别各标签规则的 `OnTick`。
 
 `Update`(每渲染帧)负责:作弊码检查、**暂停补回**(因 `timeScale=0` 会使 `FixedUpdate` 停止,故在 `Paused` 期间加 `unscaledDeltaTime`),以及按键处理。
 
-关卡加载屏(`LoadingLevel`)与客户端等待主机间隙(`ClientWaitServerLoad`)**始终不计入**,且无开关可补回。
+暂停期间始终计时,菜单 / 大厅期间始终不计时。关卡加载屏(`LoadingLevel`)与客户端等待主机间隙(`ClientWaitServerLoad`)**始终不计入**。
 
 ## 为什么重试先卸载再重新启动关卡
 
@@ -91,7 +90,7 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 这是关卡级重启。重试即重新挑战当前关卡,因此两个实时计时器(游戏总时间与当前分段)都清零、关卡从头计时。它与 R1.7 整局重置相互独立,体现在它**不**清零本局的记录(已完成分段、`LastRun`)与无效标记。重载过程会让关卡经历 `PlayingLevel → Inactive → LoadingLevel → PlayingLevel`;为避免这被误判为整局退出,`RetryAction` 将 `GameTime`/`SegmentStart` 清零并置位 `RunState.Retrying`,引擎在重载期间据此处理:
 
 - `SegmentLogic.IsAutoReset` 在 `Retrying` 期间抑制其 `PlayingLevel/Paused → Inactive` 分支(R1.7.3 分支还额外要求 `App.state == Menu` —— 真正的整局退出经 `PauseLeave → EnterMenu` 会到 Menu,而重试始终停在 LoadLevel)。因此即便 `AutoReset` 开启,重试也不会清零整局。
-- `SegmentLogic.ShouldAccumulateMenu` 在 `Retrying` 期间返回 false,重载时停留在 `Inactive` 的时间绝不计入(即便 `CountInMenu` 开启)。
+- 菜单 / 大厅时间始终不计入(固定步进时钟只在 `PlayingLevel` 运行),因此重载时停留在 `Inactive` 的时间不会增加计时。
 - `EndSegment` / `StartSegment` 在 `Retrying` 期间跳过 LC 整局成绩捕获、`LastRun` 快照**以及 tag 规则的 `OnLevelExit` 回调** —— 关卡是中途放弃、并非完成。`OnLevelExit` 执行 R4.2 最终检查点校验与语音线完成校验,若对放弃状态运行会误判 `INVALID_CHECKPOINT_FINAL` / `Voiceline`。当前关卡的分段仍会在重载关卡到达 `PlayingLevel` 时干净地重新开始。
 
 `Retrying` 在下一段分段开始时、以及整局重置时清零。
@@ -133,9 +132,13 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 
 `EndSegment(completed: LevelPassed)` 只在 `completed` 为真时才记录 `LastSegment`/`TotalAtLastSegment`、tag 的 `OnLevelExit` 完成校验(R4.2、语音线)以及 LC 最后一关的 `LastRun` 捕获。中途退出(或重试,此时 `LevelPassed` 为假)不会改动上一段尝试的 `LastSegment`/`TotalAtLastSegment` —— 这正是想要的行为:"上一段"参照值反映的是上一关**打完**的成绩,而不是半途走出去的那一关。注意 `PlayingLevel → LoadingLevel`(内置关卡的 `StartNextLevel` 重载)本质上就是完成,且该处 `LevelPassed` 由更早的 `EnterPassZone` 置真。
 
-## 为什么自动重置保留"上一段/上一局"快照
+## 为什么自动重置与菜单进入会清零"上一段"快照
 
-`LastSegment`、`TotalAtLastSegment`、`LastRun` 是 HUD 的参照值("上一段/上一局成绩对比")。它们**仅在新值记录时更新**(分段终点记录 `LastSegment`/`TotalAtLastSegment`;整局完成时记录 `LastRun`)—— 因此**自动重置(R1.7)不清零这三个值**,即便它清零实时计时器。`RunState.Reset(bool keepLastValues)` 体现这一点:自动重置路径(`HandleTransitions` → `DoFullReset(keepLastValues: true)`)保留这三个快照;**手动重置键**(`DoFullReset(keepLastValues: false)`)则清零它们,因为按重置键意味着"我要一个全新的对比基线"。(重试完全不碰 `Reset` —— 它走 `Retrying` 标志。)
+`LastSegment` 与 `TotalAtLastSegment` 是最近完成分段的参照值,`LastRun` 是上一次完整整局的总时间。**自动重置(R1.7)会清零实时计时器与两个"上一段"快照**,使退出到菜单后呈现新的分段基线,同时保留 `LastRun` 作为上一次完整成绩的参照(R1.7.4)。手动重置键则清零全部三个快照(R1.7.1)。
+
+`RunState.Reset(bool keepLastValues, bool keepLastRun)` 区分这两个关注点。自动重置与菜单进入路径使用 `DoFullReset(keepLastValues: false, keepLastRun: true)`;手动重置键使用 `DoFullReset(keepLastValues: false, keepLastRun: false)`。
+
+`Menu → LoadLevel` 边沿也会在新分段开始前调用 `DoFullReset`(R1.7.5),因此无论是否开启"自动重置",从菜单进入的整局都从零开始。重试不调用 `Reset`;它通过 `Retrying` 标志清零实时计时器,同时保留整局记录。
 
 ## 什么算"整局完成"(LastRun)
 

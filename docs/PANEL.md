@@ -12,9 +12,10 @@ tabs.
 
 ## General
 
-- **Timing** — `count_in_pause`, `count_in_menu`, `auto_reset`,
+- **Timing** — `auto_reset`,
   `restart_clears_forgivable` (clears forgivable flags on a pause-menu
-  restart; see [CONFIG.md](CONFIG.md)).
+  restart; see [CONFIG.md](CONFIG.md)). Pause time is always counted and
+  menu/lobby time is never counted; there are no toggles for them.
 - **Language** — pick the active language from the loaded set (single-select).
   "Reload language files" re-scans `lang/*.txt`.
 - **Keybinds** — reset / retry / settings keys. To rebind: click the field, then
@@ -22,9 +23,10 @@ tabs.
 
 ## Interface
 
-- **HUD** — `show_hud`; the main text block's offset (`offset_x`, `offset_y`),
-  `font_size`, and the two-color gradient (`color_a`, `color_b`) with per-channel
-  RGBA sliders.
+- **HUD** — `show_hud`; `center_loading_saving` (moves the game's own top-right
+  "Loading"/"Saving" prompts to the top-center); the main text block's offset
+  (`offset_x`, `offset_y`), `font_size`, and the two-color gradient
+  (`color_a`, `color_b`) with per-channel RGBA sliders.
 
 ## Category
 

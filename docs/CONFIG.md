@@ -15,12 +15,11 @@ defaults.
 
 ```ini
 [settings]
-count_in_pause = true
-count_in_menu = false
 auto_reset = true
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
 show_hud = true
+center_loading_saving = false
 language = en
 category = any
 reset_key = Backspace
@@ -30,17 +29,20 @@ menu_key = Home
 
 | Key | Values | Default | Notes |
 |-----|--------|---------|-------|
-| `count_in_pause` | true/false | true | R1.8 — count time while paused |
-| `count_in_menu` | true/false | false | R1.9 — count menu/lobby time |
-| `auto_reset` | true/false | true | R1.7.2 |
+| `auto_reset` | true/false | true | R1.7.2 — reset the live timers and last-segment snapshots when leaving to the menu/lobby; keeps the last completed run total |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 — clear forgivable validity flags when the level is restarted from the in-level **pause menu** (the run's timers keep running). The one-key retry clears them unconditionally (fixed behavior), and a full-run reset clears all flags. |
 | `retry_min_dwell` | seconds (≥0) | 0.5 | R6 — minimum time held in the empty scene on retry, measured from the key press. If the level reloads faster, the empty scene is held until this elapses; `0` disables the hold. |
 | `show_hud` | true/false | true | R2.5.1 |
+| `center_loading_saving` | true/false | false | Move the game's own top-right "Loading"/"Saving" progress indicator to the top-center of the screen |
 | `language` | BCP-47 code | en | matches a `lang/<code>.txt` |
 | `category` | category id | any | R3.1 |
 | `reset_key` | KeyCode | Backspace | reset-run keybind |
 | `retry_key` | KeyCode | R | retry-level keybind |
 | `menu_key` | KeyCode | Home | open/close the settings panel |
+
+> **Pause/menu behavior is fixed**: time while paused is always counted, and
+> menu/lobby time is never counted. There are no `count_in_pause` or
+> `count_in_menu` settings.
 
 > **Cheat/speed/drift detection (R5.1) is always on with hardcoded thresholds
 > and is intentionally not configurable** — there is no `drift_tolerance` or any

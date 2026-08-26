@@ -34,12 +34,11 @@ SETTINGS_LANGUAGE:Language
 SETTINGS_RESET_KEY:Reset Key
 SETTINGS_RETRY_KEY:Retry Key
 SETTINGS_MENU_KEY:Settings Panel Key
-SETTINGS_COUNT_IN_PAUSE:Count time while paused
-SETTINGS_COUNT_IN_MENU:Count time in menu
 SETTINGS_AUTO_RESET:Auto-reset run
 SETTINGS_RESTART_CLEARS_FORGIVABLE:Clear forgivable flags on pause-menu restart
 SETTINGS_RETRY_MIN_DWELL:Retry empty-scene dwell (s)
 SETTINGS_SHOW_HUD:Show timer HUD
+SETTINGS_CENTER_LOADING_SAVING:Center Loading/Saving prompts
 
 # ===== Settings panel (GUI) =====
 PANEL_TAB_GENERAL:General

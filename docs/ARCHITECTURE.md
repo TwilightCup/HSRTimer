@@ -85,15 +85,14 @@ Each physics frame (`FixedUpdate`), in order:
    - **Segment start (R1.2)**: `LoadingLevel/Inactive → PlayingLevel`, not in a lobby.
    - **Resume from pause (R1.3)**: `Paused → PlayingLevel` while timing was stopped.
 2. **Accumulate** — `GameTime += Time.fixedDeltaTime` when `PlayingLevel` and not in a lobby / not waiting on the server.
-3. **Menu supplement** — additionally `fixedDeltaTime` while `Inactive` or in a lobby, when `CountInMenu` is on.
-4. **Rules** — run each active category's tag rules' `OnTick`.
+3. **Rules** — run each active category's tag rules' `OnTick`.
 
 `Update` (per render frame) handles: the cheat-code check, the **pause
 supplement** (`unscaledDeltaTime` while `Paused`, since `timeScale=0` halts
 `FixedUpdate`), and keybinds.
 
-`LoadingLevel` and the client-wait gap (`ClientWaitServerLoad`) **never** count,
-and no toggle restores them.
+Pause time is always counted; menu/lobby time is never counted. `LoadingLevel`
+and the client-wait gap (`ClientWaitServerLoad`) **never** count either.
 
 ## Why retry unloads then re-launches the level
 
@@ -139,9 +138,8 @@ looking like a run exit, `RetryAction` zeroes `GameTime`/`SegmentStart` and sets
   `App.state == Menu`, which a genuine run exit reaches via
   `PauseLeave → EnterMenu` but a retry never does). So retrying does not clear
   the run even with `AutoReset` on.
-- `SegmentLogic.ShouldAccumulateMenu` returns false while `Retrying`, so the
-  time spent in `Inactive` during the reload is never counted (even with
-  `CountInMenu` on).
+- Menu/lobby time is never counted (the fixed-step clock only runs while
+  `PlayingLevel`), so the `Inactive` dwell during the reload never adds time.
 - `EndSegment` / `StartSegment` skip the LC
   full-run capture, the `LastRun` snapshot, **and the tag `OnLevelExit`
   callbacks** while `Retrying` — the level was abandoned mid-attempt, not
@@ -283,18 +281,24 @@ a level inside a collection run does NOT count as the epilogue (the run is still
 active — appearing in Credits mid-collection is just an ordinary level), so
 `InEpilogueSegment` also requires "not currently in a collection run".
 
-## Why auto-reset preserves the "last" snapshots
+## Why auto-reset and menu entry clear the last-segment snapshots
 
-`LastSegment`, `TotalAtLastSegment`, and `LastRun` are HUD reference values
-("how the previous segment/run compared"). They update only when a new value is
-recorded (a segment end records `LastSegment`/`TotalAtLastSegment`; a new run
-begun from a reset or a completed last level records `LastRun`) — so an
-**auto-reset (R1.7) must not clear them**, even though it clears the live timers.
-`RunState.Reset(bool keepLastValues)` expresses this: the auto-reset path
-(`HandleTransitions` → `DoFullReset(keepLastValues: true)`) keeps the three
-snapshots; the **manual reset key** (`DoFullReset(keepLastValues: false)`) clears
-them, since pressing reset means "I want a fresh comparison baseline." (Retry
-doesn't touch `Reset` at all — it goes through the `Retrying` flag.)
+`LastSegment` and `TotalAtLastSegment` are HUD reference values for the most
+recent completed segment, while `LastRun` is the last completed run's total.
+**Auto-reset (R1.7) clears the live timers and the two last-segment snapshots**,
+so leaving to the menu presents a fresh segment baseline, while keeping
+`LastRun` as the previous completed-run reference (R1.7.4). The manual reset key
+clears all three snapshots (R1.7.1).
+
+`RunState.Reset(bool keepLastValues, bool keepLastRun)` keeps these concerns
+separate. The auto-reset and menu-entry paths use
+`DoFullReset(keepLastValues: false, keepLastRun: true)`; the manual reset key
+uses `DoFullReset(keepLastValues: false, keepLastRun: false)`.
+
+A `Menu → LoadLevel` edge also calls `DoFullReset` before the new segment begins
+(R1.7.5), so a run entered from the menu always starts at zero regardless of the
+AutoReset option. A retry does not call `Reset`; it zeroes the live timers
+through the `Retrying` flag while preserving the run's records.
 
 ## Config check & repair
 

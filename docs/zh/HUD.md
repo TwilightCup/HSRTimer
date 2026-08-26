@@ -75,6 +75,10 @@ font_size = 18  # 字号
 
 通过设置面板(默认键 `Home`)切换整个计时器的显示,或在 `settings.ini` 设 `show_hud = false`。
 
+## 游戏加载/保存提示
+
+游戏自带的“Loading / Saving”进度提示默认显示在右上角。若希望它移到画面顶部居中,可在 `settings.ini` 中启用 `center_loading_saving`,或在设置面板的“界面”页勾选“将‘加载/保存’提示移到顶部居中”。
+
 ## 无效提示
 
 当本局被标记无效时(R5),面板内会出现红色提示列出原因。有效性选项见 [CONFIG.md](CONFIG.md)。

@@ -9,13 +9,13 @@
 
 ## 常规
 
-- **计时** —— `count_in_pause`、`count_in_menu`、`auto_reset`、`restart_clears_forgivable`(暂停菜单重新开始时清除可原谅标记;见 [CONFIG.md](CONFIG.md))。
+- **计时** —— `auto_reset`、`restart_clears_forgivable`(暂停菜单重新开始时清除可原谅标记;见 [CONFIG.md](CONFIG.md))。暂停期间始终计时,菜单 / 大厅期间始终不计时,二者均无开关。
 - **语言** —— 从已加载的语言集合中单选当前语言。"重新加载语言文件" 会重新扫描 `lang/*.txt`。
 - **按键绑定** —— 重置 / 重试 / 设置键。改绑方法:点击对应项,然后按下目标键。纯修饰键(Shift/Ctrl/Alt/Cmd)按下会被忽略。
 
 ## 界面
 
-- **面板** —— `show_hud`;主文本块的横向 / 纵向偏移(`offset_x`、`offset_y`)、字号(`font_size`),以及双色渐变(`color_a`、`color_b`,每通道 RGBA 滑块)。
+- **面板** —— `show_hud`;`center_loading_saving`(将游戏自带的右上角"加载/保存"提示移到顶部居中);主文本块的横向 / 纵向偏移(`offset_x`、`offset_y`)、字号(`font_size`),以及双色渐变(`color_a`、`color_b`,每通道 RGBA 滑块)。
 
 ## 类别
 
