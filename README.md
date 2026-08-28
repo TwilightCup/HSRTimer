@@ -17,6 +17,10 @@ and is fully localizable.
 - **Game-time engine** — discrete `Time.fixedDeltaTime` accumulation; auto
   start/stop per level; segment and full-run tracking; pause time always counted
   and menu/lobby time never counted; auto-reset on menu/lobby transitions.
+- **Real Time clock** — a parallel wall-clock timer that starts with the run,
+  keeps running through level-loading screens, and stops on the final level;
+  shown by default below Game Time and always active, with a settings toggle to
+  hide it.
 - **Standard-style HUD** — configurable ordered rows, per-character two-color
   gradient with alpha, arbitrary custom texts at any position, draggable panel.
 - **Categories & tags** — define rule sets via tags. Built-in: `Checkpoint`,

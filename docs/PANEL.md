@@ -23,7 +23,8 @@ tabs.
 
 ## Interface
 
-- **HUD** — `show_hud`; `center_loading_saving` (moves the game's own top-right
+- **HUD** — `show_hud`; `show_real_time` (show the always-active Real Time
+  clock); `center_loading_saving` (moves the game's own top-right
   "Loading"/"Saving" prompts to the top-center); the main text block's offset
   (`offset_x`, `offset_y`), `font_size`, and the two-color gradient
   (`color_a`, `color_b`) with per-channel RGBA sliders.

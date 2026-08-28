@@ -34,6 +34,21 @@ namespace HSRTimer
         /// <summary>Total game time of the most recently completed run, or null.</summary>
         public double? LastRun;
 
+        /// <summary>
+        /// Accumulated wall-clock time since the current run began. Unlike
+        /// <see cref="GameTime"/>, this keeps advancing through level loading
+        /// screens and pauses, so it represents the real time spent on the run.
+        /// </summary>
+        public double RealTime;
+
+        /// <summary>
+        /// True while the real-time clock is actively accumulating. Starts when
+        /// the game clock starts a run, keeps running through loading screens,
+        /// and stops when the run completes (the same moment the game clock
+        /// stops after the final level).
+        /// </summary>
+        public bool RealTimeActive;
+
         /// <summary>True while the clock is actively accumulating game time.</summary>
         public bool TimingActive;
 
@@ -205,6 +220,8 @@ namespace HSRTimer
             }
             if (!keepLastRun)
                 LastRun = null;
+            RealTime = 0d;
+            RealTimeActive = false;
             TimingActive = false;
             InSegment = false;
             PrevGameState = GameState.Inactive;

@@ -6,13 +6,14 @@ namespace HSRTimer
 {
     /// <summary>
     /// Resolves template variables in custom-text content (R2.4.2): {date},
-    /// {time}, {version}, {collection}, {category}. Unknown tokens are left
-    /// intact. Date/time use the current culture; collection/category come from
-    /// the live config and (for collection) the optional LC integration.
+    /// {time}, {version}, {collection}, {category}, {gametime}, {realtime}.
+    /// Unknown tokens are left intact. Date/time use the current culture;
+    /// collection/category come from the live config and (for collection) the
+    /// optional LC integration.
     /// </summary>
     public static class TemplateVars
     {
-        public static string Resolve(string text, double gameTime)
+        public static string Resolve(string text, double gameTime, double realTime = 0d)
         {
             if (string.IsNullOrEmpty(text) || text.IndexOf('{') < 0)
                 return text;
@@ -33,13 +34,13 @@ namespace HSRTimer
                     continue;
                 }
                 string token = text.Substring(i + 1, close - i - 1);
-                sb.Append(ResolveToken(token, gameTime));
+                sb.Append(ResolveToken(token, gameTime, realTime));
                 i = close;
             }
             return sb.ToString();
         }
 
-        private static string ResolveToken(string token, double gameTime)
+        private static string ResolveToken(string token, double gameTime, double realTime)
         {
             var cfg = ConfigService.Instance;
             switch (token)
@@ -52,6 +53,8 @@ namespace HSRTimer
                     return PluginInfo.PLUGIN_VERSION;
                 case "gametime":
                     return TimeFormatter.Format(gameTime);
+                case "realtime":
+                    return TimeFormatter.Format(realTime);
                 case "collection":
                     return CollectionName(cfg);
                 case "category":

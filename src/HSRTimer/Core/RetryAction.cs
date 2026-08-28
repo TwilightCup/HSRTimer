@@ -68,6 +68,8 @@ namespace HSRTimer
             // guard so a blocked retry never mutates state.
             double savedGameTime = state.GameTime;
             double savedSegmentStart = state.SegmentStart;
+            double savedRealTime = state.RealTime;
+            bool savedRealTimeActive = state.RealTimeActive;
 
             var game = Game.instance;
 
@@ -116,15 +118,17 @@ namespace HSRTimer
                 }
 
                 // A collection restart re-attempts the whole run: reset the live
-                // timers (total + current segment). Use the same Retrying guard as
-                // the single-level retry so the abandoned level's segment end is
-                // not recorded as a LastRun and the reload (level 1) is not
-                // mistaken for a run exit — while keeping the run's records and
-                // non-forgivable flags (R6.2.2 applies to a collection restart
-                // too: it is independent of the R1.7 reset).
+                // timers (total + current segment + real time). Use the same
+                // Retrying guard as the single-level retry so the abandoned
+                // level's segment end is not recorded as a LastRun and the reload
+                // (level 1) is not mistaken for a run exit — while keeping the
+                // run's records and non-forgivable flags (R6.2.2 applies to a
+                // collection restart too: it is independent of the R1.7 reset).
                 state.Retrying = true;
                 state.GameTime = 0d;
                 state.SegmentStart = 0d;
+                state.RealTime = 0d;
+                state.RealTimeActive = false;
 
                 if (!lc.RestartCollection())
                 {
@@ -134,6 +138,8 @@ namespace HSRTimer
                     state.Retrying = false;
                     state.GameTime = savedGameTime;
                     state.SegmentStart = savedSegmentStart;
+                    state.RealTime = savedRealTime;
+                    state.RealTimeActive = savedRealTimeActive;
                 }
                 else
                 {
@@ -145,13 +151,15 @@ namespace HSRTimer
             // Mark a retry in progress so the engine treats the level's
             // PlayingLevel → Inactive → PlayingLevel reload as a segment restart
             // without firing the R1.7 full-run clear. A retry re-attempts the
-            // target level: reset the live timers (total + current segment) so
-            // the level is timed from scratch — but keep the run's records (PBs,
-            // completed segments, LastRun) and validity flags (R6.2.2: retry is a
-            // level-level restart, not the R1.7 reset).
+            // target level: reset the live timers (total + current segment +
+            // real time) so the level is timed from scratch — but keep the run's
+            // records (PBs, completed segments, LastRun) and validity flags
+            // (R6.2.2: retry is a level-level restart, not the R1.7 reset).
             state.Retrying = true;
             state.GameTime = 0d;
             state.SegmentStart = 0d;
+            state.RealTime = 0d;
+            state.RealTimeActive = false;
 
             // R6.4: pick the retry target. During a campaign run that was
             // entered from the menu, the player wants to practice the level

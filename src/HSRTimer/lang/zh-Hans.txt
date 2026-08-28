@@ -16,6 +16,7 @@ __LANG_NAME__:简体中文
 
 # ===== 计时器面板行标签 (R2.1) =====
 TIMER_GAME_TIME:游戏总时间
+TIMER_REAL_TIME:现实时间
 TIMER_SEGMENT_TIME:当前分段时间
 TIMER_LAST_TOTAL:上段完成总时
 TIMER_LAST_SEGMENT:单段时间(上一段)
@@ -38,6 +39,7 @@ SETTINGS_AUTO_RESET:自动重置
 SETTINGS_RESTART_CLEARS_FORGIVABLE:暂停菜单重启时清除可原谅标记
 SETTINGS_RETRY_MIN_DWELL:重试空场景停留(秒)
 SETTINGS_SHOW_HUD:显示计时器面板
+SETTINGS_SHOW_REAL_TIME:显示现实时间
 SETTINGS_CENTER_LOADING_SAVING:将“加载/保存”提示移到顶部居中
 
 # ===== 设置面板 (GUI) =====

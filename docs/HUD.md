@@ -13,6 +13,7 @@ Each row renders one value:
 | Row type | Shows |
 |----------|-------|
 | `GameTime` | Total game time accumulated this run |
+| `RealTime` | Wall-clock time for the current run (shown by default below Game Time; see below) |
 | `CurrentSegment` | Time since entering the current level |
 | `TotalAtLastSegment` | Run total frozen at the moment the last segment completed |
 | `LastSegment` | Duration of the last completed level |
@@ -21,6 +22,21 @@ Each row renders one value:
 
 Rows are edited in `layout.ini` under `[rows]` (ordered by index). The panel
 height adapts to the number of rows.
+
+## Real Time clock
+
+Alongside the game-time rows, the HUD has a **Real Time** clock that measures
+wall-clock time for the current run. It starts when the game clock starts,
+continues through level-loading screens and pauses, and stops when the run is
+completed (the final level is passed) or when you leave the run for the menu.
+
+The Real Time row is shown by default directly below **Game Time** in the
+default layout, and the clock is always active. You can hide it from the
+settings panel's Interface tab (or set `show_real_time = false` in
+`settings.ini`). `RealTime` is also a regular row type: if you move it in
+`[rows]` it appears in your chosen position; if you remove it from the layout
+but leave the setting enabled, it appears below your configured timer rows as a
+convenient fallback.
 
 ## Colors & gradient
 
@@ -61,6 +77,7 @@ color_b = CCCCCCCF
 | `{collection}` | Active Level Collections collection name (or fallback) |
 | `{category}` | Active category display name |
 | `{gametime}` | Current game time |
+| `{realtime}` | Current Real Time clock value |
 
 Unknown `{tokens}` are left intact. Use the literal `\n` in the text for a
 newline.

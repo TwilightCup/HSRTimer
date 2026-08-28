@@ -138,14 +138,31 @@ namespace HSRTimer
 
             // Each configured row. LastRun is NOT drawn here — it renders in its
             // own right-hand column (see DrawLastRunColumn) so the finished-run
-            // total doesn't sit in the same column as the live timers.
+            // total doesn't sit in the same column as the live timers. RealTime
+            // is a regular row type but is additionally gated by the ShowRealTime
+            // settings toggle.
+            bool hasRealTimeRow = layout.Rows.Contains(RowType.RealTime);
             foreach (var row in layout.Rows)
             {
                 if (row == RowType.LastRun)
                     continue;
+                if (row == RowType.RealTime && !cfg.Settings.ShowRealTime)
+                    continue;
                 string label, value;
                 GetRow(row, cfg, state, loc, out label, out value);
                 string line = label.Length > 0 ? (label + ":  " + value) : value;
+                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
+                float w = _rowStyle.CalcSize(new GUIContent(line)).x;
+                if (w > widest) widest = w;
+                y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+            }
+
+            // Real-time clock fallback: when the setting is enabled but the user
+            // hasn't placed the row in their layout, show it below the configured
+            // rows so enabling the setting always has an immediate effect.
+            if (cfg.Settings.ShowRealTime && !hasRealTimeRow)
+            {
+                string line = loc.Get("TIMER_REAL_TIME") + ":  " + TimeFormatter.Format(state.RealTime);
                 DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
                 float w = _rowStyle.CalcSize(new GUIContent(line)).x;
                 if (w > widest) widest = w;
@@ -225,6 +242,10 @@ namespace HSRTimer
                     label = loc.Get("TIMER_GAME_TIME");
                     value = TimeFormatter.Format(state.GameTime);
                     break;
+                case RowType.RealTime:
+                    label = loc.Get("TIMER_REAL_TIME");
+                    value = TimeFormatter.Format(state.RealTime);
+                    break;
                 case RowType.CurrentSegment:
                     label = loc.Get("TIMER_SEGMENT_TIME");
                     value = TimeFormatter.Format(state.GameTime - state.SegmentStart);
@@ -296,9 +317,10 @@ namespace HSRTimer
             if (cfg == null || cfg.Layout.CustomTexts.Count == 0) return;
             var state = TimerCore.State;
             double gt = state != null ? state.GameTime : 0d;
+            double rt = state != null ? state.RealTime : 0d;
             foreach (var ct in cfg.Layout.CustomTexts)
             {
-                string resolved = TemplateVars.Resolve(ct.Text, gt);
+                string resolved = TemplateVars.Resolve(ct.Text, gt, rt);
                 DrawGradientLine(resolved, ct.ColorA, ct.ColorB, ct.X, ct.Y, _customStyle);
             }
         }

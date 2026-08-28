@@ -50,7 +50,7 @@ Patches/
 Hud/
   TimerHud.cs             IMGUI 面板(R2)
   GradientText.cs         颜色十六进制/透明度 + 渐变助手
-  TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}
+  TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}/{gametime}/{realtime}
 Config/
   ConfigService.cs        门面
   PersistenceService.cs   容错 INI 读写
@@ -76,6 +76,10 @@ LcIntegration.cs          可选的 LevelCollections 软集成
 
 暂停期间始终计时,菜单 / 大厅期间始终不计时。关卡加载屏(`LoadingLevel`)与客户端等待主机间隙(`ClientWaitServerLoad`)**始终不计入**。
 
+### 现实时间计时器(R1.10)
+
+与 `GameTime` 分开,`RunState.RealTime` 是墙钟计时器:它在整个运行的第一个可玩分段开始时启动,只要 `RunState.RealTimeActive` 为真,就在 `TimerCore.Update` 中用 `Time.unscaledDeltaTime` 累计。由于它不受 `PlayingLevel` 门槛限制,因此能穿过 `LoadingLevel` 加载屏与暂停继续前进。它在 `TimerCore.EndSegment` 记录整局完成(R1.6)的同一时刻停表并定格;当本局退出到菜单/大厅(重试除外)时也会停止,避免在空闲界面里暗中累计。整局重置与一键重试会把它与活动游戏计时器一并清零。HUD 通过 `show_real_time` 默认在游戏总时间下方显示该行,但无论是否显示,时钟都保持后台活跃。
+
 ## 为什么重试先卸载再重新启动关卡
 
 R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。HSRTimer 以引擎 MonoBehaviour 上的协程驱动:
@@ -87,7 +91,7 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 
 省掉第 1 步,重新启动当前关卡会悄悄退化成检查点重生 —— 正是暂停菜单"Restart"按钮的行为,而这是 R6 明令禁止的。这里**不**用 `Game.RestartLevel(true)`(检查点重生、不重载场景),也**不**用 `Game.ReloadBundle()`(仅 Workshop 可用:它解引用 `workshopLevel.dataPath`,在内置关卡上抛异常,且在设置 `timeScale = 0` 之后崩溃,游戏卡在 "Empty" 场景、画面冻结)。
 
-这是关卡级重启。重试即重新挑战当前关卡,因此两个实时计时器(游戏总时间与当前分段)都清零、关卡从头计时。它与 R1.7 整局重置相互独立,体现在它**不**清零本局的记录(已完成分段、`LastRun`)与无效标记。重载过程会让关卡经历 `PlayingLevel → Inactive → LoadingLevel → PlayingLevel`;为避免这被误判为整局退出,`RetryAction` 将 `GameTime`/`SegmentStart` 清零并置位 `RunState.Retrying`,引擎在重载期间据此处理:
+这是关卡级重启。重试即重新挑战当前关卡,因此活动计时器(游戏总时间、当前分段、现实时间)都清零、关卡从头计时。它与 R1.7 整局重置相互独立,体现在它**不**清零本局的记录(已完成分段、`LastRun`)与无效标记。重载过程会让关卡经历 `PlayingLevel → Inactive → LoadingLevel → PlayingLevel`;为避免这被误判为整局退出,`RetryAction` 将 `GameTime`/`SegmentStart` 清零并置位 `RunState.Retrying`,引擎在重载期间据此处理:
 
 - `SegmentLogic.IsAutoReset` 在 `Retrying` 期间抑制其 `PlayingLevel/Paused → Inactive` 分支(R1.7.3 分支还额外要求 `App.state == Menu` —— 真正的整局退出经 `PauseLeave → EnterMenu` 会到 Menu,而重试始终停在 LoadLevel)。因此即便 `AutoReset` 开启,重试也不会清零整局。
 - 菜单 / 大厅时间始终不计入(固定步进时钟只在 `PlayingLevel` 运行),因此重载时停留在 `Inactive` 的时间不会增加计时。

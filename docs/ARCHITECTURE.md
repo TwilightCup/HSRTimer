@@ -65,7 +65,7 @@ Patches/
 Hud/
   TimerHud.cs             IMGUI panel (R2)
   GradientText.cs         color hex/alpha + gradient helper
-  TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}
+  TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}/{gametime}/{realtime}
 Config/
   ConfigService.cs        facade
   PersistenceService.cs   tolerant INI reader/writer
@@ -93,6 +93,19 @@ supplement** (`unscaledDeltaTime` while `Paused`, since `timeScale=0` halts
 
 Pause time is always counted; menu/lobby time is never counted. `LoadingLevel`
 and the client-wait gap (`ClientWaitServerLoad`) **never** count either.
+
+### Real Time clock (R1.10)
+
+Separate from `GameTime`, `RunState.RealTime` is a wall-clock timer that starts
+on the first playable segment of a run and accumulates with
+`Time.unscaledDeltaTime` in `TimerCore.Update` as long as
+`RunState.RealTimeActive` is true. Because it is not gated on `PlayingLevel`,
+it keeps advancing through `LoadingLevel` screens and pauses. It is stopped (and
+the value frozen) in `TimerCore.EndSegment` at the same moment a completed run
+is recorded (R1.6), and also stopped when the run exits to a menu or lobby
+(unless a retry is in progress) so it does not silently count idle time. Full resets and one-key retries zero it along with the live
+game timers. The HUD shows the row by default below Game Time through
+`show_real_time`; the clock remains active regardless of that display setting.
 
 ## Why retry unloads then re-launches the level
 
@@ -124,9 +137,9 @@ what R6 forbids. This is intentionally **not** `Game.RestartLevel(true)`
 (Workshop-only: dereferences `workshopLevel.dataPath` and crashes on BuiltIn
 levels after setting `timeScale = 0`, freezing the game in the "Empty" scene).
 
-This is a level-level restart. A retry re-attempts the current level, so both
-live timers (total game time and the current segment) reset to zero and the
-level is timed from scratch. It is independent of the R1.7 run reset in the
+This is a level-level restart. A retry re-attempts the current level, so the
+live timers (total game time, current segment, and Real Time) reset to zero and
+the level is timed from scratch. It is independent of the R1.7 run reset in the
 sense that it does **not** clear the run's records (completed
 segments, `LastRun`) or validity flags. The reload drives the level through
 `PlayingLevel → Inactive → LoadingLevel → PlayingLevel`; to keep that from

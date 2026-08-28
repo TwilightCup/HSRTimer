@@ -8,6 +8,7 @@ namespace HSRTimer
     public enum RowType
     {
         GameTime,
+        RealTime,
         CurrentSegment,
         TotalAtLastSegment,
         LastSegment,
@@ -44,6 +45,7 @@ namespace HSRTimer
         public static readonly RowType[] DefaultRows =
         {
             RowType.GameTime,
+            RowType.RealTime,
             RowType.CurrentSegment,
             RowType.TotalAtLastSegment,
             RowType.LastSegment,

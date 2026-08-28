@@ -99,6 +99,13 @@ namespace HSRTimer
             if (SegmentLogic.ShouldAccumulatePause(gState, State.TimingActive))
                 State.GameTime += Time.unscaledDeltaTime;
 
+            // Real-time clock: unlike game time this is not tied to a playable
+            // state, so it keeps advancing through level loading screens and
+            // while paused. It is still reset/stopped by the same run lifecycle
+            // (start on the first segment, stop when a run completes).
+            if (State.RealTimeActive)
+                State.RealTime += Time.unscaledDeltaTime;
+
             HandleKeybinds();
         }
 
@@ -119,6 +126,24 @@ namespace HSRTimer
             // no segment is active, so this is safe on every other transition.
             if (SegmentLogic.IsSegmentEnd(prevG, gState, isLocal))
                 EndSegment(game, completed: State.LevelPassed);
+
+            // The real-time clock is deliberately not gated on LoadingLevel:
+            // it must keep counting through cross-level loading. But when the
+            // run exits to menu/lobby (not a retry) outside an LC collection
+            // run, it is no longer actively progressing, so stop the real clock
+            // too. This covers PlayingLevel→Inactive, Paused→Inactive, and
+            // lobby transitions, preventing it from silently counting while
+            // sitting in a menu/lobby even if AutoReset is disabled, while
+            // still letting a collection run's internal transition continue
+            // timing.
+            bool leftRunOutsideCollection = gState == GameState.Inactive
+                && !State.InCollectionRunSegment;
+            bool genuinelyInMenu = gState == GameState.Inactive
+                && aState == AppSate.Menu;
+            bool enteredLobby = aState == AppSate.ServerLobby || aState == AppSate.ClientLobby
+                || aState == AppSate.ServerLoadLobby || aState == AppSate.ClientLoadLobby;
+            if (!State.Retrying && (leftRunOutsideCollection || genuinelyInMenu || enteredLobby))
+                State.RealTimeActive = false;
 
             // R1.7 auto-reset (honored only when the option is on). Suppressed
             // during a retry (R6) so reloading the level does not clear the run.
@@ -181,6 +206,13 @@ namespace HSRTimer
                 && game.currentLevelNumber == game.levelCount
                 && !inCollectionRunNow;
 
+            // Real-time clock starts with the first playable segment of a run and
+            // stays active across level-loading transitions. The Credits epilogue
+            // is not a new run, so it must not restart the real-time clock after
+            // the final level has already stopped it.
+            if (!State.InEpilogueSegment)
+                State.RealTimeActive = true;
+
             // R6.4: if this segment was entered from the menu and is a playable
             // campaign level (BuiltIn, within the Intro–Reprise range, not the
             // Credits epilogue, not part of an LC collection run), remember it
@@ -241,7 +273,12 @@ namespace HSRTimer
                     && !State.InCollectionRunSegment;
                 bool collectionDone = State.OnCollectionLastLevel;
                 if (campaignDone || standaloneEditorPick || collectionDone)
+                {
                     State.LastRun = end;
+                    // The real-time clock freezes at the same moment the game
+                    // clock records the completed run.
+                    State.RealTimeActive = false;
+                }
             }
 
             if (!retrying)

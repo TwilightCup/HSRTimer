@@ -24,6 +24,11 @@ namespace HSRTimer
         // ── HUD ──
         public bool ShowHud = true;               // R2.5.1
 
+        // Real-time clock is always active while a run is in progress. It is
+        // shown by default (below Game Time in the default layout); this setting
+        // controls its HUD visibility.
+        public bool ShowRealTime = true;
+
         // Move the game's own top-right Loading/Saving progress indicator to
         // the top-center of the screen (default off).
         public bool CenterLoadingSaving = false;
@@ -60,6 +65,7 @@ namespace HSRTimer
                     case "restart_clears_forgivable": RestartClearsForgivable = ParseBool(value, RestartClearsForgivable); break;
                     case "retry_min_dwell": RetryMinDwell = ParseFloat(value, RetryMinDwell); break;
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
+                    case "show_real_time": ShowRealTime = ParseBool(value, ShowRealTime); break;
                     case "center_loading_saving": CenterLoadingSaving = ParseBool(value, CenterLoadingSaving); break;
                     case "language": CurrentLang = value; break;
                     case "reset_key": ResetKey = ParseKeyCode(value, ResetKey); break;
@@ -84,6 +90,7 @@ namespace HSRTimer
                 ["restart_clears_forgivable"] = RestartClearsForgivable ? "true" : "false",
                 ["retry_min_dwell"] = RetryMinDwell.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                 ["show_hud"] = ShowHud ? "true" : "false",
+                ["show_real_time"] = ShowRealTime ? "true" : "false",
                 ["center_loading_saving"] = CenterLoadingSaving ? "true" : "false",
                 ["language"] = CurrentLang,
                 ["reset_key"] = ResetKey.ToString(),
