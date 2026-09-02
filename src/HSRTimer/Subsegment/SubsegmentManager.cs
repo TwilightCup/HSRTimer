@@ -752,24 +752,49 @@ namespace HSRTimer
 
         // ── PB writing ────────────────────────────────────────────────────
 
-        private void WriteIlPb(string levelId, RunState state, long totalMs)
+        private void WriteIlPb(string levelId, RunState state, long endTimeMs)
         {
             if (_currentSamples.Count == 0)
                 return;
             string category = GetCategoryKey();
             string dir = Path.Combine(_options.PBPath, "IL", levelId, category);
             string metaPath = Path.Combine(dir, "meta.json");
+
+            // IL PB files are per-level: level_index is always 0 and t_ms is
+            // relative to the segment start. In a multi-run the recorder may be
+            // holding cumulative game-time samples (which are correct for the ML
+            // files), so normalize a copy before writing the IL record.
+            long levelStartMs = (long)Math.Round(state.SegmentStart * 1000.0);
+            long totalMs = Math.Max(0L, endTimeMs - levelStartMs);
             if (SubsegmentFileStore.TryReadTotalMs(metaPath, out long existing) && existing <= totalMs)
                 return;
 
+            var ilSamples = new List<SubsegmentSample>(_currentSamples.Count);
+            foreach (var s in _currentSamples)
+            {
+                ilSamples.Add(new SubsegmentSample
+                {
+                    seq = s.seq,
+                    level_index = 0,
+                    t_ms = Math.Max(0L, s.t_ms - levelStartMs),
+                    px = s.px,
+                    py = s.py,
+                    pz = s.pz,
+                    dx = s.dx,
+                    dy = s.dy,
+                    dz = s.dz,
+                    plane_radius = s.plane_radius,
+                });
+            }
+
             string samplePath = Path.Combine(dir, "sample.jsonl");
-            if (!SubsegmentFileStore.WriteAtomic(samplePath, SubsegmentFileStore.MakeSampleJson(_currentSamples)))
+            if (!SubsegmentFileStore.WriteAtomic(samplePath, SubsegmentFileStore.MakeSampleJson(ilSamples)))
                 return;
             string metaJson = SubsegmentFileStore.MakeMetaJson(
-                "IL", levelId, null, category, null, totalMs, _currentSamples.Count);
+                "IL", levelId, null, category, null, totalMs, ilSamples.Count);
             if (!SubsegmentFileStore.WriteAtomic(metaPath, metaJson))
                 return;
-            Plugin.Logger.LogInfo($"HSRTimer: subsegment PB written IL/{levelId}/{category} ({totalMs} ms, {_currentSamples.Count} samples).");
+            Plugin.Logger.LogInfo($"HSRTimer: subsegment PB written IL/{levelId}/{category} ({totalMs} ms, {ilSamples.Count} samples).");
         }
 
         private void WriteMultiPb(RunState state)
