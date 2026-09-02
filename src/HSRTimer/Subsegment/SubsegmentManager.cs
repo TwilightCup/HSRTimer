@@ -213,7 +213,7 @@ namespace HSRTimer
             if (completed)
             {
                 if (valid)
-                    WriteIlPb(levelId, state, (long)Math.Round(endTime * 1000.0));
+                    WriteIlPb(GetIlLevelId(game), state, (long)Math.Round(endTime * 1000.0));
 
                 // Track ML run contents/endpoint.
                 if (_multiRunCandidate)
@@ -541,23 +541,83 @@ namespace HSRTimer
             }
         }
 
+        /// <summary>
+        /// IL PB directories should use the level's English localized name
+        /// (e.g. <c>Intro</c>, <c>Power Plant</c>, <c>Aztec</c>) rather than our
+        /// synthetic <c>B0</c>/<c>B8</c> numbering. Falls back to the internal
+        /// scene id, then to the synthetic id when the game doesn't expose a
+        /// usable level name at runtime.
+        /// </summary>
+        private string GetIlLevelId(Game game)
+        {
+            if (game.currentLevelType == WorkshopItemSource.BuiltIn
+                && game.levels != null
+                && game.currentLevelNumber >= 0
+                && game.currentLevelNumber < game.levels.Length
+                && !string.IsNullOrEmpty(game.levels[game.currentLevelNumber]))
+            {
+                string internalName = game.levels[game.currentLevelNumber];
+                string english = GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
+                return SubsegmentFileStore.SanitizeId(english);
+            }
+            return GetLevelId(game);
+        }
+
+        private static string GetEnglishLocalizedLevelName(string term, string fallback)
+        {
+            try
+            {
+                var codes = I2.Loc.LocalizationManager.GetLanguageCodes();
+                var translations = I2.Loc.LocalizationManager.GetAllTranslationsForKey(term);
+                if (codes != null && translations != null)
+                {
+                    for (int i = 0; i < codes.Count && i < translations.Count; i++)
+                    {
+                        string code = codes[i];
+                        if (string.IsNullOrEmpty(code)) continue;
+                        bool isEnglish = string.Equals(code, "English", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(code, "en", StringComparison.OrdinalIgnoreCase)
+                            || code.StartsWith("en-", StringComparison.OrdinalIgnoreCase)
+                            || code.StartsWith("en_", StringComparison.OrdinalIgnoreCase);
+                        if (isEnglish && !string.IsNullOrEmpty(translations[i])
+                            && !translations[i].StartsWith("Missing:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return translations[i];
+                        }
+                    }
+                }
+                // Fallback to the game's current-language translation, or the
+                // internal scene name if the localization is not ready.
+                string current = I2.Loc.ScriptLocalization.Get(term);
+                return !string.IsNullOrEmpty(current) && !current.StartsWith("Missing:", StringComparison.OrdinalIgnoreCase)
+                    ? current
+                    : fallback;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogWarning($"HSRTimer: failed to resolve English level name for '{term}': {ex.Message}");
+                return fallback;
+            }
+        }
+
         private void LoadReferences(Game game)
         {
             _references.Clear();
             try
             {
-                string levelId = GetLevelId(game);
                 string category = GetCategoryKey();
 
                 if (_multiRunActive && game.currentLevelNumber != 0)
                 {
+                    string levelId = GetLevelId(game);
                     LoadPbMl(levelId, category);
                     LoadLoadMl(levelId, category);
                 }
                 else
                 {
-                    LoadPbIl(levelId, category);
-                    LoadLoadIl(levelId, category);
+                    string ilLevelId = GetIlLevelId(game);
+                    LoadPbIl(ilLevelId, category);
+                    LoadLoadIl(ilLevelId, category);
                 }
             }
             catch (Exception ex)

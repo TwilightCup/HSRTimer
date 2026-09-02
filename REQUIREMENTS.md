@@ -537,7 +537,8 @@
 
 | 来源 | id 规则 | 示例 |
 | ------ | ------ | ------ |
-| BuiltIn | `B{Game.currentLevelNumber}` | `B0`（Intro）、`B8`（Aztec） |
+| BuiltIn（IL 目录） | `Game.levels[Game.currentLevelNumber]` 对应 `LEVEL/{name}` 的英文本地化关卡名；无可用名称时回退 `B{Game.currentLevelNumber}` | `Intro`、`Power Plant`、`Aztec` |
+| BuiltIn（ML 关卡文件） | `B{Game.currentLevelNumber}`（保留多关累计时间线编号） | `B8` |
 | EditorPick | `E{Game.currentLevelNumber}` | `E3` |
 | Workshop | `W{可用的工坊物品 id}`；无可用 id 时回退 `W{Game.currentLevelNumber}` | `W123456789` |
 
