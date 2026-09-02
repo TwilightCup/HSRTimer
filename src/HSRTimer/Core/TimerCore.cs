@@ -75,6 +75,7 @@ namespace HSRTimer
                 // then run per-tick rules.
                 HandleTransitions(game, gState, aState, isLocal);
                 Accumulate(game, gState, aState);
+                TrackWakeUp(game, gState);
                 SubsegmentManager.Instance?.OnPhysicsTick(game, gState, State);
                 RunRules(game, gState);
             }
@@ -296,6 +297,27 @@ namespace HSRTimer
 
             if (!retrying)
                 _cfg.SaveSettings();
+        }
+
+        // ── Wake Up time (per level) ───────────────────────────────────────
+        /// <summary>
+        /// Record the first time the local player leaves the soft/spawn state
+        /// after a level starts. The duration is measured on the authoritative
+        /// game clock from <see cref="RunState.SegmentStart"/> (the moment the
+        /// level became playable). Once recorded it is not reset by later manual
+        /// play-dead/checkpoint respawns within the same segment.
+        /// </summary>
+        private void TrackWakeUp(Game game, GameState gState)
+        {
+            if (State.WakeUpTime.HasValue || !State.InSegment || gState != GameState.PlayingLevel)
+                return;
+            var human = Human.Localplayer;
+            if (human == null)
+                return;
+            if (human.state == HumanState.Spawning || human.state == HumanState.Unconscious || human.state == HumanState.Dead)
+                return;
+
+            State.WakeUpTime = State.GameTime - State.SegmentStart;
         }
 
         // ── Accumulation (B.1) ─────────────────────────────────────────────

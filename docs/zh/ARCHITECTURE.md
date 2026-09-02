@@ -159,7 +159,7 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 
 (单独的 Workshop 关卡通关不算"整局完成" —— 在计时器的语义里它不结束一局。)过去那个"任何分段开始时时钟还在跑就记录 LastRun"的启发式已移除:它会在战役中途的每个关卡边界误触发,而 EditorPick/Workshop 的收尾又永远捕不到;现在 `LastRun` 只在上述真正的完成时更新。
 
-`LastRun` 渲染在**紧挨计时列右侧新建的独立列**中(以主块最宽行为界),不与主计时同列,且仅空闲时(`!InSegment && GameTime == 0`)显示 —— 新局开始计时即隐藏,直到下次整局完成。唯一的例外是战役尾声:最后一个可玩关卡被通关后,游戏会把 Credits(BuiltIn 索引 == `levelCount`)当作普通关卡加载,该分段被标记为 `InEpilogueSegment` —— 它属于刚结束的那局,所以 Credits 期间列持续显示(且 Credits 自身不会记录任何东西:它没有通关区,其分段永远不会算作 `completed`)。**地图包运行中被列为关卡的 Credits 不算尾声**(运行仍在进行 —— collection 中途出现 Credits 只是一关普通关卡),因此 `InEpilogueSegment` 还要求"当前不在地图包运行中"。
+`LastRun` 渲染在**紧挨计时列右侧新建的独立列**中(以主块最宽行为界),不与主计时同列,且仅空闲时(`!InSegment && GameTime == 0`)显示 —— 新局开始计时即隐藏,直到下次整局完成。同一个右侧列在启用 `show_wake_up_time` 时还会把当前关卡的**起身时间**显示为第二行,因此即便 `LastRun` 隐藏,关内也能看到该值;关卡结束或退出时该值会被清除。唯一的例外是战役尾声:最后一个可玩关卡被通关后,游戏会把 Credits(BuiltIn 索引 == `levelCount`)当作普通关卡加载,该分段被标记为 `InEpilogueSegment` —— 它属于刚结束的那局,所以 Credits 期间列持续显示(且 Credits 自身不会记录任何东西:它没有通关区,其分段永远不会算作 `completed`)。**地图包运行中被列为关卡的 Credits 不算尾声**(运行仍在进行 —— collection 中途出现 Credits 只是一关普通关卡),因此 `InEpilogueSegment` 还要求"当前不在地图包运行中"。
 
 ## 配置检查与修复
 

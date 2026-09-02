@@ -17,6 +17,7 @@ restart_clears_forgivable = false
 retry_min_dwell = 0.5
 show_hud = true
 show_real_time = true
+show_wake_up_time = true
 center_loading_saving = false
 language = en
 reset_key = Backspace
@@ -31,6 +32,7 @@ menu_key = Home
 | `retry_min_dwell` | 秒(≥0) | 0.5 | R6 重试时在空场景强制停留的最短时间,从按下重试键开始计。若关卡重载快于该值,则在空场景内等待到该时间后再重载;`0` 表示不强制停留。 |
 | `show_hud` | true/false | true | R2.5.1 |
 | `show_real_time` | true/false | true | R2.5.3 —— 在面板中显示始终活跃的现实时间计时器(默认显示在游戏总时间下方;可关闭) |
+| `show_wake_up_time` | true/false | true | 在右侧列显示“起身时间”——从关卡开始到本地玩家首次离开瘫软状态(出生/装死/死亡)的时间;与“上一局游戏时间”同时可见时显示在其下一行 |
 | `center_loading_saving` | true/false | false | 将游戏自带的右上角"加载/保存"进度提示移动到画面顶部居中 |
 | `language` | BCP-47 代码 | en | 对应一个 `lang/<code>.txt` |
 | `reset_key` | KeyCode | Backspace | 重置成绩键 |
@@ -87,7 +89,7 @@ text = Collection: {collection}
 ```
 
 - `[text]` —— 主文本块直接绘制在屏幕上(无窗口、不可拖动)。`offset_x`/`offset_y` 为距屏幕左上角的像素偏移;`font_size` 为字号;`color_a`/`color_b` 为默认双色渐变(十六进制,见 [HUD.md](HUD.md))。
-- `[rows]` —— 有序行;键为从 0 开始的索引。行类型:`GameTime`、`RealTime`、`CurrentSegment`、`LastSegment`、`LastRun`、`CurrentState`。`RealTime` 还受 `show_real_time` 设置控制(默认开启)。
+- `[rows]` —— 有序行;键为从 0 开始的索引。行类型:`GameTime`、`RealTime`、`CurrentSegment`、`LastSegment`、`LastRun`、`CurrentState`。`RealTime` 还受 `show_real_time` 设置控制(默认开启)。起身时间不是行类型 —— 它显示在“上一局游戏时间”旁边的右侧列,由 `show_wake_up_time` 控制。
 - `[custom.<n>]` —— 位于 `(x, y)` 的任意屏上文本,各自带渐变。模板变量:`{date}`、`{time}`、`{version}`、`{collection}`、`{category}`、`{gametime}`、`{realtime}`。
 
 整个计时器的显示/隐藏由 `settings.ini` 中的 `show_hud`(及切换面板键)控制,不在 `layout.ini` 中。

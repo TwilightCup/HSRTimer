@@ -29,6 +29,11 @@ namespace HSRTimer
         // controls its HUD visibility.
         public bool ShowRealTime = true;
 
+        // Wake Up time is a per-level stat: the time from level start to the
+        // first time the local player leaves the soft/spawn state. Shown in the
+        // right-hand column (the one that also holds Last Run).
+        public bool ShowWakeUpTime = true;
+
         // Move the game's own top-right Loading/Saving progress indicator to
         // the top-center of the screen (default off).
         public bool CenterLoadingSaving = false;
@@ -94,6 +99,7 @@ namespace HSRTimer
                     case "retry_min_dwell": RetryMinDwell = ParseFloat(value, RetryMinDwell); break;
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
                     case "show_real_time": ShowRealTime = ParseBool(value, ShowRealTime); break;
+                    case "show_wake_up_time": ShowWakeUpTime = ParseBool(value, ShowWakeUpTime); break;
                     case "center_loading_saving": CenterLoadingSaving = ParseBool(value, CenterLoadingSaving); break;
                     case "language": CurrentLang = value; break;
                     case "reset_key": ResetKey = ParseKeyCode(value, ResetKey); break;
@@ -152,6 +158,7 @@ namespace HSRTimer
                 ["retry_min_dwell"] = RetryMinDwell.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                 ["show_hud"] = ShowHud ? "true" : "false",
                 ["show_real_time"] = ShowRealTime ? "true" : "false",
+                ["show_wake_up_time"] = ShowWakeUpTime ? "true" : "false",
                 ["center_loading_saving"] = CenterLoadingSaving ? "true" : "false",
                 ["language"] = CurrentLang,
                 ["reset_key"] = ResetKey.ToString(),

@@ -23,6 +23,22 @@ Each row renders one value:
 Rows are edited in `layout.ini` under `[rows]` (ordered by index). The panel
 height adapts to the number of rows.
 
+## Wake Up Time
+
+The right-hand column (the one that holds **Last Run**) also shows **Wake Up
+Time** when enabled. It is the time from the start of a level to the first time
+the local player leaves the soft/spawn state (`Spawning` / `Unconscious` /
+`Dead`) — i.e. the first time the character wakes up after loading. Once
+recorded for a level it is not reset by later manual play-dead or checkpoint
+respawns within that same level; it is cleared when the level is passed or
+exited.
+
+The value is formatted as `SS:mmm` (seconds and milliseconds, no minute/hour
+breakdown). When Last Run is visible, Wake Up Time is drawn as the second row in
+the same column; otherwise it appears as the only row in that column so it
+remains available during the run. Toggle it from the settings panel's Interface
+page, or set `show_wake_up_time = false` in `settings.ini`.
+
 ## Real Time clock
 
 Alongside the game-time rows, the HUD has a **Real Time** clock that measures

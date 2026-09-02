@@ -289,7 +289,10 @@ only on these genuine completions.
 `LastRun` renders in its own column immediately to the right of the timer stack
 (not inside it, anchored at the main block's widest line), and only while idle
 (`!InSegment && GameTime == 0`) — once a new run starts timing it hides until
-the next completion. The one exception is the campaign epilogue: the game loads
+the next completion. That same right-hand column can also show the current level's **Wake Up Time**
+as its second row (gated by `show_wake_up_time`), so the per-level value stays
+visible during a run even when `LastRun` is hidden. It is cleared when the
+level ends or is exited. The one exception is the campaign epilogue: the game loads
 Credits (BuiltIn index == `levelCount`) as an ordinary level right after the
 final playable level is passed, and that segment is flagged
 `InEpilogueSegment` — it belongs to the run that just finished, so the column

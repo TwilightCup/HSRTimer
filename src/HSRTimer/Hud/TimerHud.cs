@@ -86,38 +86,51 @@ namespace HSRTimer
 
             float mainBlockWidth = DrawMainBlock(cfg);
 
-            DrawLastRunColumn(cfg, mainBlockWidth);
+            DrawRightColumn(cfg, mainBlockWidth);
 
             DrawCustomTexts(cfg);
         }
 
         /// <summary>
-        /// The finished-run total ("LastRun") in its own column immediately to
-        /// the right of the main timer stack (offset from the main block's widest
-        /// line, top-aligned with it). Shown only while idle — once a new run
-        /// starts timing (a segment opens), the reference disappears so it never
-        /// competes with the live timers; it comes back on the next completion.
+        /// Draw the right-hand column next to the main timer stack. The first row
+        /// is the finished-run total ("LastRun") when visible, and the second row
+        /// (or the only row when no LastRun is available) is the current level's
+        /// Wake Up time, gated by the "Show Wake Up Time" setting.
         /// </summary>
-        private void DrawLastRunColumn(ConfigService cfg, float mainBlockWidth)
+        private void DrawRightColumn(ConfigService cfg, float mainBlockWidth)
         {
             var state = TimerCore.State;
             if (state == null) return;
-            if (!state.LastRun.HasValue) return;          // nothing finished yet
-            // Hide once a *new* run starts timing — but not during the epilogue
-            // (the Credits level the game loads after the campaign finishes),
-            // which belongs to the run that just ended.
-            if (!state.InEpilogueSegment && (state.InSegment || state.GameTime > 0d))
+
+            // LastRun hides once a *new* run starts timing — but not during the
+            // epilogue (the Credits level the game loads after the campaign
+            // finishes), which belongs to the run that just ended.
+            bool showLastRun = state.LastRun.HasValue
+                && (state.InEpilogueSegment || (!state.InSegment && state.GameTime <= 0d));
+            bool showWakeUp = cfg.Settings.ShowWakeUpTime && state.WakeUpTime.HasValue;
+            if (!showLastRun && !showWakeUp)
                 return;
 
             var layout = cfg.Layout;
             var loc = cfg.Localization;
-            string line = loc.Get("TIMER_LAST_RUN") + ":  " + TimeFormatter.Format(state.LastRun);
 
             // Column gap next to the main block's widest line; top-aligned with it.
             const float gap = 24f;
             float x = layout.OffsetX + mainBlockWidth + gap;
             float y = layout.OffsetY;
-            DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
+
+            if (showLastRun)
+            {
+                string line = loc.Get("TIMER_LAST_RUN") + ":  " + TimeFormatter.Format(state.LastRun);
+                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
+                y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+            }
+
+            if (showWakeUp)
+            {
+                string line = loc.Get("TIMER_WAKE_UP_TIME") + ":  " + TimeFormatter.FormatWakeUp(state.WakeUpTime);
+                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
+            }
         }
 
         /// <summary>
@@ -137,7 +150,7 @@ namespace HSRTimer
             float widest = 0f;
 
             // Each configured row. LastRun is NOT drawn here — it renders in its
-            // own right-hand column (see DrawLastRunColumn) so the finished-run
+            // own right-hand column (see DrawRightColumn) so the finished-run
             // total doesn't sit in the same column as the live timers. RealTime
             // is a regular row type but is additionally gated by the ShowRealTime
             // settings toggle.

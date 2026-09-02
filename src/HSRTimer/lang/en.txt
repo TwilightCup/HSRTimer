@@ -21,6 +21,7 @@ TIMER_SEGMENT_TIME:Segment Time
 TIMER_LAST_TOTAL:Total at Last Segment
 TIMER_LAST_SEGMENT:Last Segment
 TIMER_LAST_RUN:Last Run
+TIMER_WAKE_UP_TIME:Wake Up Time
 TIMER_CURRENT_STATE:State
 
 # ===== Current-state display (R2.1.1, debug) =====
@@ -40,6 +41,7 @@ SETTINGS_RESTART_CLEARS_FORGIVABLE:Clear forgivable flags on pause-menu restart
 SETTINGS_RETRY_MIN_DWELL:Retry empty-scene dwell (s)
 SETTINGS_SHOW_HUD:Show timer HUD
 SETTINGS_SHOW_REAL_TIME:Show Real Time
+SETTINGS_SHOW_WAKE_UP_TIME:Show Wake Up Time
 SETTINGS_CENTER_LOADING_SAVING:Center Loading/Saving prompts
 
 # ===== Settings panel (GUI) =====

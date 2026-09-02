@@ -199,6 +199,7 @@ namespace HSRTimer
             Section(loc.Get("PANEL_HUD"));
             cfg.Settings.ShowHud = Toggle(loc.Get("SETTINGS_SHOW_HUD"), cfg.Settings.ShowHud);
             cfg.Settings.ShowRealTime = Toggle(loc.Get("SETTINGS_SHOW_REAL_TIME"), cfg.Settings.ShowRealTime);
+            cfg.Settings.ShowWakeUpTime = Toggle(loc.Get("SETTINGS_SHOW_WAKE_UP_TIME"), cfg.Settings.ShowWakeUpTime);
             cfg.Settings.CenterLoadingSaving = Toggle(loc.Get("SETTINGS_CENTER_LOADING_SAVING"), cfg.Settings.CenterLoadingSaving);
             cfg.Layout.OffsetX = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), cfg.Layout.OffsetX);
             cfg.Layout.OffsetY = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), cfg.Layout.OffsetY);

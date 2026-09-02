@@ -73,6 +73,22 @@ namespace HSRTimer
     /// </summary>
     public static class TimeFormatter
     {
+        /// <summary>
+        /// Format a short per-level duration as SS:mmm (seconds and milliseconds
+        /// only, no minute/hour breakdown). Used for the Wake Up Time display.
+        /// </summary>
+        public static string FormatWakeUp(double? secondsNullable)
+        {
+            if (!secondsNullable.HasValue || secondsNullable.Value < 0d)
+                return "--:--";
+            double seconds = secondsNullable.Value;
+            int totalMs = (int)((seconds - (int)seconds) * 1000 + 0.5);
+            if (totalMs >= 1000) { seconds += 1; totalMs -= 1000; }
+            int totalSeconds = (int)seconds;
+            return totalSeconds.ToString("D2", CultureInfo.InvariantCulture)
+                + ":" + Three(totalMs);
+        }
+
         public static string Format(double? secondsNullable)
         {
             if (!secondsNullable.HasValue || secondsNullable.Value < 0d)

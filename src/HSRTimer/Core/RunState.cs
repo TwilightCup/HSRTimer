@@ -35,6 +35,16 @@ namespace HSRTimer
         public double? LastRun;
 
         /// <summary>
+        /// Time from the start of the current level to
+        /// the first time the local player leaves the soft/spawn state
+        /// (<c>Spawning</c> / <c>Unconscious</c> / <c>Dead</c>), or null before
+        /// that first wake-up has been observed. Cleared when a new playable
+        /// level starts, when the level ends/exits, and on any reset — it is
+        /// purely a live per-level display value.
+        /// </summary>
+        public double? WakeUpTime;
+
+        /// <summary>
         /// Accumulated wall-clock time since the current run began. Unlike
         /// <see cref="GameTime"/>, this keeps advancing through level loading
         /// screens and pauses, so it represents the real time spent on the run.
@@ -220,6 +230,9 @@ namespace HSRTimer
             }
             if (!keepLastRun)
                 LastRun = null;
+            // Wake Up time is a per-level live stat only; it is cleared whenever
+            // the level ends/exits and on any reset.
+            WakeUpTime = null;
             RealTime = 0d;
             RealTimeActive = false;
             TimingActive = false;
@@ -258,6 +271,7 @@ namespace HSRTimer
             CurrentLevelType = levelType;
             PrevCheckpoint = startCheckpoint;
             MaxCheckpointThisLevel = startCheckpoint;
+            WakeUpTime = null;
             SegmentJustEnded = false;
             LevelPassed = false;
             OnCollectionLastLevel = false;
@@ -284,6 +298,7 @@ namespace HSRTimer
             TimingActive = false;
             InSegment = false;
             SegmentJustEnded = true;
+            WakeUpTime = null; // the level is over; do not keep showing it
         }
     }
 }
