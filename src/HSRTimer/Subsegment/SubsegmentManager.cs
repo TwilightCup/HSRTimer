@@ -90,7 +90,6 @@ namespace HSRTimer
         private readonly Dictionary<string, List<SubsegmentSample>> _multiRunSamples = new Dictionary<string, List<SubsegmentSample>>();
         private int _lastCompletedLevelNumber = -1;
         private long _multiRunTotalMs;
-        private bool _multiRunPbWritten;
 
         private void Awake()
         {
@@ -161,7 +160,6 @@ namespace HSRTimer
                 _multiRunSamples.Clear();
                 _lastCompletedLevelNumber = -1;
                 _multiRunTotalMs = 0L;
-                _multiRunPbWritten = false;
             }
             else if (_multiRunCandidate && game.currentLevelNumber == 1)
             {
@@ -231,16 +229,22 @@ namespace HSRTimer
                     _multiRunTotalMs = (long)Math.Round(endTime * 1000.0);
                 }
 
+                // Each completed multi-run endpoint is also its own subproject
+                // PB (Aztec% / Dark% / Steam% / Any%). Writing at the moment the
+                // endpoint is reached records the run's contained sub-projects
+                // even when the player keeps going (e.g. Any% also refreshes
+                // Aztec% if the run through Aztec was faster). WriteMultiPb is
+                // idempotent for a given subproject because it compares against
+                // the existing meta total_ms.
+                if (_multiRunCandidate && valid && IsMultiEndLevel(game.currentLevelNumber))
+                    WriteMultiPb(state);
+
                 // R8.3.2.2.3: Any% ends with Intro_Reprise (B12). The run is
                 // complete here even though the game immediately loads Credits,
                 // so clear the multi-run tracking after writing (no later exit
                 // should re-write it).
                 if (_multiRunCandidate && game.currentLevelType == WorkshopItemSource.BuiltIn && game.currentLevelNumber == 12)
-                {
-                    if (valid && !_multiRunPbWritten)
-                        WriteMultiPb(state);
                     ClearMultiRun();
-                }
             }
 
             // Leaving through Inactive ends the segment and, for a multi-run,
@@ -249,7 +253,7 @@ namespace HSRTimer
             // reset and the next segment loads fresh references.
             if (!retrying && nowGameState == GameState.Inactive)
             {
-                if (_multiRunCandidate && valid && !_multiRunPbWritten && IsMultiEndLevel(_lastCompletedLevelNumber))
+                if (_multiRunCandidate && valid && IsMultiEndLevel(_lastCompletedLevelNumber))
                     WriteMultiPb(state);
                 if (_options.DebugLogging)
                     Plugin.Logger.LogInfo($"HSRTimer: subsegment level end (completed={completed}, valid={valid}, samples={_currentSamples.Count}).");
@@ -284,7 +288,7 @@ namespace HSRTimer
                 return;
             }
             var state = TimerCore.State;
-            if (state != null && !state.Flags.IsInvalid && !_multiRunPbWritten && _multiRunCandidate && IsMultiEndLevel(_lastCompletedLevelNumber))
+            if (state != null && !state.Flags.IsInvalid && _multiRunCandidate && IsMultiEndLevel(_lastCompletedLevelNumber))
                 WriteMultiPb(state);
             ClearRuntime();
         }
@@ -391,7 +395,6 @@ namespace HSRTimer
             _multiRunSamples.Clear();
             _lastCompletedLevelNumber = -1;
             _multiRunTotalMs = 0L;
-            _multiRunPbWritten = false;
         }
 
         private void ClearMultiRun()
@@ -402,7 +405,6 @@ namespace HSRTimer
             _multiRunSamples.Clear();
             _lastCompletedLevelNumber = -1;
             _multiRunTotalMs = 0L;
-            _multiRunPbWritten = false;
         }
 
         private void EnsureAwakeSample(double gameTime, Vector3 pos)
@@ -823,7 +825,6 @@ namespace HSRTimer
             if (!SubsegmentFileStore.WriteAtomic(metaPath, metaJson))
                 return;
 
-            _multiRunPbWritten = true;
             Plugin.Logger.LogInfo($"HSRTimer: subsegment PB written ML/{subproject}/{category} ({_multiRunTotalMs} ms, {sampleCount} samples).");
         }
 
