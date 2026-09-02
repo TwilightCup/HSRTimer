@@ -4,13 +4,13 @@ using UnityEngine;
 namespace HSRTimer
 {
     /// <summary>
-    /// An IMGUI settings panel, organized into three tabbed pages (General,
-    /// Interface, Category). Edits every user-tunable option and applies it live
-    /// (the HUD/engine read from the shared models each frame, so changes take
-    /// effect immediately). Changes are written to disk when the panel is closed
-    /// or the game exits. Toggled by the configurable Menu key (default Home).
-    /// Editing a keybind is done by focusing its field and pressing the desired
-    /// key.
+    /// An IMGUI settings panel, organized into four tabbed pages (General,
+    /// Interface, Category, Subsegment). Edits every user-tunable option and
+    /// applies it live (the HUD/engine read from the shared models each frame,
+    /// so changes take effect immediately). Changes are written to disk when the
+    /// panel is closed or the game exits. Toggled by the configurable Menu key
+    /// (default Home). Editing a keybind is done by focusing its field and
+    /// pressing the desired key.
     /// </summary>
     public class SettingsPanel : MonoBehaviour
     {
@@ -34,7 +34,7 @@ namespace HSRTimer
         // Active tab page.
         private int _tab;
         private string[] _tabDisplays;
-        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY" };
+        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT" };
 
         // Keybind rebind state: which logical action is awaiting a keypress.
         private string _pendingRebind;
@@ -145,6 +145,7 @@ namespace HSRTimer
                 case 0: DrawGeneral(cfg, s, loc); break;
                 case 1: DrawInterface(cfg, loc); break;
                 case 2: DrawCategory(cfg, loc); break;
+                case 3: DrawSubsegment(cfg, s, loc); break;
             }
 
             GUILayout.Space(8);
@@ -213,6 +214,40 @@ namespace HSRTimer
             DrawTagMultiSelect(cfg, loc);
         }
 
+        // ── Page: Subsegment (R8) ──
+        private void DrawSubsegment(ConfigService cfg, SettingsModel s, LocalizationService loc)
+        {
+            Section(loc.Get("PANEL_SUBSEGMENT"));
+            s.SubsegmentEnable = Toggle(loc.Get("SETTINGS_SUBSEGMENT_ENABLE"), s.SubsegmentEnable);
+            s.SubsegmentDebugLogging = Toggle(loc.Get("SETTINGS_SUBSEGMENT_DEBUG_LOGGING"), s.SubsegmentDebugLogging);
+
+            s.SubsegmentPBPath = TextFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PB_PATH"), s.SubsegmentPBPath);
+            s.SubsegmentLoadPath = TextFieldRow(loc.Get("SETTINGS_SUBSEGMENT_LOAD_PATH"), s.SubsegmentLoadPath);
+
+            Section(loc.Get("PANEL_KEYBINDS"));
+            KeybindRow(loc, "SETTINGS_SUBSEGMENT_TOGGLE_KEY", () => s.SubsegmentToggleKey, k => s.SubsegmentToggleKey = k);
+
+            Section(loc.Get("SETTINGS_SUBSEGMENT_MULTI_PROJECT"));
+            string[] projects = { "Aztec%", "Dark%", "Steam%", "Any%" };
+            int idx = System.Array.IndexOf(projects, s.SubsegmentMultiProject);
+            if (idx < 0) idx = 3;
+            int next = GUILayout.SelectionGrid(idx, projects, 2, _button);
+            if (next != idx) s.SubsegmentMultiProject = projects[next];
+
+            s.SubsegmentPlaneRadius = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_RADIUS"), s.SubsegmentPlaneRadius, "0.###"));
+            s.SubsegmentMinMove = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MIN_MOVE"), s.SubsegmentMinMove, "0.###"));
+            s.SubsegmentSampleInterval = Mathf.Max(0.01f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_SAMPLE_INTERVAL"), s.SubsegmentSampleInterval, "0.###"));
+            s.SubsegmentQuietSettleSeconds = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_QUIET_SETTLE_SECONDS"), s.SubsegmentQuietSettleSeconds, "0.###"));
+            s.SubsegmentPlaneDebounceSeconds = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_DEBOUNCE_SECONDS"), s.SubsegmentPlaneDebounceSeconds, "0.###"));
+            s.SubsegmentRespawnJumpMeters = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_RESPAWN_JUMP_METERS"), s.SubsegmentRespawnJumpMeters, "0.###"));
+            s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
+
+            Section(loc.Get("PANEL_HUD"));
+            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
+            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
+            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
+        }
+
         // ── widgets ──
 
         private void Section(string title)
@@ -242,6 +277,15 @@ namespace HSRTimer
             float parsed;
             if (float.TryParse(newText, out parsed)) return parsed;
             return value;
+        }
+
+        private string TextFieldRow(string label, string value)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label + ":", _label, GUILayout.Width(110));
+            string newText = GUILayout.TextField(value, _textField, GUILayout.Width(220));
+            GUILayout.EndHorizontal();
+            return newText;
         }
 
         private void ColorRow(LocalizationService loc, string key, Color c, System.Action<Color> set)
@@ -310,6 +354,7 @@ namespace HSRTimer
             if (key == "SETTINGS_RESET_KEY") s.ResetKey = pressed;
             else if (key == "SETTINGS_RETRY_KEY") s.RetryKey = pressed;
             else if (key == "SETTINGS_MENU_KEY") s.MenuKey = pressed;
+            else if (key == "SETTINGS_SUBSEGMENT_TOGGLE_KEY") s.SubsegmentToggleKey = pressed;
         }
 
         // Multi-select of rule tags. There are no category presets — every

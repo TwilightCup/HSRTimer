@@ -143,6 +143,7 @@ namespace HSRTimer
                 }
                 else
                 {
+                    SubsegmentManager.Instance?.OnRetryStart();
                     notifyKey = "NOTIFY_COLLECTION_RESTARTED";
                     return true;
                 }
@@ -160,6 +161,7 @@ namespace HSRTimer
             state.SegmentStart = 0d;
             state.RealTime = 0d;
             state.RealTimeActive = false;
+            SubsegmentManager.Instance?.OnRetryStart();
 
             // R6.4: pick the retry target. During a campaign run that was
             // entered from the menu, the player wants to practice the level

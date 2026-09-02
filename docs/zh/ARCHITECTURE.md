@@ -55,6 +55,11 @@ Config/
   ConfigService.cs        门面
   PersistenceService.cs   容错 INI 读写
   SettingsModel.cs, EnabledTagsModel.cs, LayoutModel.cs
+Subsegment/
+  SubsegmentModels.cs     采样/元数据/参考项/检测平面数据类型
+  SubsegmentManager.cs     记录器 + 加载器 + 比较器生命周期
+  SubsegmentFileStore.cs   JSONL/meta 文件读写
+  SubsegmentHud.cs         独立的屏幕左侧居中的排行榜 HUD
 Localization/
   LocalizationService.cs, LanguageFile.cs
 LcIntegration.cs          可选的 LevelCollections 软集成

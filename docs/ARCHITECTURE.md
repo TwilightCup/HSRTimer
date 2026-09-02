@@ -70,6 +70,11 @@ Config/
   ConfigService.cs        facade
   PersistenceService.cs   tolerant INI reader/writer
   SettingsModel.cs, EnabledTagsModel.cs, LayoutModel.cs
+Subsegment/
+  SubsegmentModels.cs      sample/meta/reference/plane data types
+  SubsegmentManager.cs      recorder + loader + comparator lifecycle
+  SubsegmentFileStore.cs   JSONL/meta file I/O
+  SubsegmentHud.cs         independent left-middle leaderboard HUD
 Localization/
   LocalizationService.cs, LanguageFile.cs
 LcIntegration.cs          optional LevelCollections soft integration
