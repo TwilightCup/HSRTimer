@@ -75,6 +75,7 @@ namespace HSRTimer
                 // then run per-tick rules.
                 HandleTransitions(game, gState, aState, isLocal);
                 Accumulate(game, gState, aState);
+                SubsegmentManager.Instance?.OnPhysicsTick(game, gState, State);
                 RunRules(game, gState);
             }
 
@@ -98,6 +99,10 @@ namespace HSRTimer
             // paused when timeScale=0).
             if (SegmentLogic.ShouldAccumulatePause(gState, State.TimingActive))
                 State.GameTime += Time.unscaledDeltaTime;
+
+            // Subsegment quiet-settle windows run in unscaled time so they
+            // continue through pauses (R8.4.3.4).
+            SubsegmentManager.Instance?.OnUpdate();
 
             // Real-time clock: unlike game time this is not tied to a playable
             // state, so it keeps advancing through level loading screens and
@@ -152,6 +157,7 @@ namespace HSRTimer
             // previous completed run's total as a reference.
             if (_opt.AutoReset && SegmentLogic.IsAutoReset(prevG, gState, prevA, aState, isLocal, State.Retrying))
             {
+                SubsegmentManager.Instance?.OnRunExit();
                 DoFullReset(keepLastValues: false, keepLastRun: true);
                 return;
             }
@@ -167,6 +173,7 @@ namespace HSRTimer
             // (keeping the previous completed run's total as a reference).
             if (SegmentLogic.IsMenuEntry(prevA, aState))
             {
+                SubsegmentManager.Instance?.OnRunExit();
                 DoFullReset(keepLastValues: false, keepLastRun: true);
                 State.MenuEntryPending = true;
             }
@@ -237,6 +244,9 @@ namespace HSRTimer
 
             State.Game = game; // cache for the HUD / rules
 
+            // Start/reload the local subsegment module (R8).
+            SubsegmentManager.Instance?.OnLevelStart(game, State);
+
             // Fire tag OnLevelEnter for every enabled tag.
             ForEachEnabledRule(rule => Safe(rule, r => r.OnLevelEnter(MakeContext(game))));
         }
@@ -245,6 +255,9 @@ namespace HSRTimer
         {
             double end = State.GameTime;
             bool retrying = State.Retrying;
+            SubsegmentManager.Instance?.OnLevelEnd(
+                game, State, end, completed, retrying,
+                game != null ? game.state : GameState.Inactive, App.state);
             State.EndSegment(end, completed);
 
             // Fire tag OnLevelExit — but only for a genuine level completion. A
@@ -354,6 +367,9 @@ namespace HSRTimer
             if (SettingsPanel.Instance != null && SettingsPanel.Instance.IsVisible)
                 return;
 
+            if (SubsegmentManager.Instance != null)
+                SubsegmentManager.Instance.HandleKeybind(s.SubsegmentToggleKey);
+
             if (Input.GetKeyDown(s.ResetKey))
             {
                 DoFullReset(keepLastValues: false);
@@ -370,6 +386,7 @@ namespace HSRTimer
 
         private void DoFullReset(bool keepLastValues, bool keepLastRun = false)
         {
+            SubsegmentManager.Instance?.OnRunReset();
             State.Reset(keepLastValues, keepLastRun);
             State.Flags.ClearAll();
             _cpEdgeInit = false;

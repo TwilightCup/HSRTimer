@@ -92,6 +92,49 @@ text = Collection: {collection}
 
 整个计时器的显示/隐藏由 `settings.ini` 中的 `show_hud`(及切换面板键)控制,不在 `layout.ini` 中。
 
+## settings.ini — [Subsegment]
+
+自 R8 起，`[Subsegment]` 节会与普通 `[settings]` 节一同写入 `settings.ini`（也可手动添加）。它同样由容错读取/写入器管理。
+
+```ini
+[Subsegment]
+Enable = true
+PBPath = subsegment/pb
+LoadPath = subsegment/load
+ToggleKey = Tab
+MultiProject = Any%
+PlaneRadius = 50.0
+MinMove = 0.5
+SampleInterval = 1.0
+QuietSettleSeconds = 0.5
+PlaneDebounceSeconds = 0.2
+RespawnJumpMeters = 100.0
+MaxLeaderboardEntries = 8
+DebugLogging = false
+HudFontSize = 16
+HudOffsetX = 16
+HudOffsetY = 0
+```
+
+| 键 | 默认 | 说明 |
+|----|------|------|
+| `Enable` | true | 总开关；关闭后不记录、不加载、不显示。 |
+| `PBPath` | `subsegment/pb` | 相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。写入 PB 时自动创建目录。 |
+| `LoadPath` | `subsegment/load` | 玩家手动放置的采样目录；目录缺失时静默不加载外部参考。 |
+| `ToggleKey` | `Tab` | 排行榜显示/隐藏键。 |
+| `MultiProject` | `Any%` | 多关实时对比使用的子项目（`Aztec%`/`Dark%`/`Steam%`/`Any%`）。PB 写入仍按实际最后完成关卡判定。 |
+| `PlaneRadius` | `50.0` | 虚拟检测平面半径（米）。 |
+| `MinMove` | `0.5` | 最小采样位移；低于该值的位移置零，且不建平面。 |
+| `SampleInterval` | `1.0` | 游戏时间采样间隔（秒）。 |
+| `QuietSettleSeconds` | `0.5` | 穿越候选的静默结算窗（秒）。 |
+| `PlaneDebounceSeconds` | `0.2` | 同一平面的穿越防抖窗口（秒）。 |
+| `RespawnJumpMeters` | `100.0` | 轨迹连续性阈值；超过视为失败折返，不做陈旧回路抑制。 |
+| `MaxLeaderboardEntries` | `8` | 排行榜最多显示项数。 |
+| `DebugLogging` | false | 详细 subsegment 日志（采样/加载/平面/结算/PB 写入）。 |
+| `HudFontSize` | 16 | 排行榜字号，独立于主计时面板。 |
+| `HudOffsetX` | 16 | 排行榜左边缘偏移。 |
+| `HudOffsetY` | 0 | 相对自动垂直居中的纵向偏移。 |
+
 ## lang/*.txt
 
 见 [LOCALIZATION.md](LOCALIZATION.md)。

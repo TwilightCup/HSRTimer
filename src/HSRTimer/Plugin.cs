@@ -62,6 +62,12 @@ namespace HSRTimer
             var panelGo = new GameObject("HSRTimer.Panel");
             Object.DontDestroyOnLoad(panelGo);
             panelGo.AddComponent<SettingsPanel>();
+
+            // 6. Subsegment module (R8): recorder/loader/comparator + leaderboard HUD.
+            var subGo = new GameObject("HSRTimer.Subsegment");
+            Object.DontDestroyOnLoad(subGo);
+            subGo.AddComponent<SubsegmentManager>();
+            subGo.AddComponent<SubsegmentHud>();
         }
 
         /// <summary>

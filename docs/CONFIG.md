@@ -116,6 +116,51 @@ text = Collection: {collection}
 Show/hide of the whole timer is controlled by `show_hud` in `settings.ini`
 (and the Toggle HUD keybind), not in `layout.ini`.
 
+## settings.ini — [Subsegment]
+
+Starting with R8, the `[Subsegment]` section is written into `settings.ini`
+alongside the regular `[settings]` section (or may be added by hand). It is
+managed by the same tolerant reader/writer.
+
+```ini
+[Subsegment]
+Enable = true
+PBPath = subsegment/pb
+LoadPath = subsegment/load
+ToggleKey = Tab
+MultiProject = Any%
+PlaneRadius = 50.0
+MinMove = 0.5
+SampleInterval = 1.0
+QuietSettleSeconds = 0.5
+PlaneDebounceSeconds = 0.2
+RespawnJumpMeters = 100.0
+MaxLeaderboardEntries = 8
+DebugLogging = false
+HudFontSize = 16
+HudOffsetX = 16
+HudOffsetY = 0
+```
+
+| Key | Default | Notes |
+|-----|---------|-------|
+| `Enable` | true | Master switch; disables sampling, loading, and the leaderboard. |
+| `PBPath` | `subsegment/pb` | Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. Created automatically when a PB is written. |
+| `LoadPath` | `subsegment/load` | Manually-placed reference samples. Missing directory silently means no external references. |
+| `ToggleKey` | `Tab` | Show/hide the subsegment leaderboard. |
+| `MultiProject` | `Any%` | Multi-run project used for live ML comparisons (`Aztec%`/`Dark%`/`Steam%`/`Any%`). PB writes still use the actual last-completed endpoint. |
+| `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. |
+| `MinMove` | `0.5` | Minimum sampled move distance; smaller moves become zero-displacement samples and do not build planes. |
+| `SampleInterval` | `1.0` | Game-time seconds between subsegment samples. |
+| `QuietSettleSeconds` | `0.5` | Quiet settle window for crossing candidates. |
+| `PlaneDebounceSeconds` | `0.2` | Same-plane candidate debounce window. |
+| `RespawnJumpMeters` | `100.0` | Continuity threshold; larger frame-to-frame sample jumps mean a failed/rewound segment is not treated as a stale loop. |
+| `MaxLeaderboardEntries` | `8` | Maximum displayed leaderboard rows. |
+| `DebugLogging` | false | Detailed subsegment logging (sample/load/plane/settle/PB writes). |
+| `HudFontSize` | 16 | Subsegment leaderboard font size, independent of the main timer HUD. |
+| `HudOffsetX` | 16 | Left edge of the subsegment leaderboard. |
+| `HudOffsetY` | 0 | Vertical offset from the automatic left-middle centering. |
+
 ## lang/*.txt
 
 See [LOCALIZATION.md](LOCALIZATION.md).
