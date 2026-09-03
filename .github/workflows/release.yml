@@ -18,10 +18,9 @@ jobs:
   release:
     runs-on: self-hosted
 
-    env:
-      # 自托管 runner 上必须预先放置游戏/BepInEx 引用 DLL，通过 secrets 传入绝对路径：
-      #   GAME_MANAGED  -> 游戏 Managed 目录（Assembly-CSharp.dll、HumanAPI.dll、UnityEngine*.dll 等）
-      #   BEPINEX_CORE  -> BepInEx core 目录（BepInEx.dll、BepInEx.Harmony.dll、0Harmony.dll）
+    # 自托管 runner 上必须预先放置游戏/BepInEx 引用 DLL，通过 secrets 传入绝对路径：
+    #   GAME_MANAGED  -> 游戏 Managed 目录（Assembly-CSharp.dll、HumanAPI.dll、UnityEngine*.dll 等）
+    #   BEPINEX_CORE  -> BepInEx core 目录（BepInEx.dll、BepInEx.Harmony.dll、0Harmony.dll）
 
     steps:
       - name: Checkout
