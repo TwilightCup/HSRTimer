@@ -48,6 +48,7 @@ namespace HSRTimer
         // Transient language/code lists.
         private string[] _langCodes;
         private string[] _langDisplays;
+        private bool _langDropdownOpen;
 
         private void Awake()
         {
@@ -74,6 +75,7 @@ namespace HSRTimer
                 ConfigService.Instance.SaveSettings();
             if (_visible)
             {
+                _langDropdownOpen = false;
                 RefreshLanguageList();
                 RefreshTabDisplays();
             }
@@ -383,18 +385,38 @@ namespace HSRTimer
             }
         }
 
-        // Single-select language picker (SelectionGrid with the _button style so
-        // the selected language is visually indicated).
+        // Single-select language picker shown as a dropdown. The displayed names
+        // come directly from each language file's __LANG_NAME__ entry; the code
+        // is not appended, so the picker shows exactly what translators defined.
+        // Unity's IMGUI version in this game has no GUILayout.Popup, so the
+        // dropdown is built from a button plus a collapsible list of buttons.
         private void DrawLanguageSelector(ConfigService cfg, LocalizationService loc)
         {
             if (_langCodes == null) RefreshLanguageList();
+            if (_langCodes == null || _langCodes.Length == 0) return;
+
             int current = System.Array.IndexOf(_langCodes, cfg.Localization.CurrentCode);
             if (current < 0) current = 0;
-            int next = GUILayout.SelectionGrid(current, _langDisplays, 1, _button);
-            if (next != current && _langCodes != null && next >= 0 && next < _langCodes.Length)
+
+            string selected = _langDisplays[current] + "  " + loc.Get("PANEL_LANG_SELECT_HINT");
+            if (GUILayout.Button(selected, _button))
+                _langDropdownOpen = !_langDropdownOpen;
+
+            if (_langDropdownOpen)
             {
-                cfg.Localization.SetLanguage(_langCodes[next]);
-                cfg.Settings.CurrentLang = cfg.Localization.CurrentCode;
+                for (int i = 0; i < _langDisplays.Length; i++)
+                {
+                    string item = i == current ? "✓  " + _langDisplays[i] : _langDisplays[i];
+                    if (GUILayout.Button(item, _button))
+                    {
+                        if (i != current)
+                        {
+                            cfg.Localization.SetLanguage(_langCodes[i]);
+                            cfg.Settings.CurrentLang = cfg.Localization.CurrentCode;
+                        }
+                        _langDropdownOpen = false;
+                    }
+                }
             }
         }
 
@@ -407,7 +429,7 @@ namespace HSRTimer
             foreach (var lang in cfg.Localization.Languages)
             {
                 codes.Add(lang.Code);
-                displays.Add((lang.DisplayName ?? lang.Code) + "  [" + lang.Code + "]");
+                displays.Add(lang.DisplayName ?? lang.Code);
             }
             _langCodes = codes.ToArray();
             _langDisplays = displays.ToArray();

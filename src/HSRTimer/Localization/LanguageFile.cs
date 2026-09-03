@@ -27,7 +27,8 @@ namespace HSRTimer
     /// <code>KEY:Translation</code>
     /// Rules: '#' lines are comments; blank lines ignored; the value is
     /// everything after the first ':'; a literal '\n' escape becomes a newline;
-    /// keys must match <c>^[A-Z][A-Z0-9_]*$</c>. UTF-8 (no BOM) assumed;
+    /// keys must match <c>^[A-Z][A-Z0-9_]*$</c>, except the special
+    /// <c>__LANG_NAME__</c> key which is always allowed. UTF-8 (no BOM) assumed;
     /// '\n' and '\r\n' line endings both tolerated. Malformed lines are skipped
     /// with a logged warning naming the file and line number (N6 / R7.5.2).
     /// </summary>
@@ -87,15 +88,17 @@ namespace HSRTimer
                 string key = line.Substring(0, colon);
                 string value = Unescape(line.Substring(colon + 1));
 
-                if (!KeyPattern.IsMatch(key))
-                {
-                    Plugin.Logger.LogWarning($"HSRTimer: {sourceName}({lineNo}): invalid key '{key}' (must match [A-Z][A-Z0-9_]*), skipping.");
-                    continue;
-                }
-
+                // The special __LANG_NAME__ key intentionally starts with an
+                // underscore, so handle it before the normal key pattern check.
                 if (key == "__LANG_NAME__")
                 {
                     displayName = value;
+                    continue;
+                }
+
+                if (!KeyPattern.IsMatch(key))
+                {
+                    Plugin.Logger.LogWarning($"HSRTimer: {sourceName}({lineNo}): invalid key '{key}' (must match [A-Z][A-Z0-9_]*), skipping.");
                     continue;
                 }
 

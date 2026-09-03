@@ -76,15 +76,18 @@ namespace HSRTimer
                     var lang = new Language { Code = code };
                     foreach (var e in LanguageFile.Parse(path, out displayName))
                         lang.Map[e.Key] = e.Value;
-                    lang.DisplayName = displayName ?? code;
+                    bool hasDisplayName = !string.IsNullOrEmpty(displayName);
+                    lang.DisplayName = hasDisplayName ? displayName : code;
 
                     // Merge into any existing (embedded) map so disk files can be
-                    // partial overrides; otherwise register a new language.
+                    // partial overrides; otherwise register a new language. A
+                    // partial disk override without __LANG_NAME__ must not replace
+                    // the embedded language's real display name with the code.
                     Language existing;
                     if (_languages.TryGetValue(code, out existing))
                     {
                         foreach (var kv in lang.Map) existing.Map[kv.Key] = kv.Value;
-                        if (!string.IsNullOrEmpty(lang.DisplayName)) existing.DisplayName = lang.DisplayName;
+                        if (hasDisplayName) existing.DisplayName = lang.DisplayName;
                     }
                     else
                     {
