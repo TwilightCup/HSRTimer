@@ -272,8 +272,8 @@ namespace HSRTimer
         private float FloatFieldRow(string label, float value, string format = "F0")
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(label + ":", _label, GUILayout.Width(110));
             string newText = GUILayout.TextField(value.ToString(format), _textField, GUILayout.Width(70));
+            GUILayout.Label(label, _label);
             GUILayout.EndHorizontal();
             float parsed;
             if (float.TryParse(newText, out parsed)) return parsed;
@@ -283,8 +283,8 @@ namespace HSRTimer
         private string TextFieldRow(string label, string value)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(label + ":", _label, GUILayout.Width(110));
             string newText = GUILayout.TextField(value, _textField, GUILayout.Width(220));
+            GUILayout.Label(label, _label);
             GUILayout.EndHorizontal();
             return newText;
         }
@@ -303,9 +303,6 @@ namespace HSRTimer
 
             // ── Hex input ──
             GUILayout.BeginHorizontal();
-            GUILayout.Label(loc.Get(key), _label, GUILayout.Width(110));
-            GUILayout.Label(loc.Get("PANEL_COLOR_HEX"), _label, GUILayout.Width(34));
-
             if (!_colorHexBuf.TryGetValue(key, out string buf))
                 buf = GradientText.ToHex(c);
             string newText = GUILayout.TextField(buf, _textField, GUILayout.Width(90));
@@ -313,6 +310,8 @@ namespace HSRTimer
             // Typing drives the color only when the text parses.
             if (newText != buf && GradientText.TryParseColor(newText, out Color fromText))
                 set(fromText);
+            GUILayout.Label(loc.Get(key), _label);
+            GUILayout.Label(loc.Get("PANEL_COLOR_HEX"), _label);
             GUILayout.EndHorizontal();
 
             // ── RGB sliders ──
