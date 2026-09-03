@@ -83,8 +83,8 @@ See [CATEGORIES.md](CATEGORIES.md).
 offset_x = 16
 offset_y = 16
 font_size = 18
-color_a = FFD950FF
-color_b = FFF299FF
+color_a = FF5272FF
+color_b = FF9A72FF
 
 [rows]
 0 = GameTime

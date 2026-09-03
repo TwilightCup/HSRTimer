@@ -65,9 +65,9 @@ namespace HSRTimer
         public int FontSize = 18;
 
         /// <summary>Default gradient colors applied to rows without their own colors.</summary>
-        public Color ColorA = new Color(1f, 0.85f, 0.3f, 1f);
+        public Color ColorA = GradientText.ParseColor("FF5272FF", Color.white);
 
-        public Color ColorB = new Color(1f, 0.95f, 0.6f, 1f);
+        public Color ColorB = GradientText.ParseColor("FF9A72FF", Color.white);
 
         public void Load()
         {

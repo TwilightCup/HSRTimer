@@ -61,8 +61,8 @@ as hex, either `RRGGBB` (opaque) or `RRGGBBAA` (with alpha). Set both in
 `layout.ini` `[panel]`:
 
 ```ini
-color_a = FFD950FF   # start color (golden, fully opaque)
-color_b = FFF299FF   # end color
+color_a = FF5272FF   # start color (pink-red, fully opaque)
+color_b = FF9A72FF   # end color
 ```
 
 If both colors are equal, the text is a flat single color. Per-character alpha
