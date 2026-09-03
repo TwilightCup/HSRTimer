@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>HSRTimer</AssemblyName>
     <Product>HSRTimer</Product>
-    <Version>dev</Version>
+    <Version>0.0.0</Version>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RootNamespace>HSRTimer</RootNamespace>

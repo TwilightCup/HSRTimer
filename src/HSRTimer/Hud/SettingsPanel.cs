@@ -109,7 +109,7 @@ namespace HSRTimer
         {
             if (!_visible) return;
             EnsureStyles();
-            _rect = GUI.Window(GetInstanceID(), _rect, Draw, "HSRTimer");
+            _rect = GUI.Window(GetInstanceID(), _rect, Draw, "HSRTimer - " + PluginInfo.PLUGIN_VERSION);
         }
 
         private void Draw(int id)
