@@ -20,7 +20,7 @@ namespace HSRTimer
 
         /// <summary>Whether the panel is currently shown on screen.</summary>
         public bool IsVisible => _visible;
-        private Rect _rect = new Rect(60f, 60f, 460f, 580f);
+        private Rect _rect = new Rect(60f, 60f, 640f, 580f);
 
         // Styles. _toggle (from GUI.skin.toggle) and _button (from GUI.skin.button)
         // are critical: passing a label-derived style to Toggle/SelectionGrid
@@ -136,11 +136,15 @@ namespace HSRTimer
                 }
             }
 
-            // Tab bar (kept outside the scroll view).
+            // Left-hand vertical category navigation, kept outside the scroll view.
             RefreshTabDisplays();
-            _tab = GUILayout.Toolbar(_tab, _tabDisplays, _button);
+            GUILayout.BeginHorizontal();
 
-            _scroll = GUILayout.BeginScrollView(_scroll);
+            int nextTab = GUILayout.SelectionGrid(_tab, _tabDisplays, 1, _button, GUILayout.Width(120));
+            if (nextTab != _tab) _tab = nextTab;
+            GUILayout.Space(4);
+
+            _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.ExpandWidth(true));
 
             switch (_tab)
             {
@@ -164,6 +168,8 @@ namespace HSRTimer
             GUILayout.Label(loc.Get("PANEL_FOOTER"), _small);
 
             GUILayout.EndScrollView();
+
+            GUILayout.EndHorizontal();
 
             GUI.DragWindow(new Rect(0, 0, _rect.width, 20));
         }
