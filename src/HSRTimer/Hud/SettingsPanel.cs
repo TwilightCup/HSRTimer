@@ -243,6 +243,12 @@ namespace HSRTimer
             int next = GUILayout.SelectionGrid(idx, projects, 2, _button);
             if (next != idx) s.SubsegmentMultiProject = projects[next];
 
+            Section(loc.Get("PANEL_HUD"));
+            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
+            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
+            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
+
+            Section(loc.Get("SETTINGS_SUBSEGMENT_DETAILS"));
             s.SubsegmentPlaneRadius = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_RADIUS"), s.SubsegmentPlaneRadius, "0.###"));
             s.SubsegmentMinMove = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MIN_MOVE"), s.SubsegmentMinMove, "0.###"));
             s.SubsegmentSampleInterval = Mathf.Max(0.01f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_SAMPLE_INTERVAL"), s.SubsegmentSampleInterval, "0.###"));
@@ -250,11 +256,6 @@ namespace HSRTimer
             s.SubsegmentPlaneDebounceSeconds = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_DEBOUNCE_SECONDS"), s.SubsegmentPlaneDebounceSeconds, "0.###"));
             s.SubsegmentRespawnJumpMeters = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_RESPAWN_JUMP_METERS"), s.SubsegmentRespawnJumpMeters, "0.###"));
             s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
-
-            Section(loc.Get("PANEL_HUD"));
-            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
-            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
-            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
         }
 
         // ── widgets ──
