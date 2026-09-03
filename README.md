@@ -38,8 +38,8 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for the full specification.
 ## Install
 
 1. Install **BepInEx** for *Human: Fall Flat* (tested with BepInEx 5.x / HarmonyX).
-2. Build (see below) or obtain `HSRTimer.dll`.
-3. Copy `HSRTimer.dll` into the game's `BepInEx/plugins/` folder.
+2. Build (see below) or obtain `HSRTimer-v{version}.dll`.
+3. Copy `HSRTimer-v{version}.dll` into the game's `BepInEx/plugins/` folder.
 4. Copy the `lang/*.txt` files into the plugin runtime dir
    `<BepInEx config dir>/HSRTimer/lang/`
    (the plugin creates this dir and ships defaults on first run if absent).
@@ -70,7 +70,7 @@ BEPINEX_CORE="/path/to/BepInEx/core" \
 dotnet build src/HSRTimer/HSRTimer.csproj
 ```
 
-The output is `src/HSRTimer/bin/Debug/netstandard2.0/HSRTimer.dll`.
+The output includes a versioned copy at `src/HSRTimer/bin/Debug/netstandard2.0/HSRTimer-v{version}.dll`; deploy that file. The unversioned `HSRTimer.dll` is also emitted for external plugin compatibility.
 
 ## Configuration
 

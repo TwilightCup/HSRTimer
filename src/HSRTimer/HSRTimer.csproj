@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>HSRTimer</AssemblyName>
     <Product>HSRTimer</Product>
-    <Version>1.0.0</Version>
+    <Version>dev</Version>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RootNamespace>HSRTimer</RootNamespace>
@@ -113,5 +113,12 @@
       <LogicalName>HSRTimer.lang.zh-Hans.txt</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
+
+  <!-- Keep the assembly identity as HSRTimer for external plugin
+       compatibility, but also emit a versioned filename for releases. -->
+  <Target Name="CopyVersionedDll" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)HSRTimer-v$(Version).dll" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFiles="$(TargetDir)HSRTimer-v$(Version).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+  </Target>
 
 </Project>

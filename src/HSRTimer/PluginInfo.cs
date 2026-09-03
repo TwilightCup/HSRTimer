@@ -8,6 +8,6 @@ namespace HSRTimer
     {
         public const string PLUGIN_GUID = "HSRTimer";
         public const string PLUGIN_NAME = "HSRTimer";
-        public const string PLUGIN_VERSION = "1.0.0";
+        public const string PLUGIN_VERSION = "dev";
     }
 }

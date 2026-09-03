@@ -30,8 +30,8 @@ HSRTimer 维护一个精确的 **游戏时间** 时钟（以游戏物理帧为�
 ## 安装
 
 1. 为《人类一败涂地》安装 **BepInEx**(已测试 BepInEx 5.x / HarmonyX)。
-2. 自行构建(见下)或获取 `HSRTimer.dll`。
-3. 将 `HSRTimer.dll` 复制到游戏的 `BepInEx/plugins/` 目录。
+2. 自行构建(见下)或获取 `HSRTimer-v{version}.dll`。
+3. 将 `HSRTimer-v{version}.dll` 复制到游戏的 `BepInEx/plugins/` 目录。
 4. 将 `lang/*.txt` 复制到插件运行时目录
    `<BepInEx 配置目录>/HSRTimer/lang/`
    (插件首次运行时若该目录缺失会自动创建并写入默认文件)。
@@ -60,7 +60,7 @@ BEPINEX_CORE="/路径/BepInEx/core" \
 dotnet build src/HSRTimer/HSRTimer.csproj
 ```
 
-产物为 `src/HSRTimer/bin/Debug/netstandard2.0/HSRTimer.dll`。
+产物包含版本化副本 `src/HSRTimer/bin/Debug/netstandard2.0/HSRTimer-v{version}.dll`，部署时使用该文件；同时仍会生成不带版本号的 `HSRTimer.dll` 以兼容外部插件引用。
 
 ## 配置
 
