@@ -4,10 +4,10 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 
 ## 1.1.0
 
-- **Release Date:** Unreleased
+- **Release Date:** *06 Sep 2026*
 - **Highlights:**
   - Redesigned the settings panel with a language dropdown, left-side navigation, and clearer input fields.
-  - Added a "Specify retry level" option so one-key retry can target a chosen level by English name or Workshop ID, and can be triggered directly from the menu.
+  - Added a "Specify retry level" option so one-key retry can target a chosen level by English name (e.g., Mansion. Case-insensitive) or Workshop ID, and can be triggered directly from the menu.
 - **Details:**
   - Settings panel input descriptions now appear next to the fields.
   - Added a language dropdown to the settings panel; the configured language name is honored.
@@ -16,4 +16,3 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - Grouped subsegment detailed parameters under their own section.
   - Added an optional "Specify retry level" setting to retry (or directly enter from the menu) a chosen level by English name or Workshop ID.
   - The subsegment load directory is now created automatically when the plugin loads.
-- **Contributors:** _To be filled from PRs merged into dev._
