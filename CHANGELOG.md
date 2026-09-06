@@ -2,7 +2,7 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
-## 0.0.0
+## 1.1.0
 
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
