@@ -154,7 +154,7 @@ HudOffsetY = 0
 |-----|---------|-------|
 | `Enable` | true | Master switch; disables sampling, loading, and the leaderboard. |
 | `PBPath` | `subsegment/pb` | Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. Created automatically when a PB is written. |
-| `LoadPath` | `subsegment/load` | Manually-placed reference samples. Missing directory silently means no external references. |
+| `LoadPath` | `subsegment/load` | Manually-placed reference samples. The directory is created automatically when the plugin loads, so it is ready for dropping reference samples into it. |
 | `ToggleKey` | `Tab` | Show/hide the subsegment leaderboard. |
 | `MultiProject` | `Any%` | Multi-run project used for live ML comparisons (`Aztec%`/`Dark%`/`Steam%`/`Any%`). PB writes still use the actual last-completed endpoint. |
 | `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. |

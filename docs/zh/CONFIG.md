@@ -126,7 +126,7 @@ HudOffsetY = 0
 |----|------|------|
 | `Enable` | true | 总开关；关闭后不记录、不加载、不显示。 |
 | `PBPath` | `subsegment/pb` | 相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。写入 PB 时自动创建目录。 |
-| `LoadPath` | `subsegment/load` | 玩家手动放置的采样目录；目录缺失时静默不加载外部参考。 |
+| `LoadPath` | `subsegment/load` | 玩家手动放置的采样目录。插件加载时会自动创建该目录，以便直接放入参考采样。 |
 | `ToggleKey` | `Tab` | 排行榜显示/隐藏键。 |
 | `MultiProject` | `Any%` | 多关实时对比使用的子项目（`Aztec%`/`Dark%`/`Steam%`/`Any%`）。PB 写入仍按实际最后完成关卡判定。 |
 | `PlaneRadius` | `50.0` | 虚拟检测平面半径（米）。 |

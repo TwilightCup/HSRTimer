@@ -13,4 +13,5 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - Updated the default HUD gradient colors.
   - Grouped subsegment detailed parameters under their own section.
   - Added an optional "Specify retry level" setting to retry (or directly enter from the menu) a chosen level by English name or Workshop ID.
+  - The subsegment load directory is now created automatically when the plugin loads.
 - **Contributors:** _To be filled from PRs merged into dev._

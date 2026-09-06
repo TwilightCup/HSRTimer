@@ -95,6 +95,21 @@ namespace HSRTimer
         {
             Instance = this;
             _options = SubsegmentOptions.FromSettings(SettingsFromConfig());
+            EnsureLoadDirectory();
+        }
+
+        private void EnsureLoadDirectory()
+        {
+            if (string.IsNullOrEmpty(_options.LoadPath))
+                return;
+            try
+            {
+                Directory.CreateDirectory(_options.LoadPath);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogWarning($"HSRTimer: failed to create subsegment load directory '{_options.LoadPath}': {ex.Message}");
+            }
         }
 
         private static SettingsModel SettingsFromConfig()

@@ -757,7 +757,7 @@
 | `Subsegment.MaxLeaderboardEntries` | `8` | 排行榜最多显示项数 |
 | `Subsegment.DebugLogging` | `false` | 采样/加载/结算调试日志 |
 
-- 路径键支持相对路径（相对插件配置目录）与绝对路径；目录不存在时自动创建 `PBPath`，`LoadPath` 不存在时静默不加载。
+- 路径键支持相对路径（相对插件配置目录）与绝对路径；目录不存在时自动创建 `PBPath`，并在插件加载时自动创建 `LoadPath`。
 - 配置说明须同步写入 `docs/CONFIG.md` 与 `docs/zh/CONFIG.md`。
 
 #### R8.7 本地化
