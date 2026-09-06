@@ -28,13 +28,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET
+      - name: Check for existing .NET SDK
+        id: dotnet-check
+        shell: bash
+        run: |
+          if command -v dotnet >/dev/null 2>&1 && dotnet --version >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "Using machine dotnet:"
+            dotnet --info | sed -n '1,20p'
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No usable machine dotnet found; will install a fallback SDK."
+          fi
+
+      - name: Setup .NET (fallback)
+        if: steps.dotnet-check.outputs.found != 'true'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
         env:
           # Self-hosted runners often cannot write to /usr/share/dotnet.
-          # Install the SDK into a writable temp directory instead.
+          # Install the SDK into a writable temp directory when no machine SDK
+          # is available.
           DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
 
       - name: Resolve version
