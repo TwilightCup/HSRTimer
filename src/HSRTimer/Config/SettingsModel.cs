@@ -17,6 +17,16 @@ namespace HSRTimer
         public bool RestartClearsForgivable = false; // R5.4.3 — pause-menu Restart clears forgivable flags (default off); the one-key retry always clears them (R5.4.2, fixed)
         public float RetryMinDwell = 0.5f;        // R6 minimum empty-scene dwell (seconds)
 
+        // R6.5: optional one-key retry target override. When enabled, retry
+        // goes to the level named here (English localized name, case-insensitive)
+        // or to a Workshop level by numeric id, instead of the current-level /
+        // campaign-start target. RetryTargetInvalidHint is a transient HUD flag
+        // (never persisted) that is shown when RetryAction cannot resolve the
+        // configured override.
+        public bool RetryLevelOverrideEnable = false;
+        public string RetryLevelOverride = "";
+        public bool RetryTargetInvalidHint;
+
         // Note: there are no user-facing validity/anti-cheat options. The
         // cheat/speed/drift detectors (R5.1) are always on with hardcoded
         // thresholds — none may be tuned or disabled by the player.
@@ -97,6 +107,8 @@ namespace HSRTimer
                     case "auto_reset": AutoReset = ParseBool(value, AutoReset); break;
                     case "restart_clears_forgivable": RestartClearsForgivable = ParseBool(value, RestartClearsForgivable); break;
                     case "retry_min_dwell": RetryMinDwell = ParseFloat(value, RetryMinDwell); break;
+                    case "retry_level_override_enabled": RetryLevelOverrideEnable = ParseBool(value, RetryLevelOverrideEnable); break;
+                    case "retry_level_override": RetryLevelOverride = value; break;
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
                     case "show_real_time": ShowRealTime = ParseBool(value, ShowRealTime); break;
                     case "show_wake_up_time": ShowWakeUpTime = ParseBool(value, ShowWakeUpTime); break;
@@ -156,6 +168,8 @@ namespace HSRTimer
                 ["auto_reset"] = AutoReset ? "true" : "false",
                 ["restart_clears_forgivable"] = RestartClearsForgivable ? "true" : "false",
                 ["retry_min_dwell"] = RetryMinDwell.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
+                ["retry_level_override_enabled"] = RetryLevelOverrideEnable ? "true" : "false",
+                ["retry_level_override"] = RetryLevelOverride,
                 ["show_hud"] = ShowHud ? "true" : "false",
                 ["show_real_time"] = ShowRealTime ? "true" : "false",
                 ["show_wake_up_time"] = ShowWakeUpTime ? "true" : "false",

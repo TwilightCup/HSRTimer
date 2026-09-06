@@ -39,6 +39,8 @@ SETTINGS_MENU_KEY:Settings Panel Key
 SETTINGS_AUTO_RESET:Auto-reset run
 SETTINGS_RESTART_CLEARS_FORGIVABLE:Clear forgivable flags on pause-menu restart
 SETTINGS_RETRY_MIN_DWELL:Retry empty-scene dwell (s)
+SETTINGS_RETRY_LEVEL_OVERRIDE_ENABLE:Specify retry level
+SETTINGS_RETRY_LEVEL_OVERRIDE:Retry level (English name or Workshop ID)
 SETTINGS_SHOW_HUD:Show timer HUD
 SETTINGS_SHOW_REAL_TIME:Show Real Time
 SETTINGS_SHOW_WAKE_UP_TIME:Show Wake Up Time
@@ -81,6 +83,7 @@ INVALID_CHECKPOINT_FINAL:WRONG FINAL CHECKPOINT
 INVALID_NO_CHECKPOINT:CHECKPOINT WAS TRIGGERED
 INVALID_JUMPLESS:JUMPED
 INVALID_VOICELINE:VOICELINE SKIPPED
+HUD_INVALID_RETRY_TARGET:Specified retry level is invalid
 SEVERITY_UNFORGIVABLE:unforgivable
 SEVERITY_FORGIVABLE:forgivable
 
@@ -104,6 +107,8 @@ NOTIFY_CAMPAIGN_RESTARTED:Restarted from the level you entered the run on.
 NOTIFY_COLLECTION_RESTARTED:Collection restarted from level 1.
 NOTIFY_RETRY_BLOCKED_INPUT:Retry blocked: a text input is open.
 NOTIFY_RETRY_BLOCKED_STATE:Retry blocked: cannot restart right now.
+NOTIFY_RETRY_TARGET_INVALID:Retry blocked: invalid specified retry level.
+NOTIFY_RETRY_OVERRIDE_RESTARTED:Restarted the specified retry level.
 
 # ===== Template variable fallbacks (R2.4.2) =====
 TEMPLATE_NO_COLLECTION:(no collection)

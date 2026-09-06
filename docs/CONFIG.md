@@ -18,6 +18,8 @@ defaults.
 auto_reset = true
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
+retry_level_override_enabled = false
+retry_level_override =
 show_hud = true
 show_real_time = true
 show_wake_up_time = true
@@ -34,6 +36,8 @@ menu_key = Home
 | `auto_reset` | true/false | true | R1.7.2 — reset the live timers and last-segment snapshots when leaving to the menu/lobby; keeps the last completed run total |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 — clear forgivable validity flags when the level is restarted from the in-level **pause menu** (the run's timers keep running). The one-key retry clears them unconditionally (fixed behavior), and a full-run reset clears all flags. |
 | `retry_min_dwell` | seconds (≥0) | 0.5 | R6 — minimum time held in the empty scene on retry, measured from the key press. If the level reloads faster, the empty scene is held until this elapses; `0` disables the hold. |
+| `retry_level_override_enabled` | true/false | false | R6.5 — use a fixed retry target instead of the current/campaign-start level. Disabled keeps the normal one-key retry behavior. |
+| `retry_level_override` | string (English level name or Workshop numeric id) | (empty) | R6.5 — the one-key retry target. Case-insensitive name for BuiltIn/EditorPick levels, or a loaded Steam Workshop id. Invalid values show a red HUD hint when Retry is pressed and do not start a retry. When enabled and no level is active (e.g. the main menu), pressing Retry directly enters the specified level. |
 | `show_hud` | true/false | true | R2.5.1 |
 | `show_real_time` | true/false | true | R2.5.3 — show the always-active Real Time clock in the HUD (default shown below Game Time; can still be hidden) |
 | `show_wake_up_time` | true/false | true | Show the Wake Up time — from level start to the first time the local player leaves the soft/spawn state — in the right-hand HUD column, below Last Run when both are visible |

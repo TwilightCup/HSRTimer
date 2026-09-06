@@ -184,6 +184,18 @@ namespace HSRTimer
             // artificial — RetryAction only needs Mathf.Max(0, dwell).
             s.RetryMinDwell = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_RETRY_MIN_DWELL"), s.RetryMinDwell, "0.###"));
 
+            // R6.5: optional fixed retry target. The text field only appears while
+            // the option is enabled; disabling clears any pending HUD hint.
+            s.RetryLevelOverrideEnable = Toggle(loc.Get("SETTINGS_RETRY_LEVEL_OVERRIDE_ENABLE"), s.RetryLevelOverrideEnable);
+            if (s.RetryLevelOverrideEnable)
+            {
+                s.RetryLevelOverride = TextFieldRow(loc.Get("SETTINGS_RETRY_LEVEL_OVERRIDE"), s.RetryLevelOverride);
+            }
+            else
+            {
+                s.RetryTargetInvalidHint = false;
+            }
+
             Section(loc.Get("SETTINGS_LANGUAGE"));
             DrawLanguageSelector(cfg, loc);
             if (GUILayout.Button(loc.Get("PANEL_RELOAD_LANGUAGE"), _button))

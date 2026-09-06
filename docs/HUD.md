@@ -131,6 +131,12 @@ panel's Interface tab.
 When a run is flagged invalid (R5), a red banner appears inside the panel
 listing the reason(s). See [CONFIG.md](CONFIG.md) for the validity options.
 
+The same red style is also used for an invalid **specified retry level**
+(R6.5): when the retry-target override is enabled and the configured level name
+or Workshop id cannot be resolved, pressing the retry key shows a red
+"Specified retry level is invalid" line in the timer HUD. It stays visible
+until a resolvable value is pressed with Retry or the override is turned off.
+
 ## Fonts
 
 The panel uses a dynamic OS font with a CJK-capable fallback chain (PingFang /

@@ -12,4 +12,5 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - Category tabs moved to the left sidebar and the settings panel was widened.
   - Updated the default HUD gradient colors.
   - Grouped subsegment detailed parameters under their own section.
+  - Added an optional "Specify retry level" setting to retry (or directly enter from the menu) a chosen level by English name or Workshop ID.
 - **Contributors:** _To be filled from PRs merged into dev._

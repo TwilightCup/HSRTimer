@@ -29,7 +29,7 @@ and is fully localizable.
   and final-checkpoint validation.
 - **Validity detection** — cheat codes, game-speed change, game-clock
   tampering; unforgivable vs forgivable flags.
-- **One-key retry** — instantly reload the current level.
+- **One-key retry** — instantly reload the current level, or directly enter a user-specified level by English name / Workshop ID (works from the menu too).
 - **Localization** — community-translatable `key:translation` files; English is
   the shipped base; a Simplified Chinese example is included.
 

@@ -46,6 +46,7 @@ Core/
   RunState.cs             single source of truth (time, segments, flags, caches)
   SegmentLogic.cs         pure Appendix-B truth table
   RetryAction.cs          one-key retry (R6)
+  RetryTargetResolver.cs  user-specified retry target resolution (R6.5)
 Validation/
   InvalidReason.cs        enum + severity map
   ValidityFlags.cs        unforgivable/forgivable flag sets
@@ -231,6 +232,30 @@ the reload re-launches that level as `BuiltIn` (`NOTIFY_CAMPAIGN_RESTARTED`);
 otherwise — EditorPick, Workshop, or any run not tagged as menu-entered — the
 current-level reload runs unchanged (`NOTIFY_LEVEL_RESTARTED`). Timing semantics
 are identical either way (see R6.2.2 above).
+
+### R6.5 — user-specified retry target
+
+The settings panel's General page has an optional **"Specify retry level"**
+override. When enabled, the one-key retry ignores the R6.4/current-level target
+selection and re-launches the level named in the associated text field. The
+input is either the game's English localized level name for a BuiltIn/EditorPick
+level (case-insensitive) or a loaded Steam Workshop numeric id; a numeric value
+is always treated as a Workshop id. Resolution uses `WorkshopRepository` plus
+the game's English localization table, so it works even when the current game
+language is not English.
+
+When no level is active (for example the main menu), a valid override lets the
+retry key directly launch the specified level; the normal R6.1.2c "a level must
+be active" guard is skipped only in this override case. This makes the feature
+usable as a quick level launcher without first entering a level.
+
+If the configured value cannot be resolved, `RetryAction` does not start a
+reload, does not touch timers/flags, and sets a transient HUD flag that renders
+the same red banner style used for invalid runs. The hint stays until a retry is
+pressed with a resolvable value or the option is switched off. During an LC
+collection run, R6.3's `lc restart` precedence remains unchanged — the override
+is validated (and can show an invalid hint), but an active collection restart
+still restarts the whole collection rather than a single specified level.
 
 ## Why segment end is recorded before the auto-reset clear
 

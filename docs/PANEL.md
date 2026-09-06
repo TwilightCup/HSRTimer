@@ -14,7 +14,12 @@ tabs.
 
 - **Timing** — `auto_reset`,
   `restart_clears_forgivable` (clears forgivable flags on a pause-menu
-  restart; see [CONFIG.md](CONFIG.md)). Pause time is always counted and
+  restart; see [CONFIG.md](CONFIG.md)), and the retry target override
+  (`retry_level_override_enabled` + `retry_level_override`). When the override
+  is enabled, a text field appears for entering the target's English localized
+  name (case-insensitive) or Workshop numeric id. Invalid values show a red
+  HUD hint when Retry is pressed; from the main menu, a valid value lets Retry
+  directly enter the specified level. Pause time is always counted and
   menu/lobby time is never counted; there are no toggles for them.
 - **Language** — pick the active language from the loaded set (single-select).
   "Reload language files" re-scans `lang/*.txt`.

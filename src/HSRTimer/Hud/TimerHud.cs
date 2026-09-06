@@ -202,6 +202,18 @@ namespace HSRTimer
                 y += _bannerStyle.CalcSize(content).y + 2f;
             }
 
+            // R6.5: show the retry-target-resolution failure in the same red
+            // banner style as a run invalid hint. It stays visible until the
+            // override is turned off or a retry is pressed with a resolvable
+            // value.
+            if (cfg.Settings.RetryTargetInvalidHint)
+            {
+                string banner = loc.Get("HUD_INVALID_RETRY_TARGET");
+                _bannerStyle.normal.textColor = Color.red;
+                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, y, _bannerStyle);
+                y += _bannerStyle.CalcSize(new GUIContent(banner)).y + 2f;
+            }
+
             return widest;
         }
 

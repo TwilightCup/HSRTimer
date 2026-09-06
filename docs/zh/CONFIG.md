@@ -15,6 +15,8 @@
 auto_reset = true
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
+retry_level_override_enabled = false
+retry_level_override =
 show_hud = true
 show_real_time = true
 show_wake_up_time = true
@@ -30,6 +32,8 @@ menu_key = Home
 | `auto_reset` | true/false | true | R1.7.2 —— 退出到菜单 / 大厅时清零实时计时器与上一段快照,并保留上一局总时间 |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 —— 在关卡内**暂停菜单**点击"重新开始"时清除可原谅的有效性标记(计时器继续计时,不重置)。一键重试则无条件清除(固定行为);整局重置会清除全部标记。 |
 | `retry_min_dwell` | 秒(≥0) | 0.5 | R6 重试时在空场景强制停留的最短时间,从按下重试键开始计。若关卡重载快于该值,则在空场景内等待到该时间后再重载;`0` 表示不强制停留。 |
+| `retry_level_override_enabled` | true/false | false | R6.5 —— 使用固定的重试关卡,而不是当前关卡 / 从菜单进入的战役起点关。关闭时保持现有的一键重试行为。 |
+| `retry_level_override` | 字符串(关卡英文名或创意工坊数字 id) | (空) | R6.5 —— 一键重试目标。官方关卡按英文名不区分大小写匹配;创意工坊关卡填已加载的 Steam Workshop 数字 id。无效值会在按下重试键时用计时器面板的红色无效样式提示,且不执行重试。开启且当前没有活动关卡时(例如主菜单),按重试键会**直接进入**该指定关卡。 |
 | `show_hud` | true/false | true | R2.5.1 |
 | `show_real_time` | true/false | true | R2.5.3 —— 在面板中显示始终活跃的现实时间计时器(默认显示在游戏总时间下方;可关闭) |
 | `show_wake_up_time` | true/false | true | 在右侧列显示“起身时间”——从关卡开始到本地玩家首次离开瘫软状态(出生/装死/死亡)的时间;与“上一局游戏时间”同时可见时显示在其下一行 |

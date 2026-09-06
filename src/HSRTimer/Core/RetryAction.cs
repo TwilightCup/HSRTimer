@@ -24,6 +24,15 @@ namespace HSRTimer
     /// (EditorPick, Workshop, a run not entered from the menu) the target is the
     /// current level, exactly as before R6.4.
     ///
+    /// <b>R6.5 user-specified target.</b> The settings panel can additionally
+    /// pin the retry target to a fixed level (by English localized name or a
+    /// Steam Workshop numeric id). When that option is enabled, it takes
+    /// precedence over both the R6.4 campaign-start target and the current-level
+    /// fallback; invalid values only show a red HUD hint and never start a retry.
+    /// If no level is active (e.g. the main menu), a valid override makes the
+    /// retry key directly launch the specified level instead of requiring an
+    /// active run.
+    ///
     /// This drives the full R6.2.1 flow (load the empty transition scene → reset
     /// the player → reload the level scene → <c>AfterLoad</c>: <c>state =
     /// PlayingLevel</c>, <c>RespawnAllPlayers</c>, <c>Level.Reset(0, 0)</c>),
@@ -73,6 +82,33 @@ namespace HSRTimer
 
             var game = Game.instance;
 
+            // R6.5: optional user-specified retry target. Resolve it before the
+            // R6.1 guards so an invalid value always shows the HUD hint when the
+            // retry key is pressed, even if another guard would otherwise block
+            // the retry; and so a resolvable value always clears a pending hint.
+            // The resolved target is applied below only for the single-level
+            // retry path; R6.3 collection retries keep their own "restart the
+            // whole collection" behavior.
+            bool hasOverride = false;
+            ulong overrideLevel = 0UL;
+            WorkshopItemSource overrideType = WorkshopItemSource.NotSpecified;
+            if (settings.RetryLevelOverrideEnable)
+            {
+                if (!RetryTargetResolver.TryResolve(settings.RetryLevelOverride,
+                        out overrideLevel, out overrideType))
+                {
+                    settings.RetryTargetInvalidHint = true;
+                    notifyKey = "NOTIFY_RETRY_TARGET_INVALID";
+                    return false;
+                }
+                settings.RetryTargetInvalidHint = false;
+                hasOverride = true;
+            }
+            else
+            {
+                settings.RetryTargetInvalidHint = false;
+            }
+
             // R6.1.2a: no keyboard-capturing UI open (chat, text input, dialog).
             if (MenuSystem.keyboardState != KeyboardState.None)
             {
@@ -88,10 +124,37 @@ namespace HSRTimer
             }
 
             // R6.1.2c: not while a level is loading; and a level must be active.
-            if (game == null || game.state == GameState.LoadingLevel || game.currentLevelNumber < 0)
+            // A resolved R6.5 override is the exception: when no level is active
+            // (for example the main menu), the retry key directly launches the
+            // specified level instead of reloading the current one.
+            bool hasActiveLevel = game != null
+                && game.state != GameState.LoadingLevel
+                && game.currentLevelNumber >= 0;
+            if (!hasActiveLevel && !hasOverride)
             {
                 notifyKey = "NOTIFY_RETRY_BLOCKED_STATE";
                 return false;
+            }
+
+            if (!hasActiveLevel)
+            {
+                if (App.instance == null || game == null)
+                {
+                    notifyKey = "NOTIFY_RETRY_BLOCKED_STATE";
+                    return false;
+                }
+                if (game.state == GameState.LoadingLevel || App.state == AppSate.LoadLevel)
+                {
+                    notifyKey = "NOTIFY_RETRY_BLOCKED_STATE";
+                    return false;
+                }
+
+                // Menu entry: no running level needs to be torn down, so launch
+                // the specified level directly. The normal Menu→LoadLevel flow
+                // starts a fresh run (R1.7.5).
+                App.instance.LaunchSinglePlayer(overrideLevel, overrideType, 0, 0);
+                notifyKey = "NOTIFY_RETRY_OVERRIDE_RESTARTED";
+                return true;
             }
 
             // R5.4.2: always clear forgivable flags to give a clean retry
@@ -163,6 +226,17 @@ namespace HSRTimer
             state.RealTimeActive = false;
             SubsegmentManager.Instance?.OnRetryStart();
 
+            // R6.5: if the user specified a retry target, re-launch exactly that
+            // level (BuiltIn/EditorPick by English name, Workshop by numeric id)
+            // instead of the R6.4 campaign-start-level / current-level decision.
+            if (hasOverride)
+            {
+                float overrideDwell = Mathf.Max(0f, settings.RetryMinDwell);
+                host.StartCoroutine(ReloadCoroutine(game, overrideLevel, overrideType, overrideDwell));
+                notifyKey = "NOTIFY_RETRY_OVERRIDE_RESTARTED";
+                return true;
+            }
+
             // R6.4: pick the retry target. During a campaign run that was
             // entered from the menu, the player wants to practice the level
             // they STARTED the run on, not whatever later level they have since
@@ -180,7 +254,7 @@ namespace HSRTimer
                 ? WorkshopItemSource.BuiltIn
                 : game.currentLevelType;
             float dwell = Mathf.Max(0f, settings.RetryMinDwell);
-            host.StartCoroutine(ReloadCoroutine(game, levelNumber, levelType, dwell));
+            host.StartCoroutine(ReloadCoroutine(game, (ulong)levelNumber, levelType, dwell));
 
             notifyKey = state.CampaignRetryLevel >= 0
                 ? "NOTIFY_CAMPAIGN_RESTARTED"
@@ -194,7 +268,7 @@ namespace HSRTimer
         /// the retry → re-launch the level. The empty-scene dwell uses
         /// <c>Time.unscaledTime</c> (real time) so it is unaffected by timeScale.
         /// </summary>
-        private static IEnumerator ReloadCoroutine(Game game, int levelNumber, WorkshopItemSource levelType, float minDwell)
+        private static IEnumerator ReloadCoroutine(Game game, ulong levelNumber, WorkshopItemSource levelType, float minDwell)
         {
             // Measured from the key press (this coroutine starts the same frame).
             float start = Time.unscaledTime;
