@@ -707,7 +707,7 @@
   - `MM`：分钟，至少两位（不足补 0）；
   - `SS`：秒，两位（00–59）；
   - `mmm`：毫秒，三位；
-  - 更快显示 `-` 与绿色；更慢显示 `+` 与红色；持平/无数据用默认色显示 `--`。
+  - 更快显示 `-` 并使用配置色（默认绿色）；更慢显示 `+` 并使用配置色（默认红色）；持平/无数据用配置色（默认白色）显示 `--`。
 - **R8.5.2.3** PB 项的 `display_id` 固定为 `PB`。
 - **R8.5.2.4** 排行榜最大条目数由配置 `Subsegment.MaxLeaderboardEntries` 决定，用户可在设置面板中调整；加载项超过该数量时，按 R8.5.3 排序后截断显示。
 
@@ -757,6 +757,12 @@
 | `Subsegment.RespawnJumpMeters` | `100.0` | 轨迹连续性阈值（米），超过视为失败折返 |
 | `Subsegment.MaxLeaderboardEntries` | `8` | 排行榜最多显示项数 |
 | `Subsegment.DebugLogging` | `false` | 采样/加载/结算调试日志 |
+| `Subsegment.HudFontSize` | `16` | 排行榜字号 |
+| `Subsegment.HudOffsetX` | `16` | 排行榜左边缘偏移 |
+| `Subsegment.HudOffsetY` | `0` | 排行榜相对垂直居中的纵向偏移 |
+| `Subsegment.HudColorFaster` | `59FF66FF` | 更快（领先）条目颜色 |
+| `Subsegment.HudColorSlower` | `FF5959FF` | 更慢（落后）条目颜色 |
+| `Subsegment.HudColorTie` | `FFFFFFFF` | 持平/无数据条目颜色 |
 
 - 路径键支持相对路径（相对插件配置目录）与绝对路径；目录不存在时自动创建 `PBPath`，并在插件加载时自动创建 `LoadPath`。
 - 配置说明须同步写入 `docs/CONFIG.md` 与 `docs/zh/CONFIG.md`。
@@ -765,7 +771,7 @@
 
 - **R8.7.1** 排行榜、设置面板新增文案全部纳入 HSRTimer 现有本地化体系（`en.txt` / `zh-Hans.txt` 等）。
 - **R8.7.2** `--`、`PB`、`MM:SS.mmm` 等格式为本地无关约定，不翻译。
-- **R8.7.3** 新增配置面板文案（开关、路径、键位、多关项目、半径等）使用 `SETTINGS_SUBSEGMENT_*` 键名分组。
+- **R8.7.3** 新增配置面板文案（开关、路径、键位、多关项目、半径等）使用 `SETTINGS_SUBSEGMENT_*` 键名分组；排行榜外观/颜色文案使用 `SETTINGS_LEADERBOARD_*` 键名分组。
 
 #### R8.8 日志与调试
 

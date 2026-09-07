@@ -5,8 +5,8 @@ namespace HSRTimer
 {
     /// <summary>
     /// An IMGUI settings panel, organized into tabbed pages (General,
-    /// Interface, Category, Subsegment, plus any tabs registered by other
-    /// plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
+    /// Interface, Category, Subsegment, Leaderboard, plus any tabs registered
+    /// by other plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
     /// option and applies it live (the HUD/engine read from the shared models
     /// each frame, so changes take effect immediately). Changes are written to
     /// disk when the panel is closed or the game exits. Toggled by the
@@ -35,7 +35,7 @@ namespace HSRTimer
         // Active tab page.
         private int _tab;
         private string[] _tabDisplays;
-        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT" };
+        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD" };
 
         // Keybind rebind state: which logical action is awaiting a keypress.
         private string _pendingRebind;
@@ -194,6 +194,7 @@ namespace HSRTimer
                 case 1: DrawInterface(cfg, loc); break;
                 case 2: DrawCategory(cfg, loc); break;
                 case 3: DrawSubsegment(cfg, s, loc); break;
+                case 4: DrawLeaderboard(cfg, s, loc); break;
                 default: DrawExternalTab(_tab - _tabKeys.Length); break;
             }
 
@@ -298,11 +299,6 @@ namespace HSRTimer
             int next = GUILayout.SelectionGrid(idx, projects, 2, _button);
             if (next != idx) s.SubsegmentMultiProject = projects[next];
 
-            Section(loc.Get("PANEL_HUD"));
-            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
-            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
-            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
-
             Section(loc.Get("SETTINGS_SUBSEGMENT_DETAILS"));
             s.SubsegmentPlaneRadius = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_RADIUS"), s.SubsegmentPlaneRadius, "0.###"));
             s.SubsegmentMinMove = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MIN_MOVE"), s.SubsegmentMinMove, "0.###"));
@@ -311,6 +307,20 @@ namespace HSRTimer
             s.SubsegmentPlaneDebounceSeconds = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_DEBOUNCE_SECONDS"), s.SubsegmentPlaneDebounceSeconds, "0.###"));
             s.SubsegmentRespawnJumpMeters = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_RESPAWN_JUMP_METERS"), s.SubsegmentRespawnJumpMeters, "0.###"));
             s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
+        }
+
+        // ── Page: Leaderboard (R8.5 HUD appearance + entry state colors) ──
+        private void DrawLeaderboard(ConfigService cfg, SettingsModel s, LocalizationService loc)
+        {
+            Section(loc.Get("PANEL_LEADERBOARD"));
+            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
+            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
+            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
+
+            Section(loc.Get("SETTINGS_LEADERBOARD_COLORS"));
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_FASTER", s.SubsegmentHudColorFaster, c => s.SubsegmentHudColorFaster = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_SLOWER", s.SubsegmentHudColorSlower, c => s.SubsegmentHudColorSlower = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_TIE", s.SubsegmentHudColorTie, c => s.SubsegmentHudColorTie = c);
         }
 
         // ── Page: external plugin tab (ISettingsPanelTab) ──

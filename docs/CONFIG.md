@@ -150,6 +150,9 @@ DebugLogging = false
 HudFontSize = 16
 HudOffsetX = 16
 HudOffsetY = 0
+HudColorFaster = 59FF66FF
+HudColorSlower = FF5959FF
+HudColorTie = FFFFFFFF
 ```
 
 | Key | Default | Notes |
@@ -170,6 +173,9 @@ HudOffsetY = 0
 | `HudFontSize` | 16 | Subsegment leaderboard font size, independent of the main timer HUD. |
 | `HudOffsetX` | 16 | Left edge of the subsegment leaderboard. |
 | `HudOffsetY` | 0 | Vertical offset from the automatic left-middle centering. |
+| `HudColorFaster` | `59FF66FF` | Color of entries where the current run is faster than the reference (green). |
+| `HudColorSlower` | `FF5959FF` | Color of entries where the current run is slower than the reference (red). |
+| `HudColorTie` | `FFFFFFFF` | Color of tie and no-data entries (shown as `--`, white). |
 
 ## lang/*.txt
 

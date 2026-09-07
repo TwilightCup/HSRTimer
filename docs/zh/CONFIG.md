@@ -120,6 +120,9 @@ DebugLogging = false
 HudFontSize = 16
 HudOffsetX = 16
 HudOffsetY = 0
+HudColorFaster = 59FF66FF
+HudColorSlower = FF5959FF
+HudColorTie = FFFFFFFF
 ```
 
 | 键 | 默认 | 说明 |
@@ -140,6 +143,9 @@ HudOffsetY = 0
 | `HudFontSize` | 16 | 排行榜字号，独立于主计时面板。 |
 | `HudOffsetX` | 16 | 排行榜左边缘偏移。 |
 | `HudOffsetY` | 0 | 相对自动垂直居中的纵向偏移。 |
+| `HudColorFaster` | `59FF66FF` | 当前比参考更快的条目颜色（绿色）。 |
+| `HudColorSlower` | `FF5959FF` | 当前比参考更慢的条目颜色（红色）。 |
+| `HudColorTie` | `FFFFFFFF` | 持平及无数据条目颜色（显示为 `--`，白色）。 |
 
 ## lang/*.txt
 

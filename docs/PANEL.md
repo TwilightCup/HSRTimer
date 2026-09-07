@@ -47,5 +47,22 @@ built-in tabs below, plus any **extra tabs registered by other plugins** via
   presets — this tag set *is* the active rule set. Changes are live and
   persisted to `tags.ini` on close/exit.
 
+## Subsegment
+
+- **Subsegment** — enable/disable subsegment time comparison, PB and manual-load
+  sample paths, the leaderboard toggle key, the multi-run project, and the
+  detailed detection/settle parameters. The leaderboard appearance settings now
+  live on the **Leaderboard** tab below.
+
+## Leaderboard
+
+- **HUD** — the subsegment leaderboard font size, X offset, and Y offset
+  (relative to automatic vertical centering). These were moved here from the
+  Subsegment tab.
+- **Entry colors** — three user-configurable colors for the three leaderboard
+  entry states: faster/ahead (default green), slower/behind (default red), and
+  tie/no-data (default white, shown as `--`). All colors include RGBA sliders
+  and a hex input.
+
 See [CATEGORIES.md](CATEGORIES.md) for what each tag does and
 [CHECKPOINTS.md](CHECKPOINTS.md) for the Checkpoint tag's rules.

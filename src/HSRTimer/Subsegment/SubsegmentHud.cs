@@ -78,15 +78,15 @@ namespace HSRTimer
             foreach (var entry in entries)
             {
                 string line = entry.DisplayId + "  " + FormatDiff(entry.DiffMs);
+                // State colors (R8.5.2.2): faster, slower, tie/no-data — all
+                // user-configurable on the Leaderboard settings tab.
                 Color color;
-                if (!entry.DiffMs.HasValue)
-                    color = Color.white;
+                if (!entry.DiffMs.HasValue || entry.DiffMs.Value == 0)
+                    color = mgr.Options.HudColorTie;
                 else if (entry.DiffMs.Value < 0)
-                    color = new Color(0.35f, 1f, 0.4f, 1f);
-                else if (entry.DiffMs.Value > 0)
-                    color = new Color(1f, 0.35f, 0.35f, 1f);
+                    color = mgr.Options.HudColorFaster;
                 else
-                    color = Color.white;
+                    color = mgr.Options.HudColorSlower;
                 DrawLine(line, color, x, y);
                 y += lineHeight;
             }

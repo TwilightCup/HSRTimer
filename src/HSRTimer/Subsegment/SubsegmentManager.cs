@@ -30,6 +30,9 @@ namespace HSRTimer
         public int HudFontSize;
         public float HudOffsetX;
         public float HudOffsetY;
+        public Color HudColorFaster;
+        public Color HudColorSlower;
+        public Color HudColorTie;
 
         public static SubsegmentOptions FromSettings(SettingsModel s)
         {
@@ -51,6 +54,9 @@ namespace HSRTimer
                 HudFontSize = Mathf.Max(8, s.SubsegmentHudFontSize),
                 HudOffsetX = s.SubsegmentHudOffsetX,
                 HudOffsetY = s.SubsegmentHudOffsetY,
+                HudColorFaster = s.SubsegmentHudColorFaster,
+                HudColorSlower = s.SubsegmentHudColorSlower,
+                HudColorTie = s.SubsegmentHudColorTie,
             };
         }
 
