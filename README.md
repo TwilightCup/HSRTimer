@@ -106,7 +106,7 @@ saved when the panel is closed or the game exits. See [docs/CONFIG.md](docs/CONF
 - [Categories & tags](docs/CATEGORIES.md) · [Checkpoint rules](docs/CHECKPOINTS.md)
 - [Configuration](docs/CONFIG.md) · [HUD](docs/HUD.md)
 - [Settings panel](docs/PANEL.md)
-- [Localization](docs/LOCALIZATION.md) · [Extending (custom tags)](docs/EXTENDING.md)
+- [Localization](docs/LOCALIZATION.md) · [Extending (custom tags & settings tabs)](docs/EXTENDING.md)
 - [Voiceline detection](docs/VOICELINE.md)
 
 ## License

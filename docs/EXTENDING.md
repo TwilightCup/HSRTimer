@@ -1,15 +1,26 @@
-# Extending HSRTimer (custom tags)
+# Extending HSRTimer
 
 > **中文版**: [zh/EXTENDING.md](zh/EXTENDING.md)
 
-HSRTimer's tag system is extensible (R3.7). Any BepInEx plugin can
-register a **custom tag rule** — new validity logic that users opt into by
-enabling the tag id in the settings panel (persisted to `tags.ini`). The
-built-in tags (`Checkpoint`, `NoCheckpoint`, `Jumpless`, `Voiceline`) are
-themselves rules registered this way, so your custom rule runs through the
-exact same engine path.
+HSRTimer exposes two extension points for other BepInEx plugins:
 
-## The `ITagRule` interface
+- **Custom tag rules** (R3.7) — new validity logic that users opt into by
+  enabling the tag id in the settings panel (persisted to `tags.ini`).
+- **Settings panel tabs** — register your own IMGUI configuration page as an
+  extra tab in HSRTimer's settings panel (one tab per plugin).
+
+Both are covered below.
+
+## Custom tag rules
+
+The tag system is extensible (R3.7). Any BepInEx plugin can register a
+**custom tag rule** — new validity logic that users opt into by enabling the
+tag id in the settings panel (persisted to `tags.ini`). The built-in tags
+(`Checkpoint`, `NoCheckpoint`, `Jumpless`, `Voiceline`) are themselves rules
+registered this way, so your custom rule runs through the exact same engine
+path.
+
+### The `ITagRule` interface
 
 ```csharp
 public interface ITagRule
@@ -30,7 +41,7 @@ reasons here), and the `LocalizationService`.
 The engine only invokes your rule when the **tag id is enabled** (checked in the
 settings panel's Category page).
 
-## Minimal example: a "no drowning" tag
+### Minimal example: a "no drowning" tag
 
 ```csharp
 using HSRTimer;
@@ -61,7 +72,7 @@ public class NoFallRule : ITagRule
 }
 ```
 
-## Registering the rule
+### Registering the rule
 
 In your plugin's `Awake` (after HSRTimer has loaded — declare a dependency):
 
@@ -78,7 +89,7 @@ public class MyPlugin : BaseUnityPlugin
 
 Duplicate ids are rejected (logged + ignored) to avoid double-penalizing.
 
-## Enabling the tag
+### Enabling the tag
 
 Once registered, `NoFall` appears as a checkbox on the settings panel's
 **Category** page alongside the built-in tags. Users simply check it. You can
@@ -89,12 +100,70 @@ also enable it directly in `tags.ini`:
 enabled = NoFall
 ```
 
-## Custom invalid reasons
+### Custom invalid reasons
 
 The built-in `InvalidReason` enum covers the standard reasons. For a fully
 custom reason, you can either reuse a built-in (e.g. `CheatCode`) or model your own
 flag separately and surface it via the HUD custom-text mechanism. (A future
 revision will expose a generic reason-registry; for v1, reuse built-ins.)
+
+## Registering a settings panel tab
+
+Any BepInEx plugin that builds its configuration UI with Unity IMGUI can add
+that UI as a **new tab** in HSRTimer's settings panel (R9). A plugin may
+register **at most one** tab — the registry keys tabs by the owning plugin's
+BepInEx GUID and rejects (and logs) a second registration for the same plugin.
+
+### The `ISettingsPanelTab` interface
+
+```csharp
+public interface ISettingsPanelTab
+{
+    string Title { get; }   // tab title shown in the settings panel navigation
+    void Draw();            // draw IMGUI content inside HSRTimer's settings panel
+}
+```
+
+### Minimal example
+
+```csharp
+using HSRTimer;
+using UnityEngine;
+
+public class MyConfigTab : ISettingsPanelTab
+{
+    private bool _someOption;
+
+    public string Title => "My Plugin";
+
+    public void Draw()
+    {
+        GUILayout.Label("Options for My Plugin");
+        _someOption = GUILayout.Toggle(_someOption, "Enable something");
+    }
+}
+```
+
+### Registering the tab
+
+In your plugin's `Awake` (after HSRTimer has loaded — declare a dependency):
+
+```csharp
+[BepInDependency("HSRTimer")]
+public class MyPlugin : BaseUnityPlugin
+{
+    private void Awake()
+    {
+        SettingsPanelTabRegistry.Instance.Register(this, new MyConfigTab());
+    }
+}
+```
+
+`Draw` runs inside HSRTimer's settings window and scroll view, so you can use
+`GUILayout.*` / `GUI.*` exactly like in any other Unity IMGUI panel. The tab
+title may return a localized string that updates live with your plugin's own
+language settings. A second registration for the same plugin GUID is rejected
+and logged.
 
 See [CATEGORIES.md](CATEGORIES.md) for the built-in tags and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the engine lifecycle.

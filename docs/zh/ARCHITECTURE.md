@@ -50,6 +50,9 @@ Patches/
   HumanControlsPatches.cs     HumanControls.HandleInput 后缀(禁跳强制)
 Hud/
   TimerHud.cs             IMGUI 面板(R2)
+  SettingsPanel.cs        IMGUI 设置面板 + 内置标签页
+  ISettingsPanelTab.cs   外部设置面板标签页接口
+  SettingsPanelTabRegistry.cs  每插件一个标签页的外部标签注册表
   GradientText.cs         颜色十六进制/透明度 + 渐变助手
   TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}/{gametime}/{realtime}
 Config/

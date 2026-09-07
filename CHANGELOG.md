@@ -8,6 +8,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
   - The settings panel can now bind mouse side buttons (Mouse3–Mouse6); mouse left/right buttons remain un-bindable.
+  - Other plugins can now register one IMGUI configuration tab each in the settings panel.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.1.0

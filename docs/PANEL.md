@@ -4,8 +4,9 @@
 
 The settings panel (open/close with the **settings key**, default `Home`) edits
 every user-tunable option live — changes take effect immediately and are saved
-to disk when the panel is closed or the game exits. It is organized into three
-tabs.
+to disk when the panel is closed or the game exits. It is organized into the
+built-in tabs below, plus any **extra tabs registered by other plugins** via
+`ISettingsPanelTab` (see [EXTENDING.md](EXTENDING.md)).
 
 > Cheat/speed/drift detection (R5.1) is always on with hardcoded thresholds and
 > is intentionally **not** exposed anywhere in the panel.

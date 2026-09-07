@@ -94,7 +94,7 @@ dotnet build src/HSRTimer/HSRTimer.csproj
 - [类别与标签](docs/zh/CATEGORIES.md) · [检查点规则](docs/zh/CHECKPOINTS.md)
 - [配置](docs/zh/CONFIG.md) · [面板](docs/zh/HUD.md)
 - [设置面板](docs/zh/PANEL.md)
-- [本地化](docs/zh/LOCALIZATION.md) · [扩展(自定义标签)](docs/zh/EXTENDING.md)
+- [本地化](docs/zh/LOCALIZATION.md) · [扩展(自定义标签 & 设置面板标签页)](docs/zh/EXTENDING.md)
 - [旁白检测](docs/zh/VOICELINE.md)
 
 ## 许可证

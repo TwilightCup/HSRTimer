@@ -4,13 +4,14 @@ using UnityEngine;
 namespace HSRTimer
 {
     /// <summary>
-    /// An IMGUI settings panel, organized into four tabbed pages (General,
-    /// Interface, Category, Subsegment). Edits every user-tunable option and
-    /// applies it live (the HUD/engine read from the shared models each frame,
-    /// so changes take effect immediately). Changes are written to disk when the
-    /// panel is closed or the game exits. Toggled by the configurable Menu key
-    /// (default Home). Editing a keybind is done by focusing its field and
-    /// pressing the desired key.
+    /// An IMGUI settings panel, organized into tabbed pages (General,
+    /// Interface, Category, Subsegment, plus any tabs registered by other
+    /// plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
+    /// option and applies it live (the HUD/engine read from the shared models
+    /// each frame, so changes take effect immediately). Changes are written to
+    /// disk when the panel is closed or the game exits. Toggled by the
+    /// configurable Menu key (default Home). Editing a keybind is done by
+    /// focusing its field and pressing the desired key.
     /// </summary>
     public class SettingsPanel : MonoBehaviour
     {
@@ -177,6 +178,8 @@ namespace HSRTimer
 
             // Left-hand vertical category navigation, kept outside the scroll view.
             RefreshTabDisplays();
+            if (_tab >= _tabDisplays.Length) _tab = Mathf.Max(0, _tabDisplays.Length - 1);
+            if (_tab < 0) _tab = 0;
             GUILayout.BeginHorizontal();
 
             int nextTab = GUILayout.SelectionGrid(_tab, _tabDisplays, 1, _button, GUILayout.Width(120));
@@ -191,6 +194,7 @@ namespace HSRTimer
                 case 1: DrawInterface(cfg, loc); break;
                 case 2: DrawCategory(cfg, loc); break;
                 case 3: DrawSubsegment(cfg, s, loc); break;
+                default: DrawExternalTab(_tab - _tabKeys.Length); break;
             }
 
             GUILayout.Space(8);
@@ -307,6 +311,23 @@ namespace HSRTimer
             s.SubsegmentPlaneDebounceSeconds = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_DEBOUNCE_SECONDS"), s.SubsegmentPlaneDebounceSeconds, "0.###"));
             s.SubsegmentRespawnJumpMeters = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_RESPAWN_JUMP_METERS"), s.SubsegmentRespawnJumpMeters, "0.###"));
             s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
+        }
+
+        // ── Page: external plugin tab (ISettingsPanelTab) ──
+        private void DrawExternalTab(int index)
+        {
+            var registry = SettingsPanelTabRegistry.Instance;
+            if (registry == null) return;
+            int i = 0;
+            foreach (var tab in registry.Tabs)
+            {
+                if (i == index)
+                {
+                    tab.Draw();
+                    return;
+                }
+                i++;
+            }
         }
 
         // ── widgets ──
@@ -502,10 +523,19 @@ namespace HSRTimer
         {
             var cfg = ConfigService.Instance;
             if (cfg == null) return;
-            if (_tabDisplays == null || _tabDisplays.Length != _tabKeys.Length)
-                _tabDisplays = new string[_tabKeys.Length];
+            var registry = SettingsPanelTabRegistry.Instance;
+            int count = _tabKeys.Length + (registry == null ? 0 : registry.Count);
+            if (_tabDisplays == null || _tabDisplays.Length != count)
+                _tabDisplays = new string[count];
             for (int i = 0; i < _tabKeys.Length; i++)
                 _tabDisplays[i] = cfg.Localization.Get(_tabKeys[i]);
+            if (registry == null) return;
+            int ext = _tabKeys.Length;
+            foreach (var tab in registry.Tabs)
+            {
+                string title = tab.Title;
+                _tabDisplays[ext++] = string.IsNullOrEmpty(title) ? tab.GetType().Name : title;
+            }
         }
     }
 }
