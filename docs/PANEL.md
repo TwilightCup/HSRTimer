@@ -24,10 +24,10 @@ built-in tabs below, plus any **extra tabs registered by other plugins** via
   menu/lobby time is never counted; there are no toggles for them.
 - **Language** — pick the active language from the loaded set (single-select).
   "Reload language files" re-scans `lang/*.txt`.
-- **Keybinds** — reset / retry / settings keys. To rebind: click the field, then
-  press the desired key. Pure modifier presses are ignored. Mouse side buttons
-  (`Mouse3`–`Mouse6`) can also be bound; mouse left/right buttons remain
-  reserved for normal UI use.
+- **Keybinds** — reset / retry / settings / subsegment leaderboard toggle keys.
+  To rebind: click the field, then press the desired key. Pure modifier presses
+  are ignored. Mouse side buttons (`Mouse3`–`Mouse6`) can also be bound; mouse
+  left/right buttons remain reserved for normal UI use.
 
 ## Interface
 
@@ -50,9 +50,9 @@ built-in tabs below, plus any **extra tabs registered by other plugins** via
 ## Subsegment
 
 - **Subsegment** — enable/disable subsegment time comparison, PB and manual-load
-  sample paths, the leaderboard toggle key, the multi-run project, and the
-  detailed detection/settle parameters. The leaderboard appearance settings now
-  live on the **Leaderboard** tab below.
+  sample paths, the multi-run project, and the detailed detection/settle
+  parameters. The leaderboard toggle key is in **General → Keybinds**; the
+  leaderboard appearance settings live on the **Leaderboard** tab below.
 
 ## Leaderboard
 

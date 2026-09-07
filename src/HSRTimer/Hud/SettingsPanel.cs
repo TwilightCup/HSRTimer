@@ -254,6 +254,7 @@ namespace HSRTimer
             KeybindRow(loc, "SETTINGS_RESET_KEY", () => s.ResetKey, k => s.ResetKey = k);
             KeybindRow(loc, "SETTINGS_RETRY_KEY", () => s.RetryKey, k => s.RetryKey = k);
             KeybindRow(loc, "SETTINGS_MENU_KEY", () => s.MenuKey, k => s.MenuKey = k);
+            KeybindRow(loc, "SETTINGS_SUBSEGMENT_TOGGLE_KEY", () => s.SubsegmentToggleKey, k => s.SubsegmentToggleKey = k);
         }
 
         // ── Page: Interface (HUD appearance) ──
@@ -289,9 +290,6 @@ namespace HSRTimer
 
             s.SubsegmentPBPath = TextFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PB_PATH"), s.SubsegmentPBPath);
             s.SubsegmentLoadPath = TextFieldRow(loc.Get("SETTINGS_SUBSEGMENT_LOAD_PATH"), s.SubsegmentLoadPath);
-
-            Section(loc.Get("PANEL_KEYBINDS"));
-            KeybindRow(loc, "SETTINGS_SUBSEGMENT_TOGGLE_KEY", () => s.SubsegmentToggleKey, k => s.SubsegmentToggleKey = k);
 
             Section(loc.Get("SETTINGS_SUBSEGMENT_MULTI_PROJECT"));
             string[] projects = { "Aztec%", "Dark%", "Steam%", "Any%" };
