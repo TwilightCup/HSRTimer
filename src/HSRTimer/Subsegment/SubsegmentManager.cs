@@ -101,6 +101,7 @@ namespace HSRTimer
         // Loader/comparator state
         private readonly List<SubsegmentReference> _references = new List<SubsegmentReference>();
         private bool _visible = true;
+        private string _leaderboardTitle = "";
 
         // Multi-run (ML) tracking
         private bool _multiRunCandidate;
@@ -139,6 +140,9 @@ namespace HSRTimer
 
         /// <summary>True during an official-campaign multi-run attempt (candidate or active).</summary>
         public bool InMultiRunActive => _multiRunCandidate || _multiRunActive;
+
+        /// <summary>Title shown above the leaderboard: the multi-run project or the current level name.</summary>
+        public string LeaderboardTitle => _leaderboardTitle;
 
         /// <summary>Current sorted leaderboard data (already truncated to MaxLeaderboardEntries).</summary>
         public List<SubsegmentReference> Entries
@@ -423,6 +427,7 @@ namespace HSRTimer
         private void ClearRuntime()
         {
             _references.Clear();
+            _leaderboardTitle = "";
             ClearRecorder();
             _multiRunCandidate = false;
             _multiRunActive = false;
@@ -598,6 +603,22 @@ namespace HSRTimer
             return GetLevelId(game);
         }
 
+        private string GetCurrentLevelDisplayName(Game game)
+        {
+            if (game.currentLevelType == WorkshopItemSource.BuiltIn
+                && game.levels != null
+                && game.currentLevelNumber >= 0
+                && game.currentLevelNumber < game.levels.Length
+                && !string.IsNullOrEmpty(game.levels[game.currentLevelNumber]))
+            {
+                string internalName = game.levels[game.currentLevelNumber];
+                return GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
+            }
+            if (game.workshopLevel != null && !string.IsNullOrEmpty(game.workshopLevel.title))
+                return game.workshopLevel.title;
+            return GetLevelId(game);
+        }
+
         private static string GetEnglishLocalizedLevelName(string term, string fallback)
         {
             try
@@ -638,6 +659,9 @@ namespace HSRTimer
         private void LoadReferences(Game game)
         {
             _references.Clear();
+            _leaderboardTitle = (_multiRunActive && game.currentLevelNumber != 0)
+                ? _options.MultiProject
+                : GetCurrentLevelDisplayName(game);
             try
             {
                 string category = GetCategoryKey();

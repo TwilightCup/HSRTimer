@@ -72,8 +72,18 @@ namespace HSRTimer
             float lineHeight = _rowStyle.CalcSize(new GUIContent("Wg")).y + 2f;
             float x = mgr.Options.HudOffsetX;
             // Default behavior: vertically centered; OffsetY lets the user nudge
-            // the whole block independently of the main timer HUD.
-            float y = Screen.height * 0.5f - size * lineHeight * 0.5f + mgr.Options.HudOffsetY;
+            // the whole block independently of the main timer HUD. The title
+            // row is counted as one more row so the block stays centered.
+            float y = Screen.height * 0.5f - (size + 1) * lineHeight * 0.5f + mgr.Options.HudOffsetY;
+
+            // Leaderboard title: the multi-run project (e.g. "Aztec%") in ML
+            // mode, otherwise the current level name.
+            string title = mgr.LeaderboardTitle;
+            if (!string.IsNullOrEmpty(title))
+            {
+                DrawLine(title, Color.white, x, y);
+                y += lineHeight;
+            }
 
             foreach (var entry in entries)
             {

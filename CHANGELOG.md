@@ -12,6 +12,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - Added a Leaderboard settings tab (below Subsegment) with the subsegment HUD appearance options and three configurable entry-state colors (faster/ahead, slower/behind, tie/no-data).
   - Added per-source display toggles on the Leaderboard tab so PB and each load-directory reference can be individually hidden/shown on the subsegment leaderboard.
   - Moved the subsegment leaderboard toggle key into General → Keybinds, alongside the other settings keybinds.
+  - The subsegment leaderboard now shows a title row at the top: the multi-run project (e.g. Aztec%) in ML mode, or the current level name in single-level mode.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.1.0
