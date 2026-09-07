@@ -10,6 +10,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - The settings panel can now bind mouse side buttons (Mouse3–Mouse6); mouse left/right buttons remain un-bindable.
   - Other plugins can now register one IMGUI configuration tab each in the settings panel.
   - Added a Leaderboard settings tab (below Subsegment) with the subsegment HUD appearance options and three configurable entry-state colors (faster/ahead, slower/behind, tie/no-data).
+  - Added per-source display toggles on the Leaderboard tab so PB and each load-directory reference can be individually hidden/shown on the subsegment leaderboard.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.1.0

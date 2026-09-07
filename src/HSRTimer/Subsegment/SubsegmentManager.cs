@@ -34,6 +34,17 @@ namespace HSRTimer
         public Color HudColorSlower;
         public Color HudColorTie;
 
+        /// <summary>
+        /// Display ids hidden from the leaderboard (denylist). Empty = show all
+        /// loaded sources (PB + load folders).
+        /// </summary>
+        public HashSet<string> DisabledLeaderboardSources;
+
+        /// <summary>Whether the given display id is allowed on the leaderboard.</summary>
+        public bool IsReferenceEnabled(string displayId)
+            => DisabledLeaderboardSources == null || string.IsNullOrEmpty(displayId)
+               || !DisabledLeaderboardSources.Contains(displayId);
+
         public static SubsegmentOptions FromSettings(SettingsModel s)
         {
             return new SubsegmentOptions
@@ -57,6 +68,8 @@ namespace HSRTimer
                 HudColorFaster = s.SubsegmentHudColorFaster,
                 HudColorSlower = s.SubsegmentHudColorSlower,
                 HudColorTie = s.SubsegmentHudColorTie,
+                DisabledLeaderboardSources = new HashSet<string>(
+                    s.GetDisabledSubsegmentSources(), System.StringComparer.OrdinalIgnoreCase),
             };
         }
 
@@ -133,10 +146,11 @@ namespace HSRTimer
             get
             {
                 if (!_options.Enable || _references.Count == 0) return new List<SubsegmentReference>();
-                var with = _references.Where(r => r.DiffMs.HasValue)
+                var visible = _references.Where(r => _options.IsReferenceEnabled(r.DisplayId)).ToList();
+                var with = visible.Where(r => r.DiffMs.HasValue)
                     .OrderBy(r => r.DiffMs.Value)
                     .ThenBy(r => r.DisplayId, StringComparer.Ordinal);
-                var without = _references.Where(r => !r.DiffMs.HasValue)
+                var without = visible.Where(r => !r.DiffMs.HasValue)
                     .OrderBy(r => r.DisplayId, StringComparer.Ordinal);
                 return with.Concat(without).Take(_options.MaxLeaderboardEntries).ToList();
             }

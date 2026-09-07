@@ -123,6 +123,7 @@ HudOffsetY = 0
 HudColorFaster = 59FF66FF
 HudColorSlower = FF5959FF
 HudColorTie = FFFFFFFF
+DisabledLeaderboardSources =
 ```
 
 | 键 | 默认 | 说明 |
@@ -146,6 +147,7 @@ HudColorTie = FFFFFFFF
 | `HudColorFaster` | `59FF66FF` | 当前比参考更快的条目颜色（绿色）。 |
 | `HudColorSlower` | `FF5959FF` | 当前比参考更慢的条目颜色（红色）。 |
 | `HudColorTie` | `FFFFFFFF` | 持平及无数据条目颜色（显示为 `--`，白色）。 |
+| `DisabledLeaderboardSources` | *(空)* | 从排行榜隐藏的资料 display id（逗号分隔；`PB` 表示 PB 项，其余为 `LoadPath` 下各顶层文件夹名）。空表示全部显示。 |
 
 ## lang/*.txt
 

@@ -153,6 +153,7 @@ HudOffsetY = 0
 HudColorFaster = 59FF66FF
 HudColorSlower = FF5959FF
 HudColorTie = FFFFFFFF
+DisabledLeaderboardSources =
 ```
 
 | Key | Default | Notes |
@@ -176,6 +177,7 @@ HudColorTie = FFFFFFFF
 | `HudColorFaster` | `59FF66FF` | Color of entries where the current run is faster than the reference (green). |
 | `HudColorSlower` | `FF5959FF` | Color of entries where the current run is slower than the reference (red). |
 | `HudColorTie` | `FFFFFFFF` | Color of tie and no-data entries (shown as `--`, white). |
+| `DisabledLeaderboardSources` | *(empty)* | Comma-separated display ids hidden from the leaderboard (`PB` = the PB entry; otherwise each top-level folder name under `LoadPath`). Empty shows everything. |
 
 ## lang/*.txt
 

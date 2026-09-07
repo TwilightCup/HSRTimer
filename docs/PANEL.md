@@ -63,6 +63,10 @@ built-in tabs below, plus any **extra tabs registered by other plugins** via
   entry states: faster/ahead (default green), slower/behind (default red), and
   tie/no-data (default white, shown as `--`). All colors include RGBA sliders
   and a hex input.
+- **Displayed sources** — at the bottom, a toggle for every subsegment source:
+  **PB** and each top-level folder under the load directory. Only checked
+  sources appear on the leaderboard. The list is still truncated to
+  `MaxLeaderboardEntries` after filtering and sorting.
 
 See [CATEGORIES.md](CATEGORIES.md) for what each tag does and
 [CHECKPOINTS.md](CHECKPOINTS.md) for the Checkpoint tag's rules.

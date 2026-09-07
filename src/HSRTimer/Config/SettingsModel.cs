@@ -86,6 +86,11 @@ namespace HSRTimer
         public Color SubsegmentHudColorSlower = GradientText.ParseColor("FF5959FF", new Color(1f, 0.35f, 0.35f, 1f));
         public Color SubsegmentHudColorTie = Color.white;
 
+        // Subsegment sources that are hidden from the leaderboard (denylist).
+        // The PB entry has the id "PB"; each top-level folder under LoadPath is
+        // identified by its folder name. Empty string means everything is shown.
+        public string SubsegmentDisabledSources = "";
+
         private const string Section = "settings";
         private const string SubsegmentSection = "Subsegment";
 
@@ -159,6 +164,7 @@ namespace HSRTimer
                     case "HudColorFaster": SubsegmentHudColorFaster = GradientText.ParseColor(value, SubsegmentHudColorFaster); break;
                     case "HudColorSlower": SubsegmentHudColorSlower = GradientText.ParseColor(value, SubsegmentHudColorSlower); break;
                     case "HudColorTie": SubsegmentHudColorTie = GradientText.ParseColor(value, SubsegmentHudColorTie); break;
+                    case "DisabledLeaderboardSources": SubsegmentDisabledSources = value; break;
                     default:
                         Plugin.Logger.LogWarning($"HSRTimer: settings.ini: unknown Subsegment key '{key}', ignored.");
                         break;
@@ -209,6 +215,7 @@ namespace HSRTimer
                 ["HudColorFaster"] = GradientText.ToHex(SubsegmentHudColorFaster),
                 ["HudColorSlower"] = GradientText.ToHex(SubsegmentHudColorSlower),
                 ["HudColorTie"] = GradientText.ToHex(SubsegmentHudColorTie),
+                ["DisabledLeaderboardSources"] = SubsegmentDisabledSources,
             };
             PersistenceService.Write(
                 PersistenceService.PathFor("settings.ini"),
@@ -218,6 +225,36 @@ namespace HSRTimer
                     new KeyValuePair<string, IDictionary<string, string>>(SubsegmentSection, sub),
                 },
                 "HSRTimer settings. Lines of the form 'key = value'. Bad lines are ignored.");
+        }
+
+        // ── subsegment source visibility helpers ──
+        public bool IsSubsegmentSourceEnabled(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return true;
+            foreach (var disabled in GetDisabledSubsegmentSources())
+                if (string.Equals(disabled, id, System.StringComparison.OrdinalIgnoreCase))
+                    return false;
+            return true;
+        }
+
+        public void SetSubsegmentSourceEnabled(string id, bool enabled)
+        {
+            if (string.IsNullOrEmpty(id)) return;
+            var disabled = new List<string>(GetDisabledSubsegmentSources());
+            disabled.RemoveAll(x => string.Equals(x, id, System.StringComparison.OrdinalIgnoreCase));
+            if (!enabled) disabled.Add(id);
+            disabled.Sort(System.StringComparer.OrdinalIgnoreCase);
+            SubsegmentDisabledSources = string.Join(",", disabled);
+        }
+
+        public IEnumerable<string> GetDisabledSubsegmentSources()
+        {
+            if (string.IsNullOrEmpty(SubsegmentDisabledSources)) yield break;
+            foreach (var raw in SubsegmentDisabledSources.Split(','))
+            {
+                var item = raw.Trim();
+                if (item.Length > 0) yield return item;
+            }
         }
 
         // ── parsing helpers (tolerant) ──

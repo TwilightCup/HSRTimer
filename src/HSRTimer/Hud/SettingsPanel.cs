@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace HSRTimer
@@ -321,6 +322,39 @@ namespace HSRTimer
             ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_FASTER", s.SubsegmentHudColorFaster, c => s.SubsegmentHudColorFaster = c);
             ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_SLOWER", s.SubsegmentHudColorSlower, c => s.SubsegmentHudColorSlower = c);
             ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_TIE", s.SubsegmentHudColorTie, c => s.SubsegmentHudColorTie = c);
+
+            Section(loc.Get("SETTINGS_LEADERBOARD_SOURCES"));
+            bool pbEnabled = s.IsSubsegmentSourceEnabled("PB");
+            bool pbNext = Toggle(loc.Get("SETTINGS_LEADERBOARD_SOURCE_PB"), pbEnabled);
+            if (pbNext != pbEnabled) s.SetSubsegmentSourceEnabled("PB", pbNext);
+
+            string loadDir = SubsegmentFileStore.ResolvePath(
+                string.IsNullOrEmpty(s.SubsegmentLoadPath) ? "subsegment/load" : s.SubsegmentLoadPath);
+            if (!string.IsNullOrEmpty(loadDir) && Directory.Exists(loadDir))
+            {
+                try
+                {
+                    var dirs = Directory.GetDirectories(loadDir);
+                    System.Array.Sort(dirs, System.StringComparer.Ordinal);
+                    foreach (var dir in dirs)
+                    {
+                        string id = Path.GetFileName(dir);
+                        if (string.IsNullOrEmpty(id)) continue;
+                        bool enabled = s.IsSubsegmentSourceEnabled(id);
+                        bool next = Toggle(id, enabled);
+                        if (next != enabled) s.SetSubsegmentSourceEnabled(id, next);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Plugin.Logger.LogWarning($"HSRTimer: failed to list subsegment load directory '{loadDir}': {ex.Message}");
+                    GUILayout.Label(loc.Get("SETTINGS_LEADERBOARD_NO_LOAD_DIR"), _small);
+                }
+            }
+            else if (!string.IsNullOrEmpty(loadDir))
+            {
+                GUILayout.Label(loc.Get("SETTINGS_LEADERBOARD_NO_LOAD_DIR"), _small);
+            }
         }
 
         // ── Page: external plugin tab (ISettingsPanelTab) ──

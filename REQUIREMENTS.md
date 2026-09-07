@@ -736,6 +736,12 @@
 - **R8.5.6.3** 命中无效标记时：排行榜继续显示，不额外处理（无效只影响 PB 写入）。
 - **R8.5.6.4** 多关运行中关卡推进：过关与进入下一关时不立即清空或重置排行榜显示；保留上一关已结算的数值，直到下一关产生首次穿越结算后再刷新为新关数据。
 
+#### R8.5.7 资料显示开关
+
+- **R8.5.7.1** 排行榜设置页提供一组开关，分别对应 **PB** 与 **LoadPath 下每个顶层文件夹**（每个参考资料一项）；关闭某项后，该资料不再出现在排行榜中。
+- **R8.5.7.2** 默认所有资料均显示；隐藏集合以 `Subsegment.DisabledLeaderboardSources`（逗号分隔的 display id，`PB` 代表 PB 项）持久化，缺失时回退为空（全部显示）。
+- **R8.5.7.3** 显示数量仍受 `Subsegment.MaxLeaderboardEntries` 限制：先按开关过滤出启用的资料，再按 R8.5.3 排序，最后截断到前 N 项。
+
 ---
 
 #### R8.6 配置
@@ -763,6 +769,7 @@
 | `Subsegment.HudColorFaster` | `59FF66FF` | 更快（领先）条目颜色 |
 | `Subsegment.HudColorSlower` | `FF5959FF` | 更慢（落后）条目颜色 |
 | `Subsegment.HudColorTie` | `FFFFFFFF` | 持平/无数据条目颜色 |
+| `Subsegment.DisabledLeaderboardSources` | 空 | 从排行榜隐藏的资料 display id（逗号分隔；`PB` 表示 PB 项） |
 
 - 路径键支持相对路径（相对插件配置目录）与绝对路径；目录不存在时自动创建 `PBPath`，并在插件加载时自动创建 `LoadPath`。
 - 配置说明须同步写入 `docs/CONFIG.md` 与 `docs/zh/CONFIG.md`。
