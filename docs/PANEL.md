@@ -24,7 +24,9 @@ tabs.
 - **Language** — pick the active language from the loaded set (single-select).
   "Reload language files" re-scans `lang/*.txt`.
 - **Keybinds** — reset / retry / settings keys. To rebind: click the field, then
-  press the desired key. Pure modifier presses are ignored.
+  press the desired key. Pure modifier presses are ignored. Mouse side buttons
+  (`Mouse3`–`Mouse6`) can also be bound; mouse left/right buttons remain
+  reserved for normal UI use.
 
 ## Interface
 

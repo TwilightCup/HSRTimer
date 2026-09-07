@@ -370,7 +370,7 @@ namespace HSRTimer
         {
             UpdateOptions();
             if (!_options.Enable || key != _options.ToggleKey) return;
-            if (!Input.GetKeyDown(key)) return;
+            if (!InputUtil.GetKeyDown(key)) return;
             _visible = !_visible;
             Plugin.Logger.LogInfo(_visible ? "HSRTimer: subsegment leaderboard shown." : "HSRTimer: subsegment leaderboard hidden.");
         }

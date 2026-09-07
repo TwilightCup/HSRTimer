@@ -61,7 +61,9 @@ menu_key = Home
 > live, and they are saved on panel close / game exit.
 
 Key codes are Unity's `KeyCode` enum names, e.g. `Backspace`, `Home`, `R`,
-`Keypad0`, `Alpha1`, `LeftControl`.
+`Keypad0`, `Alpha1`, `LeftControl`. Mouse side buttons (`Mouse3`–`Mouse6`) can
+also be used as keybinds; mouse left/right buttons are intentionally not
+bindable from the settings panel.
 
 ## tags.ini
 

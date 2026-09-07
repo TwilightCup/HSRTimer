@@ -55,6 +55,31 @@ namespace HSRTimer
             Instance = this;
         }
 
+        private void Update()
+        {
+            // IMGUI does not consistently route side mouse buttons through
+            // OnGUI MouseDown events, so also poll the raw mouse button state
+            // while a rebind is active. This makes Mouse3–Mouse6 bindable even
+            // when the engine only reports them through Input.GetMouseButtonDown.
+            if (!_visible || _pendingRebind == null)
+                return;
+
+            for (int button = 3; button <= 6; button++)
+            {
+                if (InputUtil.IsBindableMouseButton(button)
+                    && Input.GetMouseButtonDown(button))
+                {
+                    KeyCode pressed = InputUtil.MouseKeyCodeForButton(button);
+                    if (pressed != KeyCode.None)
+                    {
+                        ApplyRebind(_pendingRebind, pressed);
+                        _pendingRebind = null;
+                    }
+                    break;
+                }
+            }
+        }
+
         private void OnDestroy()
         {
             // Game exit / plugin unload: persist any unsaved edits.
@@ -120,7 +145,8 @@ namespace HSRTimer
             var loc = cfg.Localization;
 
             // Capture a keypress for an in-progress rebind before any widget
-            // consumes the event.
+            // consumes the event. Mouse side buttons arrive as MouseDown
+            // rather than KeyDown, so handle both event types.
             if (_pendingRebind != null && Event.current.type == EventType.KeyDown)
             {
                 KeyCode pressed = Event.current.keyCode;
@@ -129,6 +155,19 @@ namespace HSRTimer
                     && pressed != KeyCode.LeftControl && pressed != KeyCode.RightControl
                     && pressed != KeyCode.LeftAlt && pressed != KeyCode.RightAlt
                     && pressed != KeyCode.LeftCommand && pressed != KeyCode.RightCommand)
+                {
+                    ApplyRebind(_pendingRebind, pressed);
+                    _pendingRebind = null;
+                    Event.current.Use();
+                }
+            }
+            else if (_pendingRebind != null && Event.current.type == EventType.MouseDown)
+            {
+                // Keep left/right mouse buttons un-bindable; allow side
+                // buttons (button 3+) for speedrun keybinds.
+                int button = Event.current.button;
+                KeyCode pressed = InputUtil.MouseKeyCodeForButton(button);
+                if (InputUtil.IsBindableMouseButton(button) && pressed != KeyCode.None)
                 {
                     ApplyRebind(_pendingRebind, pressed);
                     _pendingRebind = null;
@@ -371,6 +410,11 @@ namespace HSRTimer
 
         private void ApplyRebind(string key, KeyCode pressed)
         {
+            // Left/right mouse buttons stay reserved for normal UI use; do not
+            // let them become keybinds even if some event path reports them.
+            if (pressed == KeyCode.Mouse0 || pressed == KeyCode.Mouse1)
+                return;
+
             var s = ConfigService.Instance.Settings;
             if (key == "SETTINGS_RESET_KEY") s.ResetKey = pressed;
             else if (key == "SETTINGS_RETRY_KEY") s.RetryKey = pressed;

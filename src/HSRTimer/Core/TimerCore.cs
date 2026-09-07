@@ -377,7 +377,7 @@ namespace HSRTimer
             var s = _cfg.Settings;
 
             // The settings panel key always works (so the user can open/close it).
-            if (Input.GetKeyDown(s.MenuKey))
+            if (InputUtil.GetKeyDown(s.MenuKey))
             {
                 if (SettingsPanel.Instance != null)
                     SettingsPanel.Instance.Toggle();
@@ -392,13 +392,13 @@ namespace HSRTimer
             if (SubsegmentManager.Instance != null)
                 SubsegmentManager.Instance.HandleKeybind(s.SubsegmentToggleKey);
 
-            if (Input.GetKeyDown(s.ResetKey))
+            if (InputUtil.GetKeyDown(s.ResetKey))
             {
                 DoFullReset(keepLastValues: false);
                 _cfg.SaveSettings();
                 Notify("NOTIFY_RUN_RESET");
             }
-            if (Input.GetKeyDown(s.RetryKey))
+            if (InputUtil.GetKeyDown(s.RetryKey))
             {
                 if (RetryAction.TryExecute(this, State, s, out string key))
                     UpdateOptions(); // restart may change timing context

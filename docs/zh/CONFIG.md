@@ -49,7 +49,7 @@ menu_key = Home
 
 > **提示:** 与其手改 `settings.ini`,不如在游戏内按 **设置面板键**(默认 `Home`)。所有选项都可在面板内编辑,改动实时生效,并在关闭面板 / 退出游戏时写盘。
 
-键位为 Unity `KeyCode` 枚举名,如 `Backspace`、`Home`、`R`、`Keypad0`、`Alpha1`、`LeftControl`。
+键位为 Unity `KeyCode` 枚举名,如 `Backspace`、`Home`、`R`、`Keypad0`、`Alpha1`、`LeftControl`。鼠标侧键(`Mouse3`–`Mouse6`)也可用作按键;鼠标左 / 右键刻意不能在设置面板中绑定。
 
 ## tags.ini
 
