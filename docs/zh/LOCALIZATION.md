@@ -58,6 +58,10 @@ TIMER_SEGMENT_TIME:Segment Time
 
 切换到不存在的语言是安全的:保持当前语言并给出警告(R7.2.4)。
 
+## 外部设置面板标签页的本地化
+
+在 HSRTimer 设置面板中注册配置标签页的第三方插件,可以通过实现 `ILocalizableSettingsPanelTab`(R9.2)跟随 HSRTimer 的语言选择。标签页必须内置英文基准(`en`);当 HSRTimer 当前语言不在该标签页的 `SupportedLanguages` 中时,HSRTimer 会改为传入 `"en"`。外部标签页的所有文案都应使用上文相同的文件格式与回退顺序。接口、完整约定与示例见 [EXTENDING.md](EXTENDING.md#外部标签页本地化)。
+
 ## 如何贡献翻译
 
 1. 将 `src/HSRTimer/lang/en.txt` 复制为 `src/HSRTimer/lang/<你的代码>.txt`(并复制到 `<配置>/HSRTimer/lang/` 以在游戏内测试)。

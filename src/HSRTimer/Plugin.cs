@@ -28,6 +28,14 @@ namespace HSRTimer
             //    DLL, so localization works even if the lang/ folder is absent.
             var config = new ConfigService();
             ConfigService.Init(config);
+
+            // 1.5 Settings-panel tab extension point (R9). Initialize it before
+            //     config repair below, which may call SaveSettings and must reach
+            //     external SettingsSaved handlers. Init preserves a registry that
+            //     another plugin lazily created before this Awake.
+            SettingsPanelTabRegistry.Init(new SettingsPanelTabRegistry());
+            config.SettingsSaved += SettingsPanelTabRegistry.Instance.NotifySettingsSaved;
+
             EnsureDefaultLangFiles();
             config.Load();
             // Detect & fill in missing/incorrect config items before any
@@ -49,9 +57,10 @@ namespace HSRTimer
             // 4. Optional LevelCollections integration (reflection; no-op if absent).
             LcIntegration.Init();
 
-            // 4.5 Settings-panel tab extension point: other BepInEx plugins may
-            //     register one IMGUI tab each (see ISettingsPanelTab).
-            SettingsPanelTabRegistry.Init(new SettingsPanelTabRegistry());
+            // 4.5 Language-aware settings tabs: tell them the active language now
+            //     that config is loaded. Tabs registered later receive it from
+            //     SettingsPanelTabRegistry.Register.
+            SettingsPanelTabRegistry.Instance.NotifyLanguageChanged(config.Localization.CurrentCode);
 
             // 5. Engine + HUD + settings-panel singletons, persistent across scene loads.
             var engineGo = new GameObject("HSRTimer.Core");

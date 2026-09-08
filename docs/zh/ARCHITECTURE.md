@@ -52,7 +52,8 @@ Hud/
   TimerHud.cs             IMGUI 面板(R2)
   SettingsPanel.cs        IMGUI 设置面板 + 内置标签页
   ISettingsPanelTab.cs   外部设置面板标签页接口
-  SettingsPanelTabRegistry.cs  每插件一个标签页的外部标签注册表
+  ILocalizableSettingsPanelTab.cs  可选的语言感知外部标签页接口
+  SettingsPanelTabRegistry.cs  外部标签注册表 + 语言/保存通知
   GradientText.cs         颜色十六进制/透明度 + 渐变助手
   TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}/{gametime}/{realtime}
 Config/

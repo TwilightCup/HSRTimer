@@ -71,6 +71,17 @@ English, and an entirely missing English value falls back to the key name.
 Switching to a non-existent language is safe: the current language is kept and a
 warning is logged (R7.2.4).
 
+## Localizing an external settings-panel tab
+
+Third-party plugins that register a configuration tab in HSRTimer's settings
+panel can follow HSRTimer's language selection by implementing
+`ILocalizableSettingsPanelTab` (R9.2). The tab must ship English (`en`) as its
+base language; when the active HSRTimer language is not in the tab's
+`SupportedLanguages`, HSRTimer passes `"en"` to the tab instead. All external
+tab strings should use the same file format and fallback order described above.
+See [EXTENDING.md](EXTENDING.md#localizing-an-external-tab) for the interface,
+the full contract, and a worked example.
+
 ## How to contribute a translation
 
 1. Copy `src/HSRTimer/lang/en.txt` to `src/HSRTimer/lang/<your-code>.txt`

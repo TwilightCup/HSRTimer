@@ -31,7 +31,8 @@ and is fully localizable.
   tampering; unforgivable vs forgivable flags.
 - **One-key retry** — instantly reload the current level, or directly enter a user-specified level by English name / Workshop ID (works from the menu too).
 - **Localization** — community-translatable `key:translation` files; English is
-  the shipped base; a Simplified Chinese example is included.
+  the shipped base; a Simplified Chinese example is included. Settings-panel
+  tabs from other plugins can opt into the same language selection.
 
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the full specification.
 

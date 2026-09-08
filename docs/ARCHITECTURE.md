@@ -67,7 +67,8 @@ Hud/
   TimerHud.cs             IMGUI panel (R2)
   SettingsPanel.cs        IMGUI settings panel + built-in tab pages
   ISettingsPanelTab.cs    external settings-panel tab interface
-  SettingsPanelTabRegistry.cs  one-tab-per-plugin external tab registry
+  ILocalizableSettingsPanelTab.cs  optional language-aware external tab interface
+  SettingsPanelTabRegistry.cs  external tab registry + language/save notifications
   GradientText.cs         color hex/alpha + gradient helper
   TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}/{gametime}/{realtime}
 Config/

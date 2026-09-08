@@ -146,6 +146,12 @@ namespace HSRTimer
             var s = cfg.Settings;
             var loc = cfg.Localization;
 
+            // R9.2: keep language-aware external tabs in sync with the active
+            // language. Cheap: the registry only calls SetLanguage on change.
+            var tabRegistry = SettingsPanelTabRegistry.Instance;
+            if (tabRegistry != null)
+                tabRegistry.NotifyLanguageChanged(loc.CurrentCode);
+
             // Capture a keypress for an in-progress rebind before any widget
             // consumes the event. Mouse side buttons arrive as MouseDown
             // rather than KeyDown, so handle both event types.
@@ -246,6 +252,9 @@ namespace HSRTimer
             if (GUILayout.Button(loc.Get("PANEL_RELOAD_LANGUAGE"), _button))
             {
                 cfg.ReloadLanguage();
+                var registry = SettingsPanelTabRegistry.Instance;
+                if (registry != null)
+                    registry.NotifyLanguageChanged(cfg.Localization.CurrentCode);
                 RefreshLanguageList();
                 RefreshTabDisplays();
             }
@@ -539,6 +548,10 @@ namespace HSRTimer
                         {
                             cfg.Localization.SetLanguage(_langCodes[i]);
                             cfg.Settings.CurrentLang = cfg.Localization.CurrentCode;
+                            var registry = SettingsPanelTabRegistry.Instance;
+                            if (registry != null)
+                                registry.NotifyLanguageChanged(cfg.Localization.CurrentCode);
+                            RefreshTabDisplays();
                         }
                         _langDropdownOpen = false;
                     }
