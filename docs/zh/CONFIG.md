@@ -49,7 +49,7 @@ menu_key = Home
 
 > **提示:** 与其手改 `settings.ini`,不如在游戏内按 **设置面板键**(默认 `Home`)。所有选项都可在面板内编辑,改动实时生效,并在关闭面板 / 退出游戏时写盘。
 
-键位为 Unity `KeyCode` 枚举名,如 `Backspace`、`Home`、`R`、`Keypad0`、`Alpha1`、`LeftControl`。
+键位为 Unity `KeyCode` 枚举名,如 `Backspace`、`Home`、`R`、`Keypad0`、`Alpha1`、`LeftControl`。鼠标侧键(`Mouse3`–`Mouse6`)也可用作按键;鼠标左 / 右键刻意不能在设置面板中绑定。
 
 ## tags.ini
 
@@ -120,6 +120,10 @@ DebugLogging = false
 HudFontSize = 16
 HudOffsetX = 16
 HudOffsetY = 0
+HudColorFaster = 59FF66FF
+HudColorSlower = FF5959FF
+HudColorTie = FFFFFFFF
+DisabledLeaderboardSources =
 ```
 
 | 键 | 默认 | 说明 |
@@ -128,7 +132,7 @@ HudOffsetY = 0
 | `PBPath` | `subsegment/pb` | 相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。写入 PB 时自动创建目录。 |
 | `LoadPath` | `subsegment/load` | 玩家手动放置的采样目录。插件加载时会自动创建该目录，以便直接放入参考采样。 |
 | `ToggleKey` | `Tab` | 排行榜显示/隐藏键。 |
-| `MultiProject` | `Any%` | 多关实时对比使用的子项目（`Aztec%`/`Dark%`/`Steam%`/`Any%`）。PB 写入仍按实际最后完成关卡判定。 |
+| `MultiProject` | `Any%` | 多关实时对比的初始子项目（`Aztec%`/`Dark%`/`Steam%`/`Any%`）。当前局内可沿包含关系自动升级（`Aztec%`→`Dark%`→`Steam%`→`Any%`），不写回配置；若所选项目完全没有数据，则回退到有数据的最小项目（仅当前局内）。PB 写入仍按实际最后完成关卡判定。 |
 | `PlaneRadius` | `50.0` | 虚拟检测平面半径（米）。 |
 | `MinMove` | `0.5` | 最小采样位移；低于该值的位移置零，且不建平面。 |
 | `SampleInterval` | `1.0` | 游戏时间采样间隔（秒）。 |
@@ -140,6 +144,10 @@ HudOffsetY = 0
 | `HudFontSize` | 16 | 排行榜字号，独立于主计时面板。 |
 | `HudOffsetX` | 16 | 排行榜左边缘偏移。 |
 | `HudOffsetY` | 0 | 相对自动垂直居中的纵向偏移。 |
+| `HudColorFaster` | `59FF66FF` | 当前比参考更快的条目颜色（绿色）。 |
+| `HudColorSlower` | `FF5959FF` | 当前比参考更慢的条目颜色（红色）。 |
+| `HudColorTie` | `FFFFFFFF` | 持平及无数据条目颜色（显示为 `--`，白色）。 |
+| `DisabledLeaderboardSources` | *(空)* | 从排行榜隐藏的资料 display id（逗号分隔；`PB` 表示 PB 项，其余为 `LoadPath` 下各顶层文件夹名）。空表示全部显示。 |
 
 ## lang/*.txt
 

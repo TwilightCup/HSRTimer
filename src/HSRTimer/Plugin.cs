@@ -49,6 +49,10 @@ namespace HSRTimer
             // 4. Optional LevelCollections integration (reflection; no-op if absent).
             LcIntegration.Init();
 
+            // 4.5 Settings-panel tab extension point: other BepInEx plugins may
+            //     register one IMGUI tab each (see ISettingsPanelTab).
+            SettingsPanelTabRegistry.Init(new SettingsPanelTabRegistry());
+
             // 5. Engine + HUD + settings-panel singletons, persistent across scene loads.
             var engineGo = new GameObject("HSRTimer.Core");
             Object.DontDestroyOnLoad(engineGo);

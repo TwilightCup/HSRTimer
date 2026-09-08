@@ -1,16 +1,18 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace HSRTimer
 {
     /// <summary>
-    /// An IMGUI settings panel, organized into four tabbed pages (General,
-    /// Interface, Category, Subsegment). Edits every user-tunable option and
-    /// applies it live (the HUD/engine read from the shared models each frame,
-    /// so changes take effect immediately). Changes are written to disk when the
-    /// panel is closed or the game exits. Toggled by the configurable Menu key
-    /// (default Home). Editing a keybind is done by focusing its field and
-    /// pressing the desired key.
+    /// An IMGUI settings panel, organized into tabbed pages (General,
+    /// Interface, Category, Subsegment, Leaderboard, plus any tabs registered
+    /// by other plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
+    /// option and applies it live (the HUD/engine read from the shared models
+    /// each frame, so changes take effect immediately). Changes are written to
+    /// disk when the panel is closed or the game exits. Toggled by the
+    /// configurable Menu key (default Home). Editing a keybind is done by
+    /// focusing its field and pressing the desired key.
     /// </summary>
     public class SettingsPanel : MonoBehaviour
     {
@@ -34,7 +36,7 @@ namespace HSRTimer
         // Active tab page.
         private int _tab;
         private string[] _tabDisplays;
-        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT" };
+        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD" };
 
         // Keybind rebind state: which logical action is awaiting a keypress.
         private string _pendingRebind;
@@ -53,6 +55,31 @@ namespace HSRTimer
         private void Awake()
         {
             Instance = this;
+        }
+
+        private void Update()
+        {
+            // IMGUI does not consistently route side mouse buttons through
+            // OnGUI MouseDown events, so also poll the raw mouse button state
+            // while a rebind is active. This makes Mouse3–Mouse6 bindable even
+            // when the engine only reports them through Input.GetMouseButtonDown.
+            if (!_visible || _pendingRebind == null)
+                return;
+
+            for (int button = 3; button <= 6; button++)
+            {
+                if (InputUtil.IsBindableMouseButton(button)
+                    && Input.GetMouseButtonDown(button))
+                {
+                    KeyCode pressed = InputUtil.MouseKeyCodeForButton(button);
+                    if (pressed != KeyCode.None)
+                    {
+                        ApplyRebind(_pendingRebind, pressed);
+                        _pendingRebind = null;
+                    }
+                    break;
+                }
+            }
         }
 
         private void OnDestroy()
@@ -120,7 +147,8 @@ namespace HSRTimer
             var loc = cfg.Localization;
 
             // Capture a keypress for an in-progress rebind before any widget
-            // consumes the event.
+            // consumes the event. Mouse side buttons arrive as MouseDown
+            // rather than KeyDown, so handle both event types.
             if (_pendingRebind != null && Event.current.type == EventType.KeyDown)
             {
                 KeyCode pressed = Event.current.keyCode;
@@ -135,9 +163,24 @@ namespace HSRTimer
                     Event.current.Use();
                 }
             }
+            else if (_pendingRebind != null && Event.current.type == EventType.MouseDown)
+            {
+                // Keep left/right mouse buttons un-bindable; allow side
+                // buttons (button 3+) for speedrun keybinds.
+                int button = Event.current.button;
+                KeyCode pressed = InputUtil.MouseKeyCodeForButton(button);
+                if (InputUtil.IsBindableMouseButton(button) && pressed != KeyCode.None)
+                {
+                    ApplyRebind(_pendingRebind, pressed);
+                    _pendingRebind = null;
+                    Event.current.Use();
+                }
+            }
 
             // Left-hand vertical category navigation, kept outside the scroll view.
             RefreshTabDisplays();
+            if (_tab >= _tabDisplays.Length) _tab = Mathf.Max(0, _tabDisplays.Length - 1);
+            if (_tab < 0) _tab = 0;
             GUILayout.BeginHorizontal();
 
             int nextTab = GUILayout.SelectionGrid(_tab, _tabDisplays, 1, _button, GUILayout.Width(120));
@@ -152,6 +195,8 @@ namespace HSRTimer
                 case 1: DrawInterface(cfg, loc); break;
                 case 2: DrawCategory(cfg, loc); break;
                 case 3: DrawSubsegment(cfg, s, loc); break;
+                case 4: DrawLeaderboard(cfg, s, loc); break;
+                default: DrawExternalTab(_tab - _tabKeys.Length); break;
             }
 
             GUILayout.Space(8);
@@ -209,6 +254,7 @@ namespace HSRTimer
             KeybindRow(loc, "SETTINGS_RESET_KEY", () => s.ResetKey, k => s.ResetKey = k);
             KeybindRow(loc, "SETTINGS_RETRY_KEY", () => s.RetryKey, k => s.RetryKey = k);
             KeybindRow(loc, "SETTINGS_MENU_KEY", () => s.MenuKey, k => s.MenuKey = k);
+            KeybindRow(loc, "SETTINGS_SUBSEGMENT_TOGGLE_KEY", () => s.SubsegmentToggleKey, k => s.SubsegmentToggleKey = k);
         }
 
         // ── Page: Interface (HUD appearance) ──
@@ -245,20 +291,12 @@ namespace HSRTimer
             s.SubsegmentPBPath = TextFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PB_PATH"), s.SubsegmentPBPath);
             s.SubsegmentLoadPath = TextFieldRow(loc.Get("SETTINGS_SUBSEGMENT_LOAD_PATH"), s.SubsegmentLoadPath);
 
-            Section(loc.Get("PANEL_KEYBINDS"));
-            KeybindRow(loc, "SETTINGS_SUBSEGMENT_TOGGLE_KEY", () => s.SubsegmentToggleKey, k => s.SubsegmentToggleKey = k);
-
             Section(loc.Get("SETTINGS_SUBSEGMENT_MULTI_PROJECT"));
             string[] projects = { "Aztec%", "Dark%", "Steam%", "Any%" };
             int idx = System.Array.IndexOf(projects, s.SubsegmentMultiProject);
             if (idx < 0) idx = 3;
             int next = GUILayout.SelectionGrid(idx, projects, 2, _button);
             if (next != idx) s.SubsegmentMultiProject = projects[next];
-
-            Section(loc.Get("PANEL_HUD"));
-            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
-            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
-            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
 
             Section(loc.Get("SETTINGS_SUBSEGMENT_DETAILS"));
             s.SubsegmentPlaneRadius = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_RADIUS"), s.SubsegmentPlaneRadius, "0.###"));
@@ -268,6 +306,70 @@ namespace HSRTimer
             s.SubsegmentPlaneDebounceSeconds = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_DEBOUNCE_SECONDS"), s.SubsegmentPlaneDebounceSeconds, "0.###"));
             s.SubsegmentRespawnJumpMeters = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_RESPAWN_JUMP_METERS"), s.SubsegmentRespawnJumpMeters, "0.###"));
             s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
+        }
+
+        // ── Page: Leaderboard (R8.5 HUD appearance + entry state colors) ──
+        private void DrawLeaderboard(ConfigService cfg, SettingsModel s, LocalizationService loc)
+        {
+            Section(loc.Get("PANEL_LEADERBOARD"));
+            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
+            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
+            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
+
+            Section(loc.Get("SETTINGS_LEADERBOARD_COLORS"));
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_FASTER", s.SubsegmentHudColorFaster, c => s.SubsegmentHudColorFaster = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_SLOWER", s.SubsegmentHudColorSlower, c => s.SubsegmentHudColorSlower = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_TIE", s.SubsegmentHudColorTie, c => s.SubsegmentHudColorTie = c);
+
+            Section(loc.Get("SETTINGS_LEADERBOARD_SOURCES"));
+            bool pbEnabled = s.IsSubsegmentSourceEnabled("PB");
+            bool pbNext = Toggle(loc.Get("SETTINGS_LEADERBOARD_SOURCE_PB"), pbEnabled);
+            if (pbNext != pbEnabled) s.SetSubsegmentSourceEnabled("PB", pbNext);
+
+            string loadDir = SubsegmentFileStore.ResolvePath(
+                string.IsNullOrEmpty(s.SubsegmentLoadPath) ? "subsegment/load" : s.SubsegmentLoadPath);
+            if (!string.IsNullOrEmpty(loadDir) && Directory.Exists(loadDir))
+            {
+                try
+                {
+                    var dirs = Directory.GetDirectories(loadDir);
+                    System.Array.Sort(dirs, System.StringComparer.Ordinal);
+                    foreach (var dir in dirs)
+                    {
+                        string id = Path.GetFileName(dir);
+                        if (string.IsNullOrEmpty(id)) continue;
+                        bool enabled = s.IsSubsegmentSourceEnabled(id);
+                        bool next = Toggle(id, enabled);
+                        if (next != enabled) s.SetSubsegmentSourceEnabled(id, next);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Plugin.Logger.LogWarning($"HSRTimer: failed to list subsegment load directory '{loadDir}': {ex.Message}");
+                    GUILayout.Label(loc.Get("SETTINGS_LEADERBOARD_NO_LOAD_DIR"), _small);
+                }
+            }
+            else if (!string.IsNullOrEmpty(loadDir))
+            {
+                GUILayout.Label(loc.Get("SETTINGS_LEADERBOARD_NO_LOAD_DIR"), _small);
+            }
+        }
+
+        // ── Page: external plugin tab (ISettingsPanelTab) ──
+        private void DrawExternalTab(int index)
+        {
+            var registry = SettingsPanelTabRegistry.Instance;
+            if (registry == null) return;
+            int i = 0;
+            foreach (var tab in registry.Tabs)
+            {
+                if (i == index)
+                {
+                    tab.Draw();
+                    return;
+                }
+                i++;
+            }
         }
 
         // ── widgets ──
@@ -371,6 +473,11 @@ namespace HSRTimer
 
         private void ApplyRebind(string key, KeyCode pressed)
         {
+            // Left/right mouse buttons stay reserved for normal UI use; do not
+            // let them become keybinds even if some event path reports them.
+            if (pressed == KeyCode.Mouse0 || pressed == KeyCode.Mouse1)
+                return;
+
             var s = ConfigService.Instance.Settings;
             if (key == "SETTINGS_RESET_KEY") s.ResetKey = pressed;
             else if (key == "SETTINGS_RETRY_KEY") s.RetryKey = pressed;
@@ -458,10 +565,19 @@ namespace HSRTimer
         {
             var cfg = ConfigService.Instance;
             if (cfg == null) return;
-            if (_tabDisplays == null || _tabDisplays.Length != _tabKeys.Length)
-                _tabDisplays = new string[_tabKeys.Length];
+            var registry = SettingsPanelTabRegistry.Instance;
+            int count = _tabKeys.Length + (registry == null ? 0 : registry.Count);
+            if (_tabDisplays == null || _tabDisplays.Length != count)
+                _tabDisplays = new string[count];
             for (int i = 0; i < _tabKeys.Length; i++)
                 _tabDisplays[i] = cfg.Localization.Get(_tabKeys[i]);
+            if (registry == null) return;
+            int ext = _tabKeys.Length;
+            foreach (var tab in registry.Tabs)
+            {
+                string title = tab.Title;
+                _tabDisplays[ext++] = string.IsNullOrEmpty(title) ? tab.GetType().Name : title;
+            }
         }
     }
 }

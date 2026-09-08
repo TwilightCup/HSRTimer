@@ -61,7 +61,9 @@ menu_key = Home
 > live, and they are saved on panel close / game exit.
 
 Key codes are Unity's `KeyCode` enum names, e.g. `Backspace`, `Home`, `R`,
-`Keypad0`, `Alpha1`, `LeftControl`.
+`Keypad0`, `Alpha1`, `LeftControl`. Mouse side buttons (`Mouse3`–`Mouse6`) can
+also be used as keybinds; mouse left/right buttons are intentionally not
+bindable from the settings panel.
 
 ## tags.ini
 
@@ -148,6 +150,10 @@ DebugLogging = false
 HudFontSize = 16
 HudOffsetX = 16
 HudOffsetY = 0
+HudColorFaster = 59FF66FF
+HudColorSlower = FF5959FF
+HudColorTie = FFFFFFFF
+DisabledLeaderboardSources =
 ```
 
 | Key | Default | Notes |
@@ -156,7 +162,7 @@ HudOffsetY = 0
 | `PBPath` | `subsegment/pb` | Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. Created automatically when a PB is written. |
 | `LoadPath` | `subsegment/load` | Manually-placed reference samples. The directory is created automatically when the plugin loads, so it is ready for dropping reference samples into it. |
 | `ToggleKey` | `Tab` | Show/hide the subsegment leaderboard. |
-| `MultiProject` | `Any%` | Multi-run project used for live ML comparisons (`Aztec%`/`Dark%`/`Steam%`/`Any%`). PB writes still use the actual last-completed endpoint. |
+| `MultiProject` | `Any%` | Initial multi-run project used for live ML comparisons (`Aztec%`/`Dark%`/`Steam%`/`Any%`). Within a session it can auto-upgrade along the containment chain (Aztec% → Dark% → Steam% → Any%) without writing back to config; if the chosen project has no data at all, it falls back to the smallest project that has data (session-only). PB writes still use the actual last-completed endpoint. |
 | `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. |
 | `MinMove` | `0.5` | Minimum sampled move distance; smaller moves become zero-displacement samples and do not build planes. |
 | `SampleInterval` | `1.0` | Game-time seconds between subsegment samples. |
@@ -168,6 +174,10 @@ HudOffsetY = 0
 | `HudFontSize` | 16 | Subsegment leaderboard font size, independent of the main timer HUD. |
 | `HudOffsetX` | 16 | Left edge of the subsegment leaderboard. |
 | `HudOffsetY` | 0 | Vertical offset from the automatic left-middle centering. |
+| `HudColorFaster` | `59FF66FF` | Color of entries where the current run is faster than the reference (green). |
+| `HudColorSlower` | `FF5959FF` | Color of entries where the current run is slower than the reference (red). |
+| `HudColorTie` | `FFFFFFFF` | Color of tie and no-data entries (shown as `--`, white). |
+| `DisabledLeaderboardSources` | *(empty)* | Comma-separated display ids hidden from the leaderboard (`PB` = the PB entry; otherwise each top-level folder name under `LoadPath`). Empty shows everything. |
 
 ## lang/*.txt
 

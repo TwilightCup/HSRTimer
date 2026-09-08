@@ -65,6 +65,9 @@ Patches/
   HumanControlsPatches.cs     postfix on HumanControls.HandleInput (Jumpless enforcement)
 Hud/
   TimerHud.cs             IMGUI panel (R2)
+  SettingsPanel.cs        IMGUI settings panel + built-in tab pages
+  ISettingsPanelTab.cs    external settings-panel tab interface
+  SettingsPanelTabRegistry.cs  one-tab-per-plugin external tab registry
   GradientText.cs         color hex/alpha + gradient helper
   TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}/{gametime}/{realtime}
 Config/

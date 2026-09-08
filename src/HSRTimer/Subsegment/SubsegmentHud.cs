@@ -72,21 +72,32 @@ namespace HSRTimer
             float lineHeight = _rowStyle.CalcSize(new GUIContent("Wg")).y + 2f;
             float x = mgr.Options.HudOffsetX;
             // Default behavior: vertically centered; OffsetY lets the user nudge
-            // the whole block independently of the main timer HUD.
-            float y = Screen.height * 0.5f - size * lineHeight * 0.5f + mgr.Options.HudOffsetY;
+            // the whole block independently of the main timer HUD. The title
+            // row is counted as one more row so the block stays centered.
+            float y = Screen.height * 0.5f - (size + 1) * lineHeight * 0.5f + mgr.Options.HudOffsetY;
+
+            // Leaderboard title: the active multi-run project (e.g. "Aztec%",
+            // possibly auto-upgraded this session) in ML mode, otherwise the
+            // current level name.
+            string title = mgr.LeaderboardTitle;
+            if (!string.IsNullOrEmpty(title))
+            {
+                DrawLine(title, Color.white, x, y);
+                y += lineHeight;
+            }
 
             foreach (var entry in entries)
             {
                 string line = entry.DisplayId + "  " + FormatDiff(entry.DiffMs);
+                // State colors (R8.5.2.2): faster, slower, tie/no-data — all
+                // user-configurable on the Leaderboard settings tab.
                 Color color;
-                if (!entry.DiffMs.HasValue)
-                    color = Color.white;
+                if (!entry.DiffMs.HasValue || entry.DiffMs.Value == 0)
+                    color = mgr.Options.HudColorTie;
                 else if (entry.DiffMs.Value < 0)
-                    color = new Color(0.35f, 1f, 0.4f, 1f);
-                else if (entry.DiffMs.Value > 0)
-                    color = new Color(1f, 0.35f, 0.35f, 1f);
+                    color = mgr.Options.HudColorFaster;
                 else
-                    color = Color.white;
+                    color = mgr.Options.HudColorSlower;
                 DrawLine(line, color, x, y);
                 y += lineHeight;
             }

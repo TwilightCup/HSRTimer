@@ -2,6 +2,22 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
+## 1.2.0
+
+- **Release Date:** *08 Sep 2026*
+- **Highlights:**
+  - Mouse side buttons can now be bound to hotkeys.
+  - Improved the subsegment leaderboard experience.
+- **Details:**
+  - The settings panel can now bind mouse side buttons (Mouse3–Mouse6).
+  - Other plugins can now register one IMGUI configuration tab each in the settings panel.
+  - Added a Leaderboard settings tab with the subsegment HUD appearance options and three configurable entry-state colors (faster/ahead, slower/behind, tie/no-data).
+  - Added per-source display toggles on the Leaderboard tab so PB and each load-directory reference can be individually hidden/shown on the subsegment leaderboard.
+  - Moved the subsegment leaderboard toggle key into General → Keybinds.
+  - The subsegment leaderboard now shows a title row at the top.
+  - During a multi-run, the subsegment leaderboard starts from the configured category and can auto-upgrade for the current session when the run passes that category's endpoint (Aztec% → Dark% → Steam% → Any%); the switch occurs at the first settled subsegment of the new level.
+  - When entering multi-run mode, if the selected category (other than Aztec%) has no data at all, the leaderboard falls back to the smallest category that has data for the current session (Aztec% → Dark% → Steam% → Any%).
+
 ## 1.1.0
 
 - **Release Date:** *06 Sep 2026*

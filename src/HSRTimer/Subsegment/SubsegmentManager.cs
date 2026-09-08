@@ -30,6 +30,20 @@ namespace HSRTimer
         public int HudFontSize;
         public float HudOffsetX;
         public float HudOffsetY;
+        public Color HudColorFaster;
+        public Color HudColorSlower;
+        public Color HudColorTie;
+
+        /// <summary>
+        /// Display ids hidden from the leaderboard (denylist). Empty = show all
+        /// loaded sources (PB + load folders).
+        /// </summary>
+        public HashSet<string> DisabledLeaderboardSources;
+
+        /// <summary>Whether the given display id is allowed on the leaderboard.</summary>
+        public bool IsReferenceEnabled(string displayId)
+            => DisabledLeaderboardSources == null || string.IsNullOrEmpty(displayId)
+               || !DisabledLeaderboardSources.Contains(displayId);
 
         public static SubsegmentOptions FromSettings(SettingsModel s)
         {
@@ -51,6 +65,11 @@ namespace HSRTimer
                 HudFontSize = Mathf.Max(8, s.SubsegmentHudFontSize),
                 HudOffsetX = s.SubsegmentHudOffsetX,
                 HudOffsetY = s.SubsegmentHudOffsetY,
+                HudColorFaster = s.SubsegmentHudColorFaster,
+                HudColorSlower = s.SubsegmentHudColorSlower,
+                HudColorTie = s.SubsegmentHudColorTie,
+                DisabledLeaderboardSources = new HashSet<string>(
+                    s.GetDisabledSubsegmentSources(), System.StringComparer.OrdinalIgnoreCase),
             };
         }
 
@@ -79,9 +98,14 @@ namespace HSRTimer
         private int _nextSeq;
         private bool _firstAwake;
 
-        // Loader/comparator state
-        private readonly List<SubsegmentReference> _references = new List<SubsegmentReference>();
+        // Loader/comparator state. During a multi-run level transition we keep
+        // the previous level's visible leaderboard in _displayReferences until
+        // the new level settles its first subsegment diff; _references always
+        // holds the active detection set for the current level/project.
+        private List<SubsegmentReference> _references = new List<SubsegmentReference>();
+        private List<SubsegmentReference> _displayReferences;
         private bool _visible = true;
+        private string _leaderboardTitle = "";
 
         // Multi-run (ML) tracking
         private bool _multiRunCandidate;
@@ -90,6 +114,13 @@ namespace HSRTimer
         private readonly Dictionary<string, List<SubsegmentSample>> _multiRunSamples = new Dictionary<string, List<SubsegmentSample>>();
         private int _lastCompletedLevelNumber = -1;
         private long _multiRunTotalMs;
+
+        // Runtime multi-project used by the ML leaderboard. It starts from the
+        // configured Subsegment.MultiProject when a multi-run begins and may
+        // upgrade within the session only (Aztec% -> Dark% -> Steam% -> Any%);
+        // the config value is never modified.
+        private string _activeMultiProject = "Any%";
+        private string _pendingMultiProject;
 
         private void Awake()
         {
@@ -121,16 +152,21 @@ namespace HSRTimer
         /// <summary>True during an official-campaign multi-run attempt (candidate or active).</summary>
         public bool InMultiRunActive => _multiRunCandidate || _multiRunActive;
 
+        /// <summary>Title shown above the leaderboard: the active multi-run project (session-upgraded) or the current level name.</summary>
+        public string LeaderboardTitle => _leaderboardTitle;
+
         /// <summary>Current sorted leaderboard data (already truncated to MaxLeaderboardEntries).</summary>
         public List<SubsegmentReference> Entries
         {
             get
             {
-                if (!_options.Enable || _references.Count == 0) return new List<SubsegmentReference>();
-                var with = _references.Where(r => r.DiffMs.HasValue)
+                var source = _displayReferences ?? _references;
+                if (!_options.Enable || source.Count == 0) return new List<SubsegmentReference>();
+                var visible = source.Where(r => _options.IsReferenceEnabled(r.DisplayId)).ToList();
+                var with = visible.Where(r => r.DiffMs.HasValue)
                     .OrderBy(r => r.DiffMs.Value)
                     .ThenBy(r => r.DisplayId, StringComparer.Ordinal);
-                var without = _references.Where(r => !r.DiffMs.HasValue)
+                var without = visible.Where(r => !r.DiffMs.HasValue)
                     .OrderBy(r => r.DisplayId, StringComparer.Ordinal);
                 return with.Concat(without).Take(_options.MaxLeaderboardEntries).ToList();
             }
@@ -148,17 +184,17 @@ namespace HSRTimer
                 return;
             }
 
-            // Multi-run display continuity: when advancing from one campaign
-            // level to the next, keep the previous leaderboard values on screen
-            // until the new level produces its first settled diff (R8.5.6 /
-            // follow-up UX). Snapshot by display id before the new load wipes it.
+            // Multi-run display continuity: advancing from one campaign level to
+            // the next keeps the previous level's visible leaderboard (values and
+            // title) on screen until the new level settles its first subsegment
+            // diff (R8.5.6 / follow-up UX). _displayReferences holds that
+            // snapshot while _references is swapped to the current level's
+            // detection set as soon as the new level starts.
             bool wasMultiRun = _multiRunCandidate || _multiRunActive;
-            var carryDisplayDiffs = new Dictionary<string, long?>();
-            if (wasMultiRun)
-            {
-                foreach (var r in _references)
-                    carryDisplayDiffs[r.DisplayId] = r.DiffMs;
-            }
+            bool wasMultiActive = _multiRunActive;
+            bool preserveDisplay = wasMultiRun && !state.Retrying
+                && (_displayReferences != null || _references.Count > 0);
+            List<SubsegmentReference> previousVisible = _displayReferences ?? _references;
 
             // Multi-run tracking (R8.3.2): a menu-entered B0 begins a candidate;
             // reaching B1 upgrades it to an active multi-run display. Any other
@@ -175,6 +211,8 @@ namespace HSRTimer
                 _multiRunSamples.Clear();
                 _lastCompletedLevelNumber = -1;
                 _multiRunTotalMs = 0L;
+                _activeMultiProject = _options.MultiProject;
+                _pendingMultiProject = null;
             }
             else if (_multiRunCandidate && game.currentLevelNumber == 1)
             {
@@ -187,15 +225,29 @@ namespace HSRTimer
                 _multiRunActive = true;
             }
 
-            ClearRecorder();
-            LoadReferences(game);
+            _displayReferences = preserveDisplay ? previousVisible : null;
+            _references = new List<SubsegmentReference>();
+            bool enteringMulti = !wasMultiActive && _multiRunActive && game.currentLevelNumber != 0;
 
-            if (wasMultiRun && !state.Retrying)
+            ClearRecorder();
+            if (_multiRunActive && game.currentLevelNumber != 0)
+                LoadMlReferencesForLevel(game, enteringMulti);
+            else
+                LoadReferences(game);
+
+            // If the new level/project has no reference data or no detection
+            // planes at all, there will never be a first settled diff to switch
+            // on — don't leave the previous level's leaderboard on screen
+            // (R8.4.6.1 / R8.4.6.2).
+            bool canSettle = _references.Any(r => r.Planes.Count > 0);
+            if (_displayReferences != null && !canSettle)
             {
-                foreach (var reference in _references)
+                if (_pendingMultiProject != null)
+                    ActivatePendingLeaderboard();
+                else
                 {
-                    if (carryDisplayDiffs.TryGetValue(reference.DisplayId, out long? carried))
-                        reference.DiffMs = carried;
+                    _leaderboardTitle = GetCurrentLevelDisplayName(game);
+                    _displayReferences = null;
                 }
             }
 
@@ -216,6 +268,9 @@ namespace HSRTimer
             if (retrying)
             {
                 ClearRecorder();
+                _displayReferences = null;
+                _leaderboardTitle = "";
+                _pendingMultiProject = null;
                 return;
             }
 
@@ -291,6 +346,9 @@ namespace HSRTimer
             if (_options.DebugLogging)
                 Plugin.Logger.LogInfo($"HSRTimer: subsegment level end (completed={completed}, valid={valid}, samples={_currentSamples.Count}).");
             ClearRecorder();
+            _displayReferences = null;
+            _leaderboardTitle = "";
+            _pendingMultiProject = null;
         }
 
         /// <summary>Called before an auto-reset / menu-entry full reset, i.e. a run exits without using the manual reset key.</summary>
@@ -348,6 +406,7 @@ namespace HSRTimer
                 return;
 
             float now = Time.unscaledTime;
+            bool firstSettled = false;
             foreach (var reference in _references)
             {
                 foreach (var plane in reference.Planes)
@@ -356,13 +415,23 @@ namespace HSRTimer
                     if (now - plane.QuietStartUnscaledTime < _options.QuietSettleSeconds) continue;
                     long? hit = plane.CandidateHitMs;
                     if (hit.HasValue)
+                    {
+                        // The very first settled diff of a new multi-run level is
+                        // the switch point: the previous level's leaderboard stays
+                        // on screen until then, then the new project takes over.
+                        if (_displayReferences != null && !reference.DiffMs.HasValue)
+                            firstSettled = true;
                         reference.DiffMs = hit.Value - plane.TMs;
+                    }
                     plane.HasQuiet = false;
                     plane.CandidateHitMs = null;
                     if (_options.DebugLogging)
                         Plugin.Logger.LogInfo($"HSRTimer: subsegment settled '{reference.DisplayId}' plane seq {plane.Seq} diff_ms={reference.DiffMs}");
                 }
             }
+
+            if (firstSettled)
+                ActivatePendingLeaderboard();
         }
 
         /// <summary>Handle the configurable subsegment leaderboard toggle key.</summary>
@@ -370,7 +439,7 @@ namespace HSRTimer
         {
             UpdateOptions();
             if (!_options.Enable || key != _options.ToggleKey) return;
-            if (!Input.GetKeyDown(key)) return;
+            if (!InputUtil.GetKeyDown(key)) return;
             _visible = !_visible;
             Plugin.Logger.LogInfo(_visible ? "HSRTimer: subsegment leaderboard shown." : "HSRTimer: subsegment leaderboard hidden.");
         }
@@ -402,7 +471,9 @@ namespace HSRTimer
 
         private void ClearRuntime()
         {
-            _references.Clear();
+            _references = new List<SubsegmentReference>();
+            _displayReferences = null;
+            _leaderboardTitle = "";
             ClearRecorder();
             _multiRunCandidate = false;
             _multiRunActive = false;
@@ -410,6 +481,8 @@ namespace HSRTimer
             _multiRunSamples.Clear();
             _lastCompletedLevelNumber = -1;
             _multiRunTotalMs = 0L;
+            _activeMultiProject = "Any%";
+            _pendingMultiProject = null;
         }
 
         private void ClearMultiRun()
@@ -420,6 +493,100 @@ namespace HSRTimer
             _multiRunSamples.Clear();
             _lastCompletedLevelNumber = -1;
             _multiRunTotalMs = 0L;
+            _activeMultiProject = "Any%";
+            _pendingMultiProject = null;
+        }
+
+        private static readonly string[] MultiProjectOrder = { "Aztec%", "Dark%", "Steam%", "Any%" };
+
+        private static string NextMultiProject(string project)
+        {
+            int idx = System.Array.IndexOf(MultiProjectOrder, project);
+            if (idx < 0 || idx >= MultiProjectOrder.Length - 1) return null;
+            return MultiProjectOrder[idx + 1];
+        }
+
+        /// <summary>
+        /// Candidate runtime ML projects to try for the current level.
+        /// On entry to multi-run mode (B0 → B1) the configured project is tried
+        /// first; if it is not Aztec% and has no data, the smallest project that
+        /// does have data is preferred (session-only fallback). On later levels
+        /// the search moves outward from the current project, so upgrades skip
+        /// projects that have no data for the level.
+        /// </summary>
+        private List<string> GetMultiProjectCandidates(bool enteringMulti)
+        {
+            var candidates = new List<string>();
+            if (enteringMulti)
+            {
+                // The session's starting project was captured at B0.
+                string selected = _activeMultiProject;
+                AddMultiProjectCandidate(candidates, selected);
+                if (selected != "Aztec%")
+                {
+                    for (int i = 0; i < MultiProjectOrder.Length; i++)
+                        AddMultiProjectCandidate(candidates, MultiProjectOrder[i]);
+                }
+            }
+            else
+            {
+                string project = _pendingMultiProject ?? _activeMultiProject;
+                while (project != null)
+                {
+                    AddMultiProjectCandidate(candidates, project);
+                    project = NextMultiProject(project);
+                }
+            }
+
+            return candidates;
+        }
+
+        private static void AddMultiProjectCandidate(List<string> candidates, string project)
+        {
+            if (string.IsNullOrEmpty(project) || candidates.Contains(project))
+                return;
+            candidates.Add(project);
+        }
+
+        /// <summary>
+        /// Load ML references for the current level, trying candidate projects
+        /// in order until one yields data. Sets <c>_pendingMultiProject</c> to
+        /// the chosen project, or null when none has data for this level.
+        /// </summary>
+        private void LoadMlReferencesForLevel(Game game, bool enteringMulti)
+        {
+            _pendingMultiProject = null;
+            foreach (var project in GetMultiProjectCandidates(enteringMulti))
+            {
+                _references = new List<SubsegmentReference>();
+                _pendingMultiProject = project;
+                LoadReferences(game);
+                if (_references.Count > 0)
+                {
+                    if (_options.DebugLogging)
+                        Plugin.Logger.LogInfo($"HSRTimer: subsegment ML project resolved to {project} for {GetLevelId(game)}.");
+                    return;
+                }
+            }
+            _pendingMultiProject = null;
+        }
+
+        /// <summary>
+        /// Called when the current level's first subsegment diff settles during
+        /// a preserved multi-run transition. The pending project becomes active
+        /// and the previous level's displayed leaderboard is replaced.
+        /// </summary>
+        private void ActivatePendingLeaderboard()
+        {
+            if (_pendingMultiProject != null)
+            {
+                _activeMultiProject = _pendingMultiProject;
+                _leaderboardTitle = _activeMultiProject;
+                _pendingMultiProject = null;
+            }
+            _displayReferences = null;
+            if (_options.DebugLogging)
+                Plugin.Logger.LogInfo($"HSRTimer: subsegment leaderboard switched to {_activeMultiProject}.");
         }
 
         private void EnsureAwakeSample(double gameTime, Vector3 pos)
@@ -578,6 +745,22 @@ namespace HSRTimer
             return GetLevelId(game);
         }
 
+        private string GetCurrentLevelDisplayName(Game game)
+        {
+            if (game.currentLevelType == WorkshopItemSource.BuiltIn
+                && game.levels != null
+                && game.currentLevelNumber >= 0
+                && game.currentLevelNumber < game.levels.Length
+                && !string.IsNullOrEmpty(game.levels[game.currentLevelNumber]))
+            {
+                string internalName = game.levels[game.currentLevelNumber];
+                return GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
+            }
+            if (game.workshopLevel != null && !string.IsNullOrEmpty(game.workshopLevel.title))
+                return game.workshopLevel.title;
+            return GetLevelId(game);
+        }
+
         private static string GetEnglishLocalizedLevelName(string term, string fallback)
         {
             try
@@ -615,9 +798,18 @@ namespace HSRTimer
             }
         }
 
+        private string MultiProjectForLoading
+            => _pendingMultiProject ?? _activeMultiProject ?? _options.MultiProject;
+
         private void LoadReferences(Game game)
         {
             _references.Clear();
+            if (_displayReferences == null)
+            {
+                _leaderboardTitle = (_multiRunActive && game.currentLevelNumber != 0)
+                    ? MultiProjectForLoading
+                    : GetCurrentLevelDisplayName(game);
+            }
             try
             {
                 string category = GetCategoryKey();
@@ -662,7 +854,7 @@ namespace HSRTimer
         private void LoadPbMl(string levelId, string category)
         {
             if (string.IsNullOrEmpty(_options.PBPath)) return;
-            TryAddMlReference(Path.Combine(_options.PBPath, "ML", _options.MultiProject, category), "PB", levelId);
+            TryAddMlReference(Path.Combine(_options.PBPath, "ML", MultiProjectForLoading, category), "PB", levelId);
         }
 
         private void LoadLoadMl(string levelId, string category)
@@ -672,7 +864,7 @@ namespace HSRTimer
             {
                 string display = Path.GetFileName(dir);
                 if (string.IsNullOrEmpty(display)) continue;
-                TryAddMlReference(Path.Combine(dir, "ML", _options.MultiProject, category), display, levelId);
+                TryAddMlReference(Path.Combine(dir, "ML", MultiProjectForLoading, category), display, levelId);
             }
         }
 
