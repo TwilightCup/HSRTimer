@@ -4,14 +4,16 @@
 
 设置面板(用 **设置键**,默认 `Home`,打开 / 关闭)可实时编辑所有可调选项 ——
 改动即时生效,并在关闭面板或退出游戏时写入磁盘。面板包含以下内置标签页,以及其它插件通过
-`ISettingsPanelTab` 注册的**额外标签页**(见 [EXTENDING.md](EXTENDING.md))。
+`ISettingsPanelTab` 注册的**额外标签页**(见 [EXTENDING.md](EXTENDING.md))。实现
+`ILocalizableSettingsPanelTab` 的额外标签页会随 HSRTimer 的 **常规 → 语言** 选择一起切换;
+额外标签页还可订阅 `SettingsPanelTabRegistry.SettingsSaved`,在 HSRTimer 保存时持久化自身配置。
 
 > 作弊 / 变速 / 漂移检测(R5.1)始终开启,阈值为硬编码,刻意**不**在面板的任何地方暴露。
 
 ## 常规
 
 - **计时** —— `auto_reset`、`restart_clears_forgivable`(暂停菜单重新开始时清除可原谅标记;见 [CONFIG.md](CONFIG.md)),以及重试目标指定(`retry_level_override_enabled` + `retry_level_override`)。开启“指定重试关卡”后会出现一个文本输入框,可填关卡的英文本地化名(不区分大小写)或创意工坊数字 id。无效值会在按下重试键时以计时器面板的红色无效样式提示;在主菜单中,有效值可直接通过重试键进入该指定关卡。暂停期间始终计时,菜单 / 大厅期间始终不计时,二者均无开关。
-- **语言** —— 从已加载的语言集合中单选当前语言。"重新加载语言文件" 会重新扫描 `lang/*.txt`。
+- **语言** —— 从已加载的语言集合中单选当前语言。"重新加载语言文件" 会重新扫描 `lang/*.txt`。实现 `ILocalizableSettingsPanelTab` 的外部标签页会自动跟随该选择。
 - **按键绑定** —— 重置 / 重试 / 设置键 / 排行榜显示切换键。改绑方法:点击对应项,然后按下目标键。纯修饰键(Shift/Ctrl/Alt/Cmd)按下会被忽略。鼠标侧键(`Mouse3`–`Mouse6`)也可绑定;鼠标左 / 右键仍保留为普通 UI 操作,不可绑定。
 
 ## 界面

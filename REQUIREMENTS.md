@@ -798,8 +798,22 @@
 
 - **R9.1.1** 插件须提供**公开接口**（`ISettingsPanelTab`），允许其它 BepInEx 插件把使用 Unity IMGUI 编写的配置面板注册为 HSRTimer 设置面板中的一个**新标签页**。
 - **R9.1.2** 每个插件（按其 BepInEx 插件 GUID 识别）**最多注册一个**标签页；同一插件重复注册须被**拒绝并记录日志**，不得覆盖既有标签页。
-- **R9.1.3** 外部标签页的**标题**由注册插件提供，可返回随插件自身语言设置实时变化的本地化字符串；标题用于设置面板的导航显示。
+- **R9.1.3** 外部标签页的**标题**由注册插件提供，可返回随当前语言实时变化的本地化字符串；标题用于设置面板的导航显示。实现 R9.2 的 `ILocalizableSettingsPanelTab` 时，标题须随 HSRTimer 的语言选择更新。
 - **R9.1.4** 外部标签页的**绘制**（`Draw`）在 HSRTimer 设置面板窗口与滚动视图内部执行，插件可在其中使用任意 `GUILayout.*` / `GUI.*` IMGUI 控件。
+
+#### R9.2 外部标签页本地化
+
+- **R9.2.1** 插件须提供公开的**可选接口** `ILocalizableSettingsPanelTab`（继承 `ISettingsPanelTab`），使外部标签页能够接入 HSRTimer 的语言切换；未实现该接口的标签页保持 R9.1 的既有行为。
+- **R9.2.2** 实现 `ILocalizableSettingsPanelTab` 的外部标签页须通过 `SupportedLanguages` 声明其内置语言代码，且**必须至少包含英文基准 `en`**（BCP 47 / IETF 标签）。若未声明 `en`，HSRTimer 须记录警告，并仍以 `en` 作为该标签页的兜底语言。
+- **R9.2.3** HSRTimer 须在标签页注册时、以及用户通过 HSRTimer 的语言选项切换语言时调用 `SetLanguage`：若当前语言在 `SupportedLanguages` 中，则传入当前语言代码；否则**回退传入 `en`**。
+- **R9.2.4** 外部标签页的本地化资源须遵循 R7 规范：`<code>.txt` 命名（BCP 47）、`键名:译文` 格式、UTF-8（无 BOM）、`__LANG_NAME__` 显示名，以及**当前语言 → 英文基准 → 键名本身**的查找顺序。
+- **R9.2.5** 外部标签页的 `Title` 与 `Draw` 使用的全部文案须随 `SetLanguage` 立即更新，无需重启游戏或重新打开设置面板。
+
+#### R9.3 外部标签页配置保存事件
+
+- **R9.3.1** 插件须在 `SettingsPanelTabRegistry` 上提供公开的 `SettingsSaved` 事件，供其它 BepInEx 插件在 HSRTimer 持久化配置后保存自身配置。
+- **R9.3.2** HSRTimer 每次通过 `ConfigService.SaveSettings()` 写入配置（包括设置面板的保存 / 关闭、退出游戏，以及引擎内部自动保存）后，须触发 `SettingsSaved`。
+- **R9.3.3** 外部插件的事件处理器异常不得中断 HSRTimer 的配置保存流程；处理器异常须被捕获并记录日志。
 
 ---
 

@@ -6,7 +6,11 @@ The settings panel (open/close with the **settings key**, default `Home`) edits
 every user-tunable option live — changes take effect immediately and are saved
 to disk when the panel is closed or the game exits. It is organized into the
 built-in tabs below, plus any **extra tabs registered by other plugins** via
-`ISettingsPanelTab` (see [EXTENDING.md](EXTENDING.md)).
+`ISettingsPanelTab` (see [EXTENDING.md](EXTENDING.md)). Extra tabs that
+implement `ILocalizableSettingsPanelTab` switch language together with
+HSRTimer's **General → Language** selection, and extra tabs can subscribe to
+`SettingsPanelTabRegistry.SettingsSaved` to persist their own config when
+HSRTimer saves.
 
 > Cheat/speed/drift detection (R5.1) is always on with hardcoded thresholds and
 > is intentionally **not** exposed anywhere in the panel.
@@ -23,7 +27,8 @@ built-in tabs below, plus any **extra tabs registered by other plugins** via
   directly enter the specified level. Pause time is always counted and
   menu/lobby time is never counted; there are no toggles for them.
 - **Language** — pick the active language from the loaded set (single-select).
-  "Reload language files" re-scans `lang/*.txt`.
+  "Reload language files" re-scans `lang/*.txt`. External tabs that implement
+  `ILocalizableSettingsPanelTab` follow this selection automatically.
 - **Keybinds** — reset / retry / settings / subsegment leaderboard toggle keys.
   To rebind: click the field, then press the desired key. Pure modifier presses
   are ignored. Mouse side buttons (`Mouse3`–`Mouse6`) can also be bound; mouse
