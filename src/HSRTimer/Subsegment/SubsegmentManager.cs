@@ -191,6 +191,7 @@ namespace HSRTimer
             // snapshot while _references is swapped to the current level's
             // detection set as soon as the new level starts.
             bool wasMultiRun = _multiRunCandidate || _multiRunActive;
+            bool wasMultiActive = _multiRunActive;
             bool preserveDisplay = wasMultiRun && !state.Retrying
                 && (_displayReferences != null || _references.Count > 0);
             List<SubsegmentReference> previousVisible = _displayReferences ?? _references;
@@ -226,12 +227,13 @@ namespace HSRTimer
 
             _displayReferences = preserveDisplay ? previousVisible : null;
             _references = new List<SubsegmentReference>();
-            _pendingMultiProject = (_multiRunActive && game.currentLevelNumber != 0)
-                ? ResolveMultiProjectForLevel(game.currentLevelNumber)
-                : null;
+            bool enteringMulti = !wasMultiActive && _multiRunActive && game.currentLevelNumber != 0;
 
             ClearRecorder();
-            LoadReferences(game);
+            if (_multiRunActive && game.currentLevelNumber != 0)
+                LoadMlReferencesForLevel(game, enteringMulti);
+            else
+                LoadReferences(game);
 
             // If the new level/project has no reference data or no detection
             // planes at all, there will never be a first settled diff to switch
@@ -495,19 +497,78 @@ namespace HSRTimer
             _pendingMultiProject = null;
         }
 
-        /// <summary>
-        /// Resolve the runtime ML project to compare against for a campaign
-        /// level. The session starts from the configured project and only
-        /// upgrades outward when the current level has passed that project's
-        /// endpoint (Aztec% → Dark% → Steam% → Any%). This never writes back to
-        /// the config.
-        /// </summary>
-        private string ResolveMultiProjectForLevel(int levelNumber)
+        private static readonly string[] MultiProjectOrder = { "Aztec%", "Dark%", "Steam%", "Any%" };
+
+        private static string NextMultiProject(string project)
         {
-            string project = _activeMultiProject;
-            while (project != "Any%" && levelNumber > MultiProjectEndLevel(project))
-                project = NextMultiProject(project);
-            return project;
+            int idx = System.Array.IndexOf(MultiProjectOrder, project);
+            if (idx < 0 || idx >= MultiProjectOrder.Length - 1) return null;
+            return MultiProjectOrder[idx + 1];
+        }
+
+        /// <summary>
+        /// Candidate runtime ML projects to try for the current level.
+        /// On entry to multi-run mode (B0 → B1) the configured project is tried
+        /// first; if it is not Aztec% and has no data, the smallest project that
+        /// does have data is preferred (session-only fallback). On later levels
+        /// the search moves outward from the current project, so upgrades skip
+        /// projects that have no data for the level.
+        /// </summary>
+        private List<string> GetMultiProjectCandidates(bool enteringMulti)
+        {
+            var candidates = new List<string>();
+            if (enteringMulti)
+            {
+                // The session's starting project was captured at B0.
+                string selected = _activeMultiProject;
+                AddMultiProjectCandidate(candidates, selected);
+                if (selected != "Aztec%")
+                {
+                    for (int i = 0; i < MultiProjectOrder.Length; i++)
+                        AddMultiProjectCandidate(candidates, MultiProjectOrder[i]);
+                }
+            }
+            else
+            {
+                string project = _pendingMultiProject ?? _activeMultiProject;
+                while (project != null)
+                {
+                    AddMultiProjectCandidate(candidates, project);
+                    project = NextMultiProject(project);
+                }
+            }
+
+            return candidates;
+        }
+
+        private static void AddMultiProjectCandidate(List<string> candidates, string project)
+        {
+            if (string.IsNullOrEmpty(project) || candidates.Contains(project))
+                return;
+            candidates.Add(project);
+        }
+
+        /// <summary>
+        /// Load ML references for the current level, trying candidate projects
+        /// in order until one yields data. Sets <c>_pendingMultiProject</c> to
+        /// the chosen project, or null when none has data for this level.
+        /// </summary>
+        private void LoadMlReferencesForLevel(Game game, bool enteringMulti)
+        {
+            _pendingMultiProject = null;
+            foreach (var project in GetMultiProjectCandidates(enteringMulti))
+            {
+                _references = new List<SubsegmentReference>();
+                _pendingMultiProject = project;
+                LoadReferences(game);
+                if (_references.Count > 0)
+                {
+                    if (_options.DebugLogging)
+                        Plugin.Logger.LogInfo($"HSRTimer: subsegment ML project resolved to {project} for {GetLevelId(game)}.");
+                    return;
+                }
+            }
+            _pendingMultiProject = null;
         }
 
         /// <summary>
@@ -526,28 +587,6 @@ namespace HSRTimer
             _displayReferences = null;
             if (_options.DebugLogging)
                 Plugin.Logger.LogInfo($"HSRTimer: subsegment leaderboard switched to {_activeMultiProject}.");
-        }
-
-        private static string NextMultiProject(string project)
-        {
-            switch (project)
-            {
-                case "Aztec%": return "Dark%";
-                case "Dark%": return "Steam%";
-                case "Steam%": return "Any%";
-                default: return "Any%";
-            }
-        }
-
-        private static int MultiProjectEndLevel(string project)
-        {
-            switch (project)
-            {
-                case "Aztec%": return 8;
-                case "Dark%": return 9;
-                case "Steam%": return 10;
-                default: return 12;
-            }
         }
 
         private void EnsureAwakeSample(double gameTime, Vector3 pos)

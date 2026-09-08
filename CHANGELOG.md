@@ -14,6 +14,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - Moved the subsegment leaderboard toggle key into General → Keybinds, alongside the other settings keybinds.
   - The subsegment leaderboard now shows a title row at the top: the multi-run project (e.g. Aztec%) in ML mode, or the current level name in single-level mode.
   - During a multi-run, the subsegment leaderboard starts from the configured project and can auto-upgrade for the current session when the run passes that project's endpoint (Aztec% → Dark% → Steam% → Any%); the switch occurs at the first settled subsegment of the new level.
+  - When entering multi-run mode, if the selected project (other than Aztec%) has no data at all, the leaderboard falls back to the smallest project that has data for the current session (Aztec% → Dark% → Steam% → Any%).
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.1.0
