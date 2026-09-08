@@ -13,6 +13,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - Added per-source display toggles on the Leaderboard tab so PB and each load-directory reference can be individually hidden/shown on the subsegment leaderboard.
   - Moved the subsegment leaderboard toggle key into General → Keybinds, alongside the other settings keybinds.
   - The subsegment leaderboard now shows a title row at the top: the multi-run project (e.g. Aztec%) in ML mode, or the current level name in single-level mode.
+  - During a multi-run, the subsegment leaderboard starts from the configured project and can auto-upgrade for the current session when the run passes that project's endpoint (Aztec% → Dark% → Steam% → Any%); the switch occurs at the first settled subsegment of the new level.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.1.0

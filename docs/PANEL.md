@@ -50,9 +50,11 @@ built-in tabs below, plus any **extra tabs registered by other plugins** via
 ## Subsegment
 
 - **Subsegment** — enable/disable subsegment time comparison, PB and manual-load
-  sample paths, the multi-run project, and the detailed detection/settle
-  parameters. The leaderboard toggle key is in **General → Keybinds**; the
-  leaderboard appearance settings live on the **Leaderboard** tab below.
+  sample paths, the initial multi-run project, and the detailed detection/settle
+  parameters. During a multi-run the project can auto-upgrade for that session
+  only (Any% ⊃ Steam% ⊃ Dark% ⊃ Aztec%) without changing the saved setting. The
+  leaderboard toggle key is in **General → Keybinds**; the leaderboard
+  appearance settings live on the **Leaderboard** tab below.
 
 ## Leaderboard
 

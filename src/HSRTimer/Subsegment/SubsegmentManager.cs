@@ -98,8 +98,12 @@ namespace HSRTimer
         private int _nextSeq;
         private bool _firstAwake;
 
-        // Loader/comparator state
-        private readonly List<SubsegmentReference> _references = new List<SubsegmentReference>();
+        // Loader/comparator state. During a multi-run level transition we keep
+        // the previous level's visible leaderboard in _displayReferences until
+        // the new level settles its first subsegment diff; _references always
+        // holds the active detection set for the current level/project.
+        private List<SubsegmentReference> _references = new List<SubsegmentReference>();
+        private List<SubsegmentReference> _displayReferences;
         private bool _visible = true;
         private string _leaderboardTitle = "";
 
@@ -110,6 +114,13 @@ namespace HSRTimer
         private readonly Dictionary<string, List<SubsegmentSample>> _multiRunSamples = new Dictionary<string, List<SubsegmentSample>>();
         private int _lastCompletedLevelNumber = -1;
         private long _multiRunTotalMs;
+
+        // Runtime multi-project used by the ML leaderboard. It starts from the
+        // configured Subsegment.MultiProject when a multi-run begins and may
+        // upgrade within the session only (Aztec% -> Dark% -> Steam% -> Any%);
+        // the config value is never modified.
+        private string _activeMultiProject = "Any%";
+        private string _pendingMultiProject;
 
         private void Awake()
         {
@@ -141,7 +152,7 @@ namespace HSRTimer
         /// <summary>True during an official-campaign multi-run attempt (candidate or active).</summary>
         public bool InMultiRunActive => _multiRunCandidate || _multiRunActive;
 
-        /// <summary>Title shown above the leaderboard: the multi-run project or the current level name.</summary>
+        /// <summary>Title shown above the leaderboard: the active multi-run project (session-upgraded) or the current level name.</summary>
         public string LeaderboardTitle => _leaderboardTitle;
 
         /// <summary>Current sorted leaderboard data (already truncated to MaxLeaderboardEntries).</summary>
@@ -149,8 +160,9 @@ namespace HSRTimer
         {
             get
             {
-                if (!_options.Enable || _references.Count == 0) return new List<SubsegmentReference>();
-                var visible = _references.Where(r => _options.IsReferenceEnabled(r.DisplayId)).ToList();
+                var source = _displayReferences ?? _references;
+                if (!_options.Enable || source.Count == 0) return new List<SubsegmentReference>();
+                var visible = source.Where(r => _options.IsReferenceEnabled(r.DisplayId)).ToList();
                 var with = visible.Where(r => r.DiffMs.HasValue)
                     .OrderBy(r => r.DiffMs.Value)
                     .ThenBy(r => r.DisplayId, StringComparer.Ordinal);
@@ -172,17 +184,16 @@ namespace HSRTimer
                 return;
             }
 
-            // Multi-run display continuity: when advancing from one campaign
-            // level to the next, keep the previous leaderboard values on screen
-            // until the new level produces its first settled diff (R8.5.6 /
-            // follow-up UX). Snapshot by display id before the new load wipes it.
+            // Multi-run display continuity: advancing from one campaign level to
+            // the next keeps the previous level's visible leaderboard (values and
+            // title) on screen until the new level settles its first subsegment
+            // diff (R8.5.6 / follow-up UX). _displayReferences holds that
+            // snapshot while _references is swapped to the current level's
+            // detection set as soon as the new level starts.
             bool wasMultiRun = _multiRunCandidate || _multiRunActive;
-            var carryDisplayDiffs = new Dictionary<string, long?>();
-            if (wasMultiRun)
-            {
-                foreach (var r in _references)
-                    carryDisplayDiffs[r.DisplayId] = r.DiffMs;
-            }
+            bool preserveDisplay = wasMultiRun && !state.Retrying
+                && (_displayReferences != null || _references.Count > 0);
+            List<SubsegmentReference> previousVisible = _displayReferences ?? _references;
 
             // Multi-run tracking (R8.3.2): a menu-entered B0 begins a candidate;
             // reaching B1 upgrades it to an active multi-run display. Any other
@@ -199,6 +210,8 @@ namespace HSRTimer
                 _multiRunSamples.Clear();
                 _lastCompletedLevelNumber = -1;
                 _multiRunTotalMs = 0L;
+                _activeMultiProject = _options.MultiProject;
+                _pendingMultiProject = null;
             }
             else if (_multiRunCandidate && game.currentLevelNumber == 1)
             {
@@ -211,15 +224,28 @@ namespace HSRTimer
                 _multiRunActive = true;
             }
 
+            _displayReferences = preserveDisplay ? previousVisible : null;
+            _references = new List<SubsegmentReference>();
+            _pendingMultiProject = (_multiRunActive && game.currentLevelNumber != 0)
+                ? ResolveMultiProjectForLevel(game.currentLevelNumber)
+                : null;
+
             ClearRecorder();
             LoadReferences(game);
 
-            if (wasMultiRun && !state.Retrying)
+            // If the new level/project has no reference data or no detection
+            // planes at all, there will never be a first settled diff to switch
+            // on — don't leave the previous level's leaderboard on screen
+            // (R8.4.6.1 / R8.4.6.2).
+            bool canSettle = _references.Any(r => r.Planes.Count > 0);
+            if (_displayReferences != null && !canSettle)
             {
-                foreach (var reference in _references)
+                if (_pendingMultiProject != null)
+                    ActivatePendingLeaderboard();
+                else
                 {
-                    if (carryDisplayDiffs.TryGetValue(reference.DisplayId, out long? carried))
-                        reference.DiffMs = carried;
+                    _leaderboardTitle = GetCurrentLevelDisplayName(game);
+                    _displayReferences = null;
                 }
             }
 
@@ -240,6 +266,9 @@ namespace HSRTimer
             if (retrying)
             {
                 ClearRecorder();
+                _displayReferences = null;
+                _leaderboardTitle = "";
+                _pendingMultiProject = null;
                 return;
             }
 
@@ -315,6 +344,9 @@ namespace HSRTimer
             if (_options.DebugLogging)
                 Plugin.Logger.LogInfo($"HSRTimer: subsegment level end (completed={completed}, valid={valid}, samples={_currentSamples.Count}).");
             ClearRecorder();
+            _displayReferences = null;
+            _leaderboardTitle = "";
+            _pendingMultiProject = null;
         }
 
         /// <summary>Called before an auto-reset / menu-entry full reset, i.e. a run exits without using the manual reset key.</summary>
@@ -372,6 +404,7 @@ namespace HSRTimer
                 return;
 
             float now = Time.unscaledTime;
+            bool firstSettled = false;
             foreach (var reference in _references)
             {
                 foreach (var plane in reference.Planes)
@@ -380,13 +413,23 @@ namespace HSRTimer
                     if (now - plane.QuietStartUnscaledTime < _options.QuietSettleSeconds) continue;
                     long? hit = plane.CandidateHitMs;
                     if (hit.HasValue)
+                    {
+                        // The very first settled diff of a new multi-run level is
+                        // the switch point: the previous level's leaderboard stays
+                        // on screen until then, then the new project takes over.
+                        if (_displayReferences != null && !reference.DiffMs.HasValue)
+                            firstSettled = true;
                         reference.DiffMs = hit.Value - plane.TMs;
+                    }
                     plane.HasQuiet = false;
                     plane.CandidateHitMs = null;
                     if (_options.DebugLogging)
                         Plugin.Logger.LogInfo($"HSRTimer: subsegment settled '{reference.DisplayId}' plane seq {plane.Seq} diff_ms={reference.DiffMs}");
                 }
             }
+
+            if (firstSettled)
+                ActivatePendingLeaderboard();
         }
 
         /// <summary>Handle the configurable subsegment leaderboard toggle key.</summary>
@@ -426,7 +469,8 @@ namespace HSRTimer
 
         private void ClearRuntime()
         {
-            _references.Clear();
+            _references = new List<SubsegmentReference>();
+            _displayReferences = null;
             _leaderboardTitle = "";
             ClearRecorder();
             _multiRunCandidate = false;
@@ -435,6 +479,8 @@ namespace HSRTimer
             _multiRunSamples.Clear();
             _lastCompletedLevelNumber = -1;
             _multiRunTotalMs = 0L;
+            _activeMultiProject = "Any%";
+            _pendingMultiProject = null;
         }
 
         private void ClearMultiRun()
@@ -445,6 +491,63 @@ namespace HSRTimer
             _multiRunSamples.Clear();
             _lastCompletedLevelNumber = -1;
             _multiRunTotalMs = 0L;
+            _activeMultiProject = "Any%";
+            _pendingMultiProject = null;
+        }
+
+        /// <summary>
+        /// Resolve the runtime ML project to compare against for a campaign
+        /// level. The session starts from the configured project and only
+        /// upgrades outward when the current level has passed that project's
+        /// endpoint (Aztec% → Dark% → Steam% → Any%). This never writes back to
+        /// the config.
+        /// </summary>
+        private string ResolveMultiProjectForLevel(int levelNumber)
+        {
+            string project = _activeMultiProject;
+            while (project != "Any%" && levelNumber > MultiProjectEndLevel(project))
+                project = NextMultiProject(project);
+            return project;
+        }
+
+        /// <summary>
+        /// Called when the current level's first subsegment diff settles during
+        /// a preserved multi-run transition. The pending project becomes active
+        /// and the previous level's displayed leaderboard is replaced.
+        /// </summary>
+        private void ActivatePendingLeaderboard()
+        {
+            if (_pendingMultiProject != null)
+            {
+                _activeMultiProject = _pendingMultiProject;
+                _leaderboardTitle = _activeMultiProject;
+                _pendingMultiProject = null;
+            }
+            _displayReferences = null;
+            if (_options.DebugLogging)
+                Plugin.Logger.LogInfo($"HSRTimer: subsegment leaderboard switched to {_activeMultiProject}.");
+        }
+
+        private static string NextMultiProject(string project)
+        {
+            switch (project)
+            {
+                case "Aztec%": return "Dark%";
+                case "Dark%": return "Steam%";
+                case "Steam%": return "Any%";
+                default: return "Any%";
+            }
+        }
+
+        private static int MultiProjectEndLevel(string project)
+        {
+            switch (project)
+            {
+                case "Aztec%": return 8;
+                case "Dark%": return 9;
+                case "Steam%": return 10;
+                default: return 12;
+            }
         }
 
         private void EnsureAwakeSample(double gameTime, Vector3 pos)
@@ -656,12 +759,18 @@ namespace HSRTimer
             }
         }
 
+        private string MultiProjectForLoading
+            => _pendingMultiProject ?? _activeMultiProject ?? _options.MultiProject;
+
         private void LoadReferences(Game game)
         {
             _references.Clear();
-            _leaderboardTitle = (_multiRunActive && game.currentLevelNumber != 0)
-                ? _options.MultiProject
-                : GetCurrentLevelDisplayName(game);
+            if (_displayReferences == null)
+            {
+                _leaderboardTitle = (_multiRunActive && game.currentLevelNumber != 0)
+                    ? MultiProjectForLoading
+                    : GetCurrentLevelDisplayName(game);
+            }
             try
             {
                 string category = GetCategoryKey();
@@ -706,7 +815,7 @@ namespace HSRTimer
         private void LoadPbMl(string levelId, string category)
         {
             if (string.IsNullOrEmpty(_options.PBPath)) return;
-            TryAddMlReference(Path.Combine(_options.PBPath, "ML", _options.MultiProject, category), "PB", levelId);
+            TryAddMlReference(Path.Combine(_options.PBPath, "ML", MultiProjectForLoading, category), "PB", levelId);
         }
 
         private void LoadLoadMl(string levelId, string category)
@@ -716,7 +825,7 @@ namespace HSRTimer
             {
                 string display = Path.GetFileName(dir);
                 if (string.IsNullOrEmpty(display)) continue;
-                TryAddMlReference(Path.Combine(dir, "ML", _options.MultiProject, category), display, levelId);
+                TryAddMlReference(Path.Combine(dir, "ML", MultiProjectForLoading, category), display, levelId);
             }
         }
 

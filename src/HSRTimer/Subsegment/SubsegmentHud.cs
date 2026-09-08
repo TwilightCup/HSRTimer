@@ -76,8 +76,9 @@ namespace HSRTimer
             // row is counted as one more row so the block stays centered.
             float y = Screen.height * 0.5f - (size + 1) * lineHeight * 0.5f + mgr.Options.HudOffsetY;
 
-            // Leaderboard title: the multi-run project (e.g. "Aztec%") in ML
-            // mode, otherwise the current level name.
+            // Leaderboard title: the active multi-run project (e.g. "Aztec%",
+            // possibly auto-upgraded this session) in ML mode, otherwise the
+            // current level name.
             string title = mgr.LeaderboardTitle;
             if (!string.IsNullOrEmpty(title))
             {
