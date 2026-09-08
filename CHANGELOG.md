@@ -2,14 +2,14 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
-## 0.0.0
+## 1.2.1
 
-- **Release Date:** Unreleased
-- **Highlights:** _To be filled during version branch preparation._
+- **Release Date:** *09 Sep 2026*
+- **Highlights:**
+  - Improved integration for other plugins.
 - **Details:**
-  - Settings-panel tabs contributed by other plugins can now follow HSRTimer's language selection; a tab must ship an English base and automatically falls back to English when the selected HSRTimer language is unavailable to it.
+  - Settings-panel tabs from other plugins can now follow HSRTimer's language selection, with English as the mandatory fallback language.
   - Other plugins can now subscribe to `SettingsPanelTabRegistry.SettingsSaved` to persist their own settings whenever HSRTimer saves its configuration.
-- **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.2.0
 
