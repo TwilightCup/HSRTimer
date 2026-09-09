@@ -164,7 +164,7 @@ namespace HSRTimer
                 if (!_options.Enable || source.Count == 0) return new List<SubsegmentReference>();
                 var visible = source.Where(r => _options.IsReferenceEnabled(r.DisplayId)).ToList();
                 var with = visible.Where(r => r.DiffMs.HasValue)
-                    .OrderBy(r => r.DiffMs.Value)
+                    .OrderByDescending(r => r.DiffMs.Value)
                     .ThenBy(r => r.DisplayId, StringComparer.Ordinal);
                 var without = visible.Where(r => !r.DiffMs.HasValue)
                     .OrderBy(r => r.DisplayId, StringComparer.Ordinal);
