@@ -98,14 +98,19 @@ namespace HSRTimer
         private int _nextSeq;
         private bool _firstAwake;
 
-        // Loader/comparator state. During a multi-run level transition we keep
-        // the previous level's visible leaderboard in _displayReferences until
-        // the new level settles its first subsegment diff; _references always
-        // holds the active detection set for the current level/project.
+        // Loader/comparator state. During a level transition we keep the
+        // previous level's visible leaderboard in _displayReferences until the
+        // new level settles its first subsegment diff; _references always holds
+        // the active detection set for the current level/project. This applies
+        // to both multi-run (ML) and single-level (IL) transitions.
         private List<SubsegmentReference> _references = new List<SubsegmentReference>();
         private List<SubsegmentReference> _displayReferences;
         private bool _visible = true;
         private string _leaderboardTitle = "";
+        // True while a completed level is advancing to the next one and the
+        // previous leaderboard is being kept on screen (covers the loading gap
+        // before the next OnLevelStart snapshots it into _displayReferences).
+        private bool _preservingDisplay;
 
         // Multi-run (ML) tracking
         private bool _multiRunCandidate;
@@ -121,6 +126,9 @@ namespace HSRTimer
         // the config value is never modified.
         private string _activeMultiProject = "Any%";
         private string _pendingMultiProject;
+        // New level's title to switch to once its first subsegment settles
+        // during a preserved single-level (IL) transition.
+        private string _pendingLeaderboardTitle;
 
         private void Awake()
         {
@@ -151,6 +159,13 @@ namespace HSRTimer
 
         /// <summary>True during an official-campaign multi-run attempt (candidate or active).</summary>
         public bool InMultiRunActive => _multiRunCandidate || _multiRunActive;
+
+        /// <summary>
+        /// True while a completed level's leaderboard is being kept on screen
+        /// across the loading transition to the next level, before the next
+        /// level has had a chance to settle its first subsegment.
+        /// </summary>
+        public bool InPreservedTransition => _preservingDisplay;
 
         /// <summary>Title shown above the leaderboard: the active multi-run project (session-upgraded) or the current level name.</summary>
         public string LeaderboardTitle => _leaderboardTitle;
@@ -184,15 +199,16 @@ namespace HSRTimer
                 return;
             }
 
-            // Multi-run display continuity: advancing from one campaign level to
-            // the next keeps the previous level's visible leaderboard (values and
-            // title) on screen until the new level settles its first subsegment
-            // diff (R8.5.6 / follow-up UX). _displayReferences holds that
-            // snapshot while _references is swapped to the current level's
-            // detection set as soon as the new level starts.
+            // Level display continuity: advancing from one level to the next
+            // keeps the previous level's visible leaderboard (values and title)
+            // on screen until the new level settles its first subsegment diff
+            // (R8.5.6 / follow-up UX). _displayReferences holds that snapshot
+            // while _references is swapped to the current level's detection set
+            // as soon as the new level starts. This applies to both multi-run
+            // (ML) and single-level (IL) transitions.
             bool wasMultiRun = _multiRunCandidate || _multiRunActive;
             bool wasMultiActive = _multiRunActive;
-            bool preserveDisplay = wasMultiRun && !state.Retrying
+            bool preserveDisplay = !state.Retrying
                 && (_displayReferences != null || _references.Count > 0);
             List<SubsegmentReference> previousVisible = _displayReferences ?? _references;
 
@@ -226,6 +242,7 @@ namespace HSRTimer
             }
 
             _displayReferences = preserveDisplay ? previousVisible : null;
+            _preservingDisplay = false;
             _references = new List<SubsegmentReference>();
             bool enteringMulti = !wasMultiActive && _multiRunActive && game.currentLevelNumber != 0;
 
@@ -247,6 +264,7 @@ namespace HSRTimer
                 else
                 {
                     _leaderboardTitle = GetCurrentLevelDisplayName(game);
+                    _pendingLeaderboardTitle = null;
                     _displayReferences = null;
                 }
             }
@@ -271,14 +289,17 @@ namespace HSRTimer
                 _displayReferences = null;
                 _leaderboardTitle = "";
                 _pendingMultiProject = null;
+                _pendingLeaderboardTitle = null;
+                _preservingDisplay = false;
                 return;
             }
 
             if (completed && _firstAwake)
-                AddFinalSample(endTime);
+                AddFinalSample(_multiRunActive ? endTime : Math.Max(0d, endTime - state.SegmentStart));
 
             bool valid = !state.Flags.IsInvalid;
             string levelId = GetLevelId(game);
+            bool multiRunEnded = false;
 
             if (completed)
             {
@@ -314,7 +335,10 @@ namespace HSRTimer
                 // so clear the multi-run tracking after writing (no later exit
                 // should re-write it).
                 if (_multiRunCandidate && game.currentLevelType == WorkshopItemSource.BuiltIn && game.currentLevelNumber == 12)
+                {
                     ClearMultiRun();
+                    multiRunEnded = true;
+                }
             }
 
             // Leaving through Inactive ends the segment and, for a multi-run,
@@ -331,15 +355,16 @@ namespace HSRTimer
                 return;
             }
 
-            // During an official-campaign multi-run, a completed level advances
-            // through LoadingLevel into the next level. Keep the current
-            // leaderboard display intact across that transition; OnLevelStart
-            // snapshots it and refreshes on the first new-level diff.
-            if (!retrying && (_multiRunCandidate || _multiRunActive)
-                && nowGameState == GameState.LoadingLevel)
+            // A completed level advances through LoadingLevel into the next
+            // level. Keep the current leaderboard display intact across that
+            // transition (both ML and IL); OnLevelStart snapshots it and the
+            // display refreshes on the first new-level diff. A just-finished
+            // final multi-run level (Credits load) is not preserved.
+            if (!retrying && !multiRunEnded && nowGameState == GameState.LoadingLevel)
             {
+                _preservingDisplay = true;
                 if (_options.DebugLogging)
-                    Plugin.Logger.LogInfo($"HSRTimer: subsegment level end (completed={completed}, valid={valid}, samples={_currentSamples.Count}); preserving multi-run leaderboard.");
+                    Plugin.Logger.LogInfo($"HSRTimer: subsegment level end (completed={completed}, valid={valid}, samples={_currentSamples.Count}); preserving leaderboard across transition.");
                 return;
             }
 
@@ -349,6 +374,8 @@ namespace HSRTimer
             _displayReferences = null;
             _leaderboardTitle = "";
             _pendingMultiProject = null;
+            _pendingLeaderboardTitle = null;
+            _preservingDisplay = false;
         }
 
         /// <summary>Called before an auto-reset / menu-entry full reset, i.e. a run exits without using the manual reset key.</summary>
@@ -388,15 +415,27 @@ namespace HSRTimer
             var pos = GetCurrentPosition();
             if (pos == null) return;
 
-            EnsureAwakeSample(state.GameTime, pos.Value);
+            double time = SampleTime(state);
+            EnsureAwakeSample(time, pos.Value);
             if (!_firstAwake)
                 return;
 
-            if (state.GameTime - _lastSampleGameTime >= _options.SampleInterval)
-                AddRegularSample(state.GameTime, pos.Value);
+            if (time - _lastSampleGameTime >= _options.SampleInterval)
+                AddRegularSample(time, pos.Value);
 
-            RunCrossingDetection(pos.Value, state);
+            RunCrossingDetection(pos.Value, time);
         }
+
+        /// <summary>
+        /// Time base for subsegment recording and diffs. In multi-run (ML)
+        /// mode the recorder keeps cumulative game time so per-level ML files
+        /// stay cumulative; in single-level (IL) mode it uses the current
+        /// segment's time (<c>GameTime - SegmentStart</c>) so comparisons
+        /// against segment-relative IL references stay correct even when a
+        /// multi-level run is in progress.
+        /// </summary>
+        private double SampleTime(RunState state)
+            => _multiRunActive ? state.GameTime : Math.Max(0d, state.GameTime - state.SegmentStart);
 
         /// <summary>Per-render-frame hook: quiet-settle timers (runs even while paused, R8.4.3.4).</summary>
         public void OnUpdate()
@@ -474,6 +513,7 @@ namespace HSRTimer
             _references = new List<SubsegmentReference>();
             _displayReferences = null;
             _leaderboardTitle = "";
+            _preservingDisplay = false;
             ClearRecorder();
             _multiRunCandidate = false;
             _multiRunActive = false;
@@ -483,6 +523,7 @@ namespace HSRTimer
             _multiRunTotalMs = 0L;
             _activeMultiProject = "Any%";
             _pendingMultiProject = null;
+            _pendingLeaderboardTitle = null;
         }
 
         private void ClearMultiRun()
@@ -495,6 +536,7 @@ namespace HSRTimer
             _multiRunTotalMs = 0L;
             _activeMultiProject = "Any%";
             _pendingMultiProject = null;
+            _pendingLeaderboardTitle = null;
         }
 
         private static readonly string[] MultiProjectOrder = { "Aztec%", "Dark%", "Steam%", "Any%" };
@@ -583,6 +625,11 @@ namespace HSRTimer
                 _activeMultiProject = _pendingMultiProject;
                 _leaderboardTitle = _activeMultiProject;
                 _pendingMultiProject = null;
+            }
+            else if (_pendingLeaderboardTitle != null)
+            {
+                _leaderboardTitle = _pendingLeaderboardTitle;
+                _pendingLeaderboardTitle = null;
             }
             _displayReferences = null;
             if (_options.DebugLogging)
@@ -809,6 +856,13 @@ namespace HSRTimer
                 _leaderboardTitle = (_multiRunActive && game.currentLevelNumber != 0)
                     ? MultiProjectForLoading
                     : GetCurrentLevelDisplayName(game);
+                _pendingLeaderboardTitle = null;
+            }
+            else if (!_multiRunActive)
+            {
+                // Preserved IL transition: remember the new level's title so the
+                // leaderboard switches to it on the first settled diff.
+                _pendingLeaderboardTitle = GetCurrentLevelDisplayName(game);
             }
             try
             {
@@ -922,7 +976,7 @@ namespace HSRTimer
 
         // ── Comparator ────────────────────────────────────────────────────
 
-        private void RunCrossingDetection(Vector3 pos, RunState state)
+        private void RunCrossingDetection(Vector3 pos, double time)
         {
             foreach (var reference in _references)
             {
@@ -955,7 +1009,7 @@ namespace HSRTimer
                             continue;
                         }
 
-                        long hitMs = (long)Math.Round(state.GameTime * 1000.0);
+                        long hitMs = (long)Math.Round(time * 1000.0);
                         plane.CandidateHitMs = hitMs;
                         plane.QuietStartUnscaledTime = Time.unscaledTime;
                         plane.HasQuiet = true;
@@ -1030,10 +1084,12 @@ namespace HSRTimer
             string metaPath = Path.Combine(dir, "meta.json");
 
             // IL PB files are per-level: level_index is always 0 and t_ms is
-            // relative to the segment start. In a multi-run the recorder may be
-            // holding cumulative game-time samples (which are correct for the ML
-            // files), so normalize a copy before writing the IL record.
+            // relative to the segment start. During an active multi-run the
+            // recorder holds cumulative game-time samples (which are correct for
+            // the ML files), so normalize a copy before writing the IL record;
+            // in IL mode the samples are already segment-relative.
             long levelStartMs = (long)Math.Round(state.SegmentStart * 1000.0);
+            bool normalizeForIl = _multiRunActive;
             long totalMs = Math.Max(0L, endTimeMs - levelStartMs);
             if (SubsegmentFileStore.TryReadTotalMs(metaPath, out long existing) && existing <= totalMs)
                 return;
@@ -1045,7 +1101,7 @@ namespace HSRTimer
                 {
                     seq = s.seq,
                     level_index = 0,
-                    t_ms = Math.Max(0L, s.t_ms - levelStartMs),
+                    t_ms = normalizeForIl ? Math.Max(0L, s.t_ms - levelStartMs) : Math.Max(0L, s.t_ms),
                     px = s.px,
                     py = s.py,
                     pz = s.pz,

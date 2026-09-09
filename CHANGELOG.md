@@ -8,6 +8,8 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
   - The subsegment leaderboard now lists settled entries from slowest to fastest (descending diff), keeping no-data entries at the bottom.
+  - In IL mode the subsegment leaderboard compares against the current segment time instead of cumulative game time, so IL references stay correct even during a multi-level run.
+  - Passing a level now keeps the subsegment leaderboard on screen until the next level settles its first subsegment, in both single-level (IL) and multi-run (ML) modes.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.2.1

@@ -53,12 +53,14 @@ namespace HSRTimer
             if (ConfigService.Instance == null || !ConfigService.Instance.Settings.SubsegmentEnable) return;
             var state = TimerCore.State;
             if (state == null) return;
-            // During a multi-run level transition (LoadingLevel between levels)
-            // keep the previous leaderboard on screen until the next level's
-            // first settled diff refreshes it.
+            // During a level transition (LoadingLevel between levels) keep the
+            // previous leaderboard on screen until the next level's first
+            // settled diff refreshes it. This applies to both multi-run and
+            // single-level (IL) transitions.
             bool inPlayableSegment = state.InSegment;
             bool inMultiTransition = mgr.InMultiRunActive && state.GameTime > 0d;
-            if (!inPlayableSegment && !inMultiTransition) return;
+            bool inPreservedTransition = mgr.InPreservedTransition && state.GameTime > 0d;
+            if (!inPlayableSegment && !inMultiTransition && !inPreservedTransition) return;
 
             var entries = mgr.Entries;
             if (entries.Count == 0) return;
