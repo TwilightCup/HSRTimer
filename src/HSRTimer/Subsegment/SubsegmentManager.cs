@@ -130,6 +130,14 @@ namespace HSRTimer
         // during a preserved single-level (IL) transition.
         private string _pendingLeaderboardTitle;
 
+        // Level identity snapshotted at segment start. The game clears
+        // Game.currentLevelNumber and Game.workshopLevel in AfterUnload before
+        // the engine observes the level-ending Inactive transition, so PB
+        // writes at level end must use these captured ids (R8.2.3), not the
+        // already-cleared live game fields.
+        private string _currentLevelId = "";
+        private string _currentIlLevelId = "";
+
         private void Awake()
         {
             Instance = this;
@@ -247,6 +255,14 @@ namespace HSRTimer
             bool enteringMulti = !wasMultiActive && _multiRunActive && game.currentLevelNumber != 0;
 
             ClearRecorder();
+
+            // Capture the level identity now, while Game.currentLevelNumber and
+            // Game.workshopLevel are still populated. The game clears both when
+            // the level ends (AfterUnload -> Inactive), but PB writes happen at
+            // level end, so they must use this snapshot (R8.2.3).
+            _currentLevelId = GetLevelId(game);
+            _currentIlLevelId = GetIlLevelId(game);
+
             if (_multiRunActive && game.currentLevelNumber != 0)
                 LoadMlReferencesForLevel(game, enteringMulti);
             else
@@ -298,13 +314,18 @@ namespace HSRTimer
                 AddFinalSample(_multiRunActive ? endTime : Math.Max(0d, endTime - state.SegmentStart));
 
             bool valid = !state.Flags.IsInvalid;
-            string levelId = GetLevelId(game);
+            // Use the ids captured at segment start: the game clears
+            // currentLevelNumber / workshopLevel before the level-ending
+            // transition is observed, so reading them from `game` here would
+            // collapse every EditorPick to E-1 and every Workshop level to W-1.
+            string levelId = !string.IsNullOrEmpty(_currentLevelId) ? _currentLevelId : GetLevelId(game);
+            string ilLevelId = !string.IsNullOrEmpty(_currentIlLevelId) ? _currentIlLevelId : GetIlLevelId(game);
             bool multiRunEnded = false;
 
             if (completed)
             {
                 if (valid)
-                    WriteIlPb(GetIlLevelId(game), state, (long)Math.Round(endTime * 1000.0));
+                    WriteIlPb(ilLevelId, state, (long)Math.Round(endTime * 1000.0));
 
                 // Track ML run contents/endpoint.
                 if (_multiRunCandidate)
@@ -515,6 +536,8 @@ namespace HSRTimer
             _leaderboardTitle = "";
             _preservingDisplay = false;
             ClearRecorder();
+            _currentLevelId = "";
+            _currentIlLevelId = "";
             _multiRunCandidate = false;
             _multiRunActive = false;
             _multiRunLevelIds.Clear();
@@ -870,15 +893,13 @@ namespace HSRTimer
 
                 if (_multiRunActive && game.currentLevelNumber != 0)
                 {
-                    string levelId = GetLevelId(game);
-                    LoadPbMl(levelId, category);
-                    LoadLoadMl(levelId, category);
+                    LoadPbMl(_currentLevelId, category);
+                    LoadLoadMl(_currentLevelId, category);
                 }
                 else
                 {
-                    string ilLevelId = GetIlLevelId(game);
-                    LoadPbIl(ilLevelId, category);
-                    LoadLoadIl(ilLevelId, category);
+                    LoadPbIl(_currentIlLevelId, category);
+                    LoadLoadIl(_currentIlLevelId, category);
                 }
             }
             catch (Exception ex)
