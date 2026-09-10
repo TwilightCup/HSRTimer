@@ -516,7 +516,7 @@
 {
   "format_version": 1,
   "project": "IL",
-  "level_id": "B8",
+  "level_id": "Aztec",
   "category_key": "Any",
   "total_ms": 184320,
   "sample_count": 123,
@@ -548,13 +548,13 @@
 
 | 来源 | id 规则 | 示例 |
 | ------ | ------ | ------ |
-| BuiltIn（IL 目录） | `Game.levels[Game.currentLevelNumber]` 对应 `LEVEL/{name}` 的英文本地化关卡名；无可用名称时回退 `B{Game.currentLevelNumber}` | `Intro`、`Power Plant`、`Aztec` |
+| BuiltIn（IL 目录） | `WorkshopRepository` 中 `BuiltinLevelMetadata.internalName`（如 `Train`）对应 `LEVEL/{name}` 的英文本地化关卡名；无可用名称时回退 `B{Game.currentLevelNumber}` | `Intro`、`Power Plant`、`Aztec` |
 | BuiltIn（ML 关卡文件） | `B{Game.currentLevelNumber}`（保留多关累计时间线编号） | `B8` |
-| EditorPick | `E{Game.currentLevelNumber}` | `E3` |
-| Workshop | `W{可用的工坊物品 id}`；无可用 id 时回退 `W{Game.currentLevelNumber}` | `W123456789` |
+| EditorPick（IL 目录） | `WorkshopRepository` 中 `BuiltinLevelMetadata.internalName`（如 `Thermal`）对应 `LEVEL/{name}` 的英文本地化关卡名；无可用名称时回退 `E{Game.currentLevelNumber}` | `Thermal`、`Factory`、`Museum` |
+| Workshop（IL 目录） | 可用的工坊物品数字 id（纯数字）；无可用 id 时回退 `W{Game.currentLevelNumber}` | `123456789` |
 
 - 目录名中的 id 只允许 `[A-Za-z0-9._-]`；其它字符在写入时替换为 `_`。
-- 内置关卡序号与常用名映射见附录 B；实现时以 `Game.levels` 实际内容为准。
+- 内置关卡序号与常用名映射见附录 B；实现时优先以 `WorkshopRepository` 的 `BuiltinLevelMetadata.internalName` 为准，缺失时回退 `Game.levels` / `Game.editorPickLevels` 场景 id。
 
 #### R8.2.4 类别键规范化
 

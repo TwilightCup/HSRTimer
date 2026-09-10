@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using HumanAPI;
 using Multiplayer;
 using UnityEngine;
 
@@ -775,6 +776,12 @@ namespace HSRTimer
             return string.Join("+", sorted);
         }
 
+        /// <summary>
+        /// Machine level id used by the multi-run (ML) per-level files and as a
+        /// fallback: BuiltIn keeps <c>B{number}</c> timeline numbering,
+        /// EditorPick keeps <c>E{number}</c>, Workshop uses the raw numeric
+        /// workshop id.
+        /// </summary>
         private string GetLevelId(Game game)
         {
             switch (game.currentLevelType)
@@ -785,46 +792,110 @@ namespace HSRTimer
                     return SubsegmentFileStore.SanitizeId("E" + game.currentLevelNumber);
                 case WorkshopItemSource.Subscription:
                 case WorkshopItemSource.LocalWorkshop:
-                    if (game.workshopLevel != null && game.workshopLevel.workshopId != 0UL)
-                        return SubsegmentFileStore.SanitizeId("W" + game.workshopLevel.workshopId);
-                    return SubsegmentFileStore.SanitizeId("W" + game.currentLevelNumber);
+                    return GetWorkshopId(game) ?? SubsegmentFileStore.SanitizeId("W" + game.currentLevelNumber);
                 default:
                     return SubsegmentFileStore.SanitizeId("L" + game.currentLevelNumber);
             }
         }
 
         /// <summary>
-        /// IL PB directories should use the level's English localized name
-        /// (e.g. <c>Intro</c>, <c>Power Plant</c>, <c>Aztec</c>) rather than our
-        /// synthetic <c>B0</c>/<c>B8</c> numbering. Falls back to the internal
-        /// scene id, then to the synthetic id when the game doesn't expose a
-        /// usable level name at runtime.
+        /// IL persistence id: official BuiltIn / EditorPick levels are
+        /// identified by the game's English localized name (e.g. <c>Intro</c>,
+        /// <c>Power Plant</c>, <c>Aztec</c> — the same names the one-key retry
+        /// feature matches), Workshop levels by the raw numeric workshop id.
+        /// Falls back to the synthetic <c>B{number}</c>/<c>E{number}</c> ids
+        /// when the game doesn't expose a usable level name at runtime.
         /// </summary>
         private string GetIlLevelId(Game game)
         {
+            switch (game.currentLevelType)
+            {
+                case WorkshopItemSource.BuiltIn:
+                case WorkshopItemSource.EditorPick:
+                    string fallback = game.currentLevelType == WorkshopItemSource.BuiltIn ? "B" : "E";
+                    return GetOfficialLocalizedLevelId(game, game.currentLevelNumber, fallback);
+                case WorkshopItemSource.Subscription:
+                case WorkshopItemSource.LocalWorkshop:
+                    return GetWorkshopId(game) ?? GetLevelId(game);
+                default:
+                    return GetLevelId(game);
+            }
+        }
+
+        /// <summary>
+        /// The English localized level name for a BuiltIn/EditorPick level, used
+        /// as its persistence id, falling back to the synthetic numbered id when
+        /// no name is available.
+        /// </summary>
+        private string GetOfficialLocalizedLevelId(Game game, int levelNumber, string fallbackPrefix)
+        {
+            string internalName = GetOfficialInternalName(game, levelNumber);
+            if (string.IsNullOrEmpty(internalName))
+                return SubsegmentFileStore.SanitizeId(fallbackPrefix + levelNumber);
+            string english = GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
+            return SubsegmentFileStore.SanitizeId(english);
+        }
+
+        /// <summary>
+        /// Canonical internal name for a BuiltIn/EditorPick level. Prefers the
+        /// level metadata's <c>internalName</c> (e.g. <c>Train</c>), which is the
+        /// key the <c>LEVEL/</c> localization terms are stored under, over the
+        /// raw scene id from <c>Game.levels</c>/<c>Game.editorPickLevels</c>
+        /// (e.g. the Train scene's id <c>Push</c>), which has no localization
+        /// term of its own.
+        /// </summary>
+        private string GetOfficialInternalName(Game game, int levelNumber)
+        {
+            var repo = WorkshopRepository.instance != null ? WorkshopRepository.instance.levelRepo : null;
+            if (repo != null)
+            {
+                var items = repo.BySource(game.currentLevelType);
+                if (items != null)
+                {
+                    foreach (var item in items)
+                    {
+                        if (item == null || item.workshopId != (ulong)levelNumber)
+                            continue;
+                        var builtin = item as BuiltinLevelMetadata;
+                        if (builtin != null && !string.IsNullOrEmpty(builtin.internalName))
+                            return builtin.internalName;
+                    }
+                }
+            }
+
             if (game.currentLevelType == WorkshopItemSource.BuiltIn
                 && game.levels != null
-                && game.currentLevelNumber >= 0
-                && game.currentLevelNumber < game.levels.Length
-                && !string.IsNullOrEmpty(game.levels[game.currentLevelNumber]))
+                && levelNumber >= 0
+                && levelNumber < game.levels.Length)
             {
-                string internalName = game.levels[game.currentLevelNumber];
-                string english = GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
-                return SubsegmentFileStore.SanitizeId(english);
+                return game.levels[levelNumber];
             }
-            return GetLevelId(game);
+            if (game.currentLevelType == WorkshopItemSource.EditorPick
+                && game.editorPickLevels != null
+                && levelNumber >= 0
+                && levelNumber < game.editorPickLevels.Length)
+            {
+                return game.editorPickLevels[levelNumber];
+            }
+            return null;
+        }
+
+        /// <summary>Raw numeric workshop id when available, else null.</summary>
+        private static string GetWorkshopId(Game game)
+        {
+            return game.workshopLevel != null && game.workshopLevel.workshopId != 0UL
+                ? SubsegmentFileStore.SanitizeId(game.workshopLevel.workshopId.ToString())
+                : null;
         }
 
         private string GetCurrentLevelDisplayName(Game game)
         {
             if (game.currentLevelType == WorkshopItemSource.BuiltIn
-                && game.levels != null
-                && game.currentLevelNumber >= 0
-                && game.currentLevelNumber < game.levels.Length
-                && !string.IsNullOrEmpty(game.levels[game.currentLevelNumber]))
+                || game.currentLevelType == WorkshopItemSource.EditorPick)
             {
-                string internalName = game.levels[game.currentLevelNumber];
-                return GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
+                string internalName = GetOfficialInternalName(game, game.currentLevelNumber);
+                if (!string.IsNullOrEmpty(internalName))
+                    return GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
             }
             if (game.workshopLevel != null && !string.IsNullOrEmpty(game.workshopLevel.title))
                 return game.workshopLevel.title;
