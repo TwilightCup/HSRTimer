@@ -132,9 +132,9 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 
 因此 `SegmentLogic.IsMenuEntry(prevApp, nowApp)` 只会在真正的菜单选关时触发。`TimerCore.HandleTransitions` 把它锁存进 `RunState.MenuEntryPending`,随后的 `StartSegment` 将关卡号记入 `CampaignRetryLevel` —— 但仅当它是可玩的战役关卡(`BuiltIn`、`0 <= number < levelCount`、非 Credits 尾声、不在 LC 地图包运行中;地图包关卡的重试由 R6.3 负责)。之后 `MenuEntryPending` 即被清除;该边沿只描述刚刚开始的那一关。
 
-**持续性。** `CampaignRetryLevel` 在战役推进(不重新触发菜单边沿)、整局重置、乃至重试自身之间都保持不变 —— 它的含义是"玩家最近一次从菜单进入的关卡",在下一次菜单进入(换关卡开新局)改写它之前一直有效。`MenuEntryPending` 由 `RunState.Reset` 清除。
+**持续性。** `CampaignRetryLevel` 在战役推进(不重新触发菜单边沿)、整局重置、乃至重试自身之间都保持不变 —— 它的含义是"玩家最近一次从菜单进入的关卡",在下一次菜单进入(换关卡开新局)改写它之前一直有效。若下一次菜单进入开始的是 EditorPick / Workshop / 地图包关卡,则会把该记忆清除回 `-1`,让重试回退到当前关卡,而不会跳到之前的内置关。`MenuEntryPending` 由 `RunState.Reset` 清除。
 
-**重试行为。** 在 `RetryAction.TryExecute` 中,当 `CampaignRetryLevel >= 0` 时,重载以 `BuiltIn` 重新启动该关卡(提示 `NOTIFY_CAMPAIGN_RESTARTED`);否则 —— EditorPick、Workshop、或任何未被标记为菜单进入的运行 —— 原地重载当前关卡的行为与从前完全一致(提示 `NOTIFY_LEVEL_RESTARTED`)。两种情况的计时语义完全相同(见上文 R6.2.2)。
+**重试行为。** 在 `RetryAction.TryExecute` 中,当 `CampaignRetryLevel >= 0` 时,重载以 `BuiltIn` 重新启动该关卡(提示 `NOTIFY_CAMPAIGN_RESTARTED`);否则 —— EditorPick、Workshop、或任何未被标记为菜单进入的运行 —— 原地重载当前关卡的行为与从前完全一致(提示 `NOTIFY_LEVEL_RESTARTED`)。Workshop 当前关卡重载使用完整的 `Game.workshopLevel.workshopId` 调用 `App.LaunchSinglePlayer`,从而保留完整的 Steam 创意工坊 id(`Game.currentLevelNumber` 只保存截断后的 `int`)。由于较大的工坊 id 截断后可能让 `currentLevelNumber` 变成负数,活动关卡判断也会把已设置的 `Game.workshopLevel` 视为有活动关卡;否则第一次工坊重试后重试键就会失效。两种情况的计时语义完全相同(见上文 R6.2.2)。
 
 ## R6.5 —— 用户指定的重试关卡
 

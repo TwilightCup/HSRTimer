@@ -457,7 +457,7 @@
 
 - **R8.1.1.1** 单关采样窗口：从本关**首次苏醒**起，到本关计时终点（R1.4.1）止。
 - **R8.1.1.2** 首次苏醒定义：本关 `Game.state` 已进入 `PlayingLevel` 后，本地玩家角色首次离开瘫软状态（`Spawning` / `Unconscious` / `Dead`）的那一帧。通过轮询 `Human.Localplayer.state` 检测；`Localplayer` 不可用（加载/过渡/假空）时等待，不视为苏醒。
-- **R8.1.1.3** 首次苏醒之前的加载、出生、无意识阶段不产生采样；但这些阶段已计入 HSRTimer 游戏时间，因此采样时间戳 `t_ms` 自然包含它们，参考与当前仍为同一时间基准。
+- **R8.1.1.3** 首次苏醒之前的加载、出生、无意识阶段不产生采样；但这些阶段已计入 HSRTimer 计时（IL 为分段时间，ML 为累计游戏时间），因此采样时间戳 `t_ms` 自然包含它们，参考与当前仍为同一时间基准。
 - **R8.1.1.4** 首次苏醒后，关内手动装死、检查点复活均不重置采样窗口、不重置 `seq`；计时持续，罚时自然计入时间差。
 - **R8.1.1.5** 只有在本关确为通过（`Game.passedLevel` 锁存为真）时，采样才允许参与 PB 判定与写入；未通过、中途退出、重试放弃的采样一律丢弃。
 - **R8.1.1.6** 多关运行中，每一关独立维护一个采样文件；多关运行的起点与终点见 R8.3.2。
@@ -465,8 +465,8 @@
 #### R8.1.2 采样节拍与时间基准
 
 - **R8.1.2.1** 采样间隔由 `Subsegment.SampleInterval` 配置，默认 `1.0` 秒（游戏时间）。
-- **R8.1.2.2** 采样时间戳 `t_ms = round(State.GameTime * 1000)`，即 HSRTimer 游戏时间（物理帧累计 + 暂停补时），与计时器显示同源。
-- **R8.1.2.3** 首次苏醒帧立即产生 `seq = 0` 的采样（位移为 `(0,0,0)`），并将 `lastSampleGameTime` 设为当前 `State.GameTime`；此后每帧检查是否应采样：仅当本关**已首次苏醒**、`Game.state == PlayingLevel` 且 `State.GameTime - lastSampleGameTime >= SampleInterval` 时，产生一条采样；`lastSampleGameTime` 更新为当前 `State.GameTime`。
+- **R8.1.2.2** 采样时间戳按模式区分：IL 模式 `t_ms = round((State.GameTime - State.SegmentStart) * 1000)`（当前分段时间）；ML 模式 `t_ms = round(State.GameTime * 1000)`（整局累计游戏时间）。两者均使用物理帧累计 + 暂停补时，与计时器显示同源。
+- **R8.1.2.3** 首次苏醒帧立即产生 `seq = 0` 的采样（位移为 `(0,0,0)`），并将 `lastSampleGameTime` 设为当前采样时间基准（IL 为分段时间，ML 为累计游戏时间）；此后每帧检查是否应采样：仅当本关**已首次苏醒**、`Game.state == PlayingLevel` 且当前采样时间基准 - `lastSampleGameTime` >= `SampleInterval` 时，产生一条采样；`lastSampleGameTime` 更新为当前采样时间基准。
 - **R8.1.2.4** 暂停（`Game.state == Paused`）期间不产生采样；暂停时间会计入采样节拍与 `t_ms`，即暂停结束后若已到节拍，下一帧立即补一条采样（位置为当前位置，位移相对上一条采样计算）。暂停前尚未苏醒的，苏醒后从苏醒帧开始按当前游戏时间推进节拍。
 - **R8.1.2.5** `seq` 从 0 起，在当前关卡内每产生一条采样递增 1；进入新关卡/重试重开后归零。
 
@@ -478,14 +478,14 @@
 | ------ | ------ | ------ |
 | `seq` | int | 当前关卡内序号，从 0 起 |
 | `level_index` | int | IL 恒为 `0`；ML 为该关 BuiltIn 关卡序号（见附录 B） |
-| `t_ms` | int | 当前游戏时间（毫秒） |
+| `t_ms` | int | 采样时间戳（毫秒）：IL 为当前分段时间，ML 为累计游戏时间 |
 | `px`,`py`,`pz` | float | 当前角色位置 |
 | `dx`,`dy`,`dz` | float | 相对上一条采样的位移；模长 < `MinMove` 时置为 `(0,0,0)` |
 | `plane_radius` | float | 当前配置的检测平面半径（米） |
 
 #### R8.1.4 最终采样
 
-- **R8.1.4.1** 在本关计时终点（R1.4.1）且本关通过时，若当前 `Game.state` 或锁存的位置仍可用，产生一条最终采样（`seq` 为当前值，`t_ms` 为终点游戏时间，位移按相对上一条采样计算）。
+- **R8.1.4.1** 在本关计时终点（R1.4.1）且本关通过时，若当前 `Game.state` 或锁存的位置仍可用，产生一条最终采样（`seq` 为当前值，`t_ms` 为终点时刻的采样时间基准（IL 为分段时间，ML 为累计游戏时间），位移按相对上一条采样计算）。
 - **R8.1.4.2** 最终采样同样遵守 `MinMove` 置零规则；零位移最终采样保留（用于终点对比），不建平面但参与采样文件存储。
 
 #### R8.1.5 记录期间的状态规则
@@ -516,7 +516,7 @@
 {
   "format_version": 1,
   "project": "IL",
-  "level_id": "B8",
+  "level_id": "Aztec",
   "category_key": "Any",
   "total_ms": 184320,
   "sample_count": 123,
@@ -548,13 +548,13 @@
 
 | 来源 | id 规则 | 示例 |
 | ------ | ------ | ------ |
-| BuiltIn（IL 目录） | `Game.levels[Game.currentLevelNumber]` 对应 `LEVEL/{name}` 的英文本地化关卡名；无可用名称时回退 `B{Game.currentLevelNumber}` | `Intro`、`Power Plant`、`Aztec` |
+| BuiltIn（IL 目录） | `WorkshopRepository` 中 `BuiltinLevelMetadata.internalName`（如 `Train`）对应 `LEVEL/{name}` 的英文本地化关卡名；无可用名称时回退 `B{Game.currentLevelNumber}` | `Intro`、`Power Plant`、`Aztec` |
 | BuiltIn（ML 关卡文件） | `B{Game.currentLevelNumber}`（保留多关累计时间线编号） | `B8` |
-| EditorPick | `E{Game.currentLevelNumber}` | `E3` |
-| Workshop | `W{可用的工坊物品 id}`；无可用 id 时回退 `W{Game.currentLevelNumber}` | `W123456789` |
+| EditorPick（IL 目录） | `WorkshopRepository` 中 `BuiltinLevelMetadata.internalName`（如 `Thermal`）对应 `LEVEL/{name}` 的英文本地化关卡名；无可用名称时回退 `E{Game.currentLevelNumber}` | `Thermal`、`Factory`、`Museum` |
+| Workshop（IL 目录） | 可用的工坊物品数字 id（纯数字）；无可用 id 时回退 `W{Game.currentLevelNumber}` | `123456789` |
 
 - 目录名中的 id 只允许 `[A-Za-z0-9._-]`；其它字符在写入时替换为 `_`。
-- 内置关卡序号与常用名映射见附录 B；实现时以 `Game.levels` 实际内容为准。
+- 内置关卡序号与常用名映射见附录 B；实现时优先以 `WorkshopRepository` 的 `BuiltinLevelMetadata.internalName` 为准，缺失时回退 `Game.levels` / `Game.editorPickLevels` 场景 id。
 
 #### R8.2.4 类别键规范化
 
@@ -658,7 +658,7 @@
   - 计算符号距离 `d = dot(pos - plane.pos, plane.normal)`；
   - 平面首次参与检测的帧只初始化 `PrevD`，不判定穿越；
   - 当 `PrevD < 0` 且 `d >= 0`，且横向偏移 ≤ 平面半径时，记为一次穿越候选。
-- **R8.4.2.2** 穿越候选的 `hit_ms = round(State.GameTime * 1000)`，并记录 `(参考项, plane)` 与候选值。
+- **R8.4.2.2** 穿越候选的 `hit_ms` 与采样时间基准一致：IL 模式为当前分段时间（`round((State.GameTime - State.SegmentStart) * 1000)`），ML 模式为累计游戏时间（`round(State.GameTime * 1000)`），并记录 `(参考项, plane)` 与候选值。
 - **R8.4.2.3** 检测不创建任何 Unity 碰撞体，不得影响游戏物理与性能（O(平面数) 每帧）。
 
 #### R8.4.3 防抖与静默结算
@@ -697,7 +697,7 @@
 
 - **R8.5.1.1** 进入关卡计时起点后，排行榜自动准备；计时进行中显示在屏幕左侧垂直居中位置。
 - **R8.5.1.2** 提供可配置的切换键（默认 `Tab`），用于显示/隐藏排行榜；配置键见 R8.6。
-- **R8.5.1.3** 本关计时终点/离开关卡/回到菜单时，排行榜清空并隐藏（新一关重新加载）。
+- **R8.5.1.3** 本关离开关卡/回到菜单/多关运行结束（如通关最终关进入 Credits）时，排行榜清空并隐藏；过关推进到下一关时保留显示，直至下一关首次 subsegment 结算后刷新。
 - **R8.5.1.4** 排行榜为独立 HUD 元素，不并入现有行式计时器面板。
 
 #### R8.5.2 单项内容与格式
@@ -714,7 +714,7 @@
 
 #### R8.5.3 排序
 
-- **R8.5.3.1** 有数值项按 `diff_ms` 升序（最负/最快在上，最慢在下）。
+- **R8.5.3.1** 有数值项按 `diff_ms` 降序（最慢/最大在上，最快在下）。
 - **R8.5.3.2** `diff_ms` 相同时按 `display_id` 升序（字母序）稳定排序。
 - **R8.5.3.3** 无数据项排在有数值项之后，并按 `display_id` 升序。
 
@@ -739,7 +739,7 @@
 - **R8.5.6.1** 一键重试/重开关卡：清空当前比较状态与当前采样缓冲，重新加载并重新开始比较。
 - **R8.5.6.2** 暂停期间：排行榜保留显示，不进行新的穿越判定；暂停恢复后继续。
 - **R8.5.6.3** 命中无效标记时：排行榜继续显示，不额外处理（无效只影响 PB 写入）。
-- **R8.5.6.4** 多关运行中关卡推进：过关与进入下一关时不立即清空或重置排行榜显示；保留上一关已结算的数值与标题，直到下一关产生首次穿越结算后再刷新为新关/新项目数据（含 R8.5.5.3 的子项目升级）。
+- **R8.5.6.4** 关卡推进（多关或单关）：过关与进入下一关时不立即清空或重置排行榜显示；保留上一关已结算的数值与标题，直到下一关产生首次穿越结算后再刷新为新关数据（多关模式下含 R8.5.5.3 的子项目升级）。
 
 #### R8.5.7 资料显示开关
 

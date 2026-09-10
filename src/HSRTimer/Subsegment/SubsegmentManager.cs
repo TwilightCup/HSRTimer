@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using HumanAPI;
 using Multiplayer;
 using UnityEngine;
 
@@ -98,14 +99,19 @@ namespace HSRTimer
         private int _nextSeq;
         private bool _firstAwake;
 
-        // Loader/comparator state. During a multi-run level transition we keep
-        // the previous level's visible leaderboard in _displayReferences until
-        // the new level settles its first subsegment diff; _references always
-        // holds the active detection set for the current level/project.
+        // Loader/comparator state. During a level transition we keep the
+        // previous level's visible leaderboard in _displayReferences until the
+        // new level settles its first subsegment diff; _references always holds
+        // the active detection set for the current level/project. This applies
+        // to both multi-run (ML) and single-level (IL) transitions.
         private List<SubsegmentReference> _references = new List<SubsegmentReference>();
         private List<SubsegmentReference> _displayReferences;
         private bool _visible = true;
         private string _leaderboardTitle = "";
+        // True while a completed level is advancing to the next one and the
+        // previous leaderboard is being kept on screen (covers the loading gap
+        // before the next OnLevelStart snapshots it into _displayReferences).
+        private bool _preservingDisplay;
 
         // Multi-run (ML) tracking
         private bool _multiRunCandidate;
@@ -121,6 +127,17 @@ namespace HSRTimer
         // the config value is never modified.
         private string _activeMultiProject = "Any%";
         private string _pendingMultiProject;
+        // New level's title to switch to once its first subsegment settles
+        // during a preserved single-level (IL) transition.
+        private string _pendingLeaderboardTitle;
+
+        // Level identity snapshotted at segment start. The game clears
+        // Game.currentLevelNumber and Game.workshopLevel in AfterUnload before
+        // the engine observes the level-ending Inactive transition, so PB
+        // writes at level end must use these captured ids (R8.2.3), not the
+        // already-cleared live game fields.
+        private string _currentLevelId = "";
+        private string _currentIlLevelId = "";
 
         private void Awake()
         {
@@ -152,6 +169,13 @@ namespace HSRTimer
         /// <summary>True during an official-campaign multi-run attempt (candidate or active).</summary>
         public bool InMultiRunActive => _multiRunCandidate || _multiRunActive;
 
+        /// <summary>
+        /// True while a completed level's leaderboard is being kept on screen
+        /// across the loading transition to the next level, before the next
+        /// level has had a chance to settle its first subsegment.
+        /// </summary>
+        public bool InPreservedTransition => _preservingDisplay;
+
         /// <summary>Title shown above the leaderboard: the active multi-run project (session-upgraded) or the current level name.</summary>
         public string LeaderboardTitle => _leaderboardTitle;
 
@@ -164,7 +188,7 @@ namespace HSRTimer
                 if (!_options.Enable || source.Count == 0) return new List<SubsegmentReference>();
                 var visible = source.Where(r => _options.IsReferenceEnabled(r.DisplayId)).ToList();
                 var with = visible.Where(r => r.DiffMs.HasValue)
-                    .OrderBy(r => r.DiffMs.Value)
+                    .OrderByDescending(r => r.DiffMs.Value)
                     .ThenBy(r => r.DisplayId, StringComparer.Ordinal);
                 var without = visible.Where(r => !r.DiffMs.HasValue)
                     .OrderBy(r => r.DisplayId, StringComparer.Ordinal);
@@ -184,15 +208,16 @@ namespace HSRTimer
                 return;
             }
 
-            // Multi-run display continuity: advancing from one campaign level to
-            // the next keeps the previous level's visible leaderboard (values and
-            // title) on screen until the new level settles its first subsegment
-            // diff (R8.5.6 / follow-up UX). _displayReferences holds that
-            // snapshot while _references is swapped to the current level's
-            // detection set as soon as the new level starts.
+            // Level display continuity: advancing from one level to the next
+            // keeps the previous level's visible leaderboard (values and title)
+            // on screen until the new level settles its first subsegment diff
+            // (R8.5.6 / follow-up UX). _displayReferences holds that snapshot
+            // while _references is swapped to the current level's detection set
+            // as soon as the new level starts. This applies to both multi-run
+            // (ML) and single-level (IL) transitions.
             bool wasMultiRun = _multiRunCandidate || _multiRunActive;
             bool wasMultiActive = _multiRunActive;
-            bool preserveDisplay = wasMultiRun && !state.Retrying
+            bool preserveDisplay = !state.Retrying
                 && (_displayReferences != null || _references.Count > 0);
             List<SubsegmentReference> previousVisible = _displayReferences ?? _references;
 
@@ -226,10 +251,19 @@ namespace HSRTimer
             }
 
             _displayReferences = preserveDisplay ? previousVisible : null;
+            _preservingDisplay = false;
             _references = new List<SubsegmentReference>();
             bool enteringMulti = !wasMultiActive && _multiRunActive && game.currentLevelNumber != 0;
 
             ClearRecorder();
+
+            // Capture the level identity now, while Game.currentLevelNumber and
+            // Game.workshopLevel are still populated. The game clears both when
+            // the level ends (AfterUnload -> Inactive), but PB writes happen at
+            // level end, so they must use this snapshot (R8.2.3).
+            _currentLevelId = GetLevelId(game);
+            _currentIlLevelId = GetIlLevelId(game);
+
             if (_multiRunActive && game.currentLevelNumber != 0)
                 LoadMlReferencesForLevel(game, enteringMulti);
             else
@@ -247,6 +281,7 @@ namespace HSRTimer
                 else
                 {
                     _leaderboardTitle = GetCurrentLevelDisplayName(game);
+                    _pendingLeaderboardTitle = null;
                     _displayReferences = null;
                 }
             }
@@ -271,19 +306,27 @@ namespace HSRTimer
                 _displayReferences = null;
                 _leaderboardTitle = "";
                 _pendingMultiProject = null;
+                _pendingLeaderboardTitle = null;
+                _preservingDisplay = false;
                 return;
             }
 
             if (completed && _firstAwake)
-                AddFinalSample(endTime);
+                AddFinalSample(_multiRunActive ? endTime : Math.Max(0d, endTime - state.SegmentStart));
 
             bool valid = !state.Flags.IsInvalid;
-            string levelId = GetLevelId(game);
+            // Use the ids captured at segment start: the game clears
+            // currentLevelNumber / workshopLevel before the level-ending
+            // transition is observed, so reading them from `game` here would
+            // collapse every EditorPick to E-1 and every Workshop level to W-1.
+            string levelId = !string.IsNullOrEmpty(_currentLevelId) ? _currentLevelId : GetLevelId(game);
+            string ilLevelId = !string.IsNullOrEmpty(_currentIlLevelId) ? _currentIlLevelId : GetIlLevelId(game);
+            bool multiRunEnded = false;
 
             if (completed)
             {
                 if (valid)
-                    WriteIlPb(GetIlLevelId(game), state, (long)Math.Round(endTime * 1000.0));
+                    WriteIlPb(ilLevelId, state, (long)Math.Round(endTime * 1000.0));
 
                 // Track ML run contents/endpoint.
                 if (_multiRunCandidate)
@@ -314,7 +357,10 @@ namespace HSRTimer
                 // so clear the multi-run tracking after writing (no later exit
                 // should re-write it).
                 if (_multiRunCandidate && game.currentLevelType == WorkshopItemSource.BuiltIn && game.currentLevelNumber == 12)
+                {
                     ClearMultiRun();
+                    multiRunEnded = true;
+                }
             }
 
             // Leaving through Inactive ends the segment and, for a multi-run,
@@ -331,15 +377,16 @@ namespace HSRTimer
                 return;
             }
 
-            // During an official-campaign multi-run, a completed level advances
-            // through LoadingLevel into the next level. Keep the current
-            // leaderboard display intact across that transition; OnLevelStart
-            // snapshots it and refreshes on the first new-level diff.
-            if (!retrying && (_multiRunCandidate || _multiRunActive)
-                && nowGameState == GameState.LoadingLevel)
+            // A completed level advances through LoadingLevel into the next
+            // level. Keep the current leaderboard display intact across that
+            // transition (both ML and IL); OnLevelStart snapshots it and the
+            // display refreshes on the first new-level diff. A just-finished
+            // final multi-run level (Credits load) is not preserved.
+            if (!retrying && !multiRunEnded && nowGameState == GameState.LoadingLevel)
             {
+                _preservingDisplay = true;
                 if (_options.DebugLogging)
-                    Plugin.Logger.LogInfo($"HSRTimer: subsegment level end (completed={completed}, valid={valid}, samples={_currentSamples.Count}); preserving multi-run leaderboard.");
+                    Plugin.Logger.LogInfo($"HSRTimer: subsegment level end (completed={completed}, valid={valid}, samples={_currentSamples.Count}); preserving leaderboard across transition.");
                 return;
             }
 
@@ -349,6 +396,8 @@ namespace HSRTimer
             _displayReferences = null;
             _leaderboardTitle = "";
             _pendingMultiProject = null;
+            _pendingLeaderboardTitle = null;
+            _preservingDisplay = false;
         }
 
         /// <summary>Called before an auto-reset / menu-entry full reset, i.e. a run exits without using the manual reset key.</summary>
@@ -388,15 +437,27 @@ namespace HSRTimer
             var pos = GetCurrentPosition();
             if (pos == null) return;
 
-            EnsureAwakeSample(state.GameTime, pos.Value);
+            double time = SampleTime(state);
+            EnsureAwakeSample(time, pos.Value);
             if (!_firstAwake)
                 return;
 
-            if (state.GameTime - _lastSampleGameTime >= _options.SampleInterval)
-                AddRegularSample(state.GameTime, pos.Value);
+            if (time - _lastSampleGameTime >= _options.SampleInterval)
+                AddRegularSample(time, pos.Value);
 
-            RunCrossingDetection(pos.Value, state);
+            RunCrossingDetection(pos.Value, time);
         }
+
+        /// <summary>
+        /// Time base for subsegment recording and diffs. In multi-run (ML)
+        /// mode the recorder keeps cumulative game time so per-level ML files
+        /// stay cumulative; in single-level (IL) mode it uses the current
+        /// segment's time (<c>GameTime - SegmentStart</c>) so comparisons
+        /// against segment-relative IL references stay correct even when a
+        /// multi-level run is in progress.
+        /// </summary>
+        private double SampleTime(RunState state)
+            => _multiRunActive ? state.GameTime : Math.Max(0d, state.GameTime - state.SegmentStart);
 
         /// <summary>Per-render-frame hook: quiet-settle timers (runs even while paused, R8.4.3.4).</summary>
         public void OnUpdate()
@@ -474,7 +535,10 @@ namespace HSRTimer
             _references = new List<SubsegmentReference>();
             _displayReferences = null;
             _leaderboardTitle = "";
+            _preservingDisplay = false;
             ClearRecorder();
+            _currentLevelId = "";
+            _currentIlLevelId = "";
             _multiRunCandidate = false;
             _multiRunActive = false;
             _multiRunLevelIds.Clear();
@@ -483,6 +547,7 @@ namespace HSRTimer
             _multiRunTotalMs = 0L;
             _activeMultiProject = "Any%";
             _pendingMultiProject = null;
+            _pendingLeaderboardTitle = null;
         }
 
         private void ClearMultiRun()
@@ -495,6 +560,7 @@ namespace HSRTimer
             _multiRunTotalMs = 0L;
             _activeMultiProject = "Any%";
             _pendingMultiProject = null;
+            _pendingLeaderboardTitle = null;
         }
 
         private static readonly string[] MultiProjectOrder = { "Aztec%", "Dark%", "Steam%", "Any%" };
@@ -583,6 +649,11 @@ namespace HSRTimer
                 _activeMultiProject = _pendingMultiProject;
                 _leaderboardTitle = _activeMultiProject;
                 _pendingMultiProject = null;
+            }
+            else if (_pendingLeaderboardTitle != null)
+            {
+                _leaderboardTitle = _pendingLeaderboardTitle;
+                _pendingLeaderboardTitle = null;
             }
             _displayReferences = null;
             if (_options.DebugLogging)
@@ -705,6 +776,12 @@ namespace HSRTimer
             return string.Join("+", sorted);
         }
 
+        /// <summary>
+        /// Machine level id used by the multi-run (ML) per-level files and as a
+        /// fallback: BuiltIn keeps <c>B{number}</c> timeline numbering,
+        /// EditorPick keeps <c>E{number}</c>, Workshop uses the raw numeric
+        /// workshop id.
+        /// </summary>
         private string GetLevelId(Game game)
         {
             switch (game.currentLevelType)
@@ -715,46 +792,110 @@ namespace HSRTimer
                     return SubsegmentFileStore.SanitizeId("E" + game.currentLevelNumber);
                 case WorkshopItemSource.Subscription:
                 case WorkshopItemSource.LocalWorkshop:
-                    if (game.workshopLevel != null && game.workshopLevel.workshopId != 0UL)
-                        return SubsegmentFileStore.SanitizeId("W" + game.workshopLevel.workshopId);
-                    return SubsegmentFileStore.SanitizeId("W" + game.currentLevelNumber);
+                    return GetWorkshopId(game) ?? SubsegmentFileStore.SanitizeId("W" + game.currentLevelNumber);
                 default:
                     return SubsegmentFileStore.SanitizeId("L" + game.currentLevelNumber);
             }
         }
 
         /// <summary>
-        /// IL PB directories should use the level's English localized name
-        /// (e.g. <c>Intro</c>, <c>Power Plant</c>, <c>Aztec</c>) rather than our
-        /// synthetic <c>B0</c>/<c>B8</c> numbering. Falls back to the internal
-        /// scene id, then to the synthetic id when the game doesn't expose a
-        /// usable level name at runtime.
+        /// IL persistence id: official BuiltIn / EditorPick levels are
+        /// identified by the game's English localized name (e.g. <c>Intro</c>,
+        /// <c>Power Plant</c>, <c>Aztec</c> — the same names the one-key retry
+        /// feature matches), Workshop levels by the raw numeric workshop id.
+        /// Falls back to the synthetic <c>B{number}</c>/<c>E{number}</c> ids
+        /// when the game doesn't expose a usable level name at runtime.
         /// </summary>
         private string GetIlLevelId(Game game)
         {
+            switch (game.currentLevelType)
+            {
+                case WorkshopItemSource.BuiltIn:
+                case WorkshopItemSource.EditorPick:
+                    string fallback = game.currentLevelType == WorkshopItemSource.BuiltIn ? "B" : "E";
+                    return GetOfficialLocalizedLevelId(game, game.currentLevelNumber, fallback);
+                case WorkshopItemSource.Subscription:
+                case WorkshopItemSource.LocalWorkshop:
+                    return GetWorkshopId(game) ?? GetLevelId(game);
+                default:
+                    return GetLevelId(game);
+            }
+        }
+
+        /// <summary>
+        /// The English localized level name for a BuiltIn/EditorPick level, used
+        /// as its persistence id, falling back to the synthetic numbered id when
+        /// no name is available.
+        /// </summary>
+        private string GetOfficialLocalizedLevelId(Game game, int levelNumber, string fallbackPrefix)
+        {
+            string internalName = GetOfficialInternalName(game, levelNumber);
+            if (string.IsNullOrEmpty(internalName))
+                return SubsegmentFileStore.SanitizeId(fallbackPrefix + levelNumber);
+            string english = GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
+            return SubsegmentFileStore.SanitizeId(english);
+        }
+
+        /// <summary>
+        /// Canonical internal name for a BuiltIn/EditorPick level. Prefers the
+        /// level metadata's <c>internalName</c> (e.g. <c>Train</c>), which is the
+        /// key the <c>LEVEL/</c> localization terms are stored under, over the
+        /// raw scene id from <c>Game.levels</c>/<c>Game.editorPickLevels</c>
+        /// (e.g. the Train scene's id <c>Push</c>), which has no localization
+        /// term of its own.
+        /// </summary>
+        private string GetOfficialInternalName(Game game, int levelNumber)
+        {
+            var repo = WorkshopRepository.instance != null ? WorkshopRepository.instance.levelRepo : null;
+            if (repo != null)
+            {
+                var items = repo.BySource(game.currentLevelType);
+                if (items != null)
+                {
+                    foreach (var item in items)
+                    {
+                        if (item == null || item.workshopId != (ulong)levelNumber)
+                            continue;
+                        var builtin = item as BuiltinLevelMetadata;
+                        if (builtin != null && !string.IsNullOrEmpty(builtin.internalName))
+                            return builtin.internalName;
+                    }
+                }
+            }
+
             if (game.currentLevelType == WorkshopItemSource.BuiltIn
                 && game.levels != null
-                && game.currentLevelNumber >= 0
-                && game.currentLevelNumber < game.levels.Length
-                && !string.IsNullOrEmpty(game.levels[game.currentLevelNumber]))
+                && levelNumber >= 0
+                && levelNumber < game.levels.Length)
             {
-                string internalName = game.levels[game.currentLevelNumber];
-                string english = GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
-                return SubsegmentFileStore.SanitizeId(english);
+                return game.levels[levelNumber];
             }
-            return GetLevelId(game);
+            if (game.currentLevelType == WorkshopItemSource.EditorPick
+                && game.editorPickLevels != null
+                && levelNumber >= 0
+                && levelNumber < game.editorPickLevels.Length)
+            {
+                return game.editorPickLevels[levelNumber];
+            }
+            return null;
+        }
+
+        /// <summary>Raw numeric workshop id when available, else null.</summary>
+        private static string GetWorkshopId(Game game)
+        {
+            return game.workshopLevel != null && game.workshopLevel.workshopId != 0UL
+                ? SubsegmentFileStore.SanitizeId(game.workshopLevel.workshopId.ToString())
+                : null;
         }
 
         private string GetCurrentLevelDisplayName(Game game)
         {
             if (game.currentLevelType == WorkshopItemSource.BuiltIn
-                && game.levels != null
-                && game.currentLevelNumber >= 0
-                && game.currentLevelNumber < game.levels.Length
-                && !string.IsNullOrEmpty(game.levels[game.currentLevelNumber]))
+                || game.currentLevelType == WorkshopItemSource.EditorPick)
             {
-                string internalName = game.levels[game.currentLevelNumber];
-                return GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
+                string internalName = GetOfficialInternalName(game, game.currentLevelNumber);
+                if (!string.IsNullOrEmpty(internalName))
+                    return GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
             }
             if (game.workshopLevel != null && !string.IsNullOrEmpty(game.workshopLevel.title))
                 return game.workshopLevel.title;
@@ -809,6 +950,13 @@ namespace HSRTimer
                 _leaderboardTitle = (_multiRunActive && game.currentLevelNumber != 0)
                     ? MultiProjectForLoading
                     : GetCurrentLevelDisplayName(game);
+                _pendingLeaderboardTitle = null;
+            }
+            else if (!_multiRunActive)
+            {
+                // Preserved IL transition: remember the new level's title so the
+                // leaderboard switches to it on the first settled diff.
+                _pendingLeaderboardTitle = GetCurrentLevelDisplayName(game);
             }
             try
             {
@@ -816,15 +964,13 @@ namespace HSRTimer
 
                 if (_multiRunActive && game.currentLevelNumber != 0)
                 {
-                    string levelId = GetLevelId(game);
-                    LoadPbMl(levelId, category);
-                    LoadLoadMl(levelId, category);
+                    LoadPbMl(_currentLevelId, category);
+                    LoadLoadMl(_currentLevelId, category);
                 }
                 else
                 {
-                    string ilLevelId = GetIlLevelId(game);
-                    LoadPbIl(ilLevelId, category);
-                    LoadLoadIl(ilLevelId, category);
+                    LoadPbIl(_currentIlLevelId, category);
+                    LoadLoadIl(_currentIlLevelId, category);
                 }
             }
             catch (Exception ex)
@@ -922,7 +1068,7 @@ namespace HSRTimer
 
         // ── Comparator ────────────────────────────────────────────────────
 
-        private void RunCrossingDetection(Vector3 pos, RunState state)
+        private void RunCrossingDetection(Vector3 pos, double time)
         {
             foreach (var reference in _references)
             {
@@ -955,7 +1101,7 @@ namespace HSRTimer
                             continue;
                         }
 
-                        long hitMs = (long)Math.Round(state.GameTime * 1000.0);
+                        long hitMs = (long)Math.Round(time * 1000.0);
                         plane.CandidateHitMs = hitMs;
                         plane.QuietStartUnscaledTime = Time.unscaledTime;
                         plane.HasQuiet = true;
@@ -1030,10 +1176,12 @@ namespace HSRTimer
             string metaPath = Path.Combine(dir, "meta.json");
 
             // IL PB files are per-level: level_index is always 0 and t_ms is
-            // relative to the segment start. In a multi-run the recorder may be
-            // holding cumulative game-time samples (which are correct for the ML
-            // files), so normalize a copy before writing the IL record.
+            // relative to the segment start. During an active multi-run the
+            // recorder holds cumulative game-time samples (which are correct for
+            // the ML files), so normalize a copy before writing the IL record;
+            // in IL mode the samples are already segment-relative.
             long levelStartMs = (long)Math.Round(state.SegmentStart * 1000.0);
+            bool normalizeForIl = _multiRunActive;
             long totalMs = Math.Max(0L, endTimeMs - levelStartMs);
             if (SubsegmentFileStore.TryReadTotalMs(metaPath, out long existing) && existing <= totalMs)
                 return;
@@ -1045,7 +1193,7 @@ namespace HSRTimer
                 {
                     seq = s.seq,
                     level_index = 0,
-                    t_ms = Math.Max(0L, s.t_ms - levelStartMs),
+                    t_ms = normalizeForIl ? Math.Max(0L, s.t_ms - levelStartMs) : Math.Max(0L, s.t_ms),
                     px = s.px,
                     py = s.py,
                     pz = s.pz,

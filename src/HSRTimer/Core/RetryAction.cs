@@ -127,9 +127,15 @@ namespace HSRTimer
             // A resolved R6.5 override is the exception: when no level is active
             // (for example the main menu), the retry key directly launches the
             // specified level instead of reloading the current one.
+            //
+            // A Workshop level is active whenever Game.workshopLevel is set, even
+            // if Game.currentLevelNumber was truncated to a negative int by a
+            // Steam Workshop id larger than int.MaxValue (the game itself stores
+            // it as an int). Without this, such a level could only be retried
+            // once before the guard wrongly reported "no active level".
             bool hasActiveLevel = game != null
                 && game.state != GameState.LoadingLevel
-                && game.currentLevelNumber >= 0;
+                && (game.currentLevelNumber >= 0 || game.workshopLevel != null);
             if (!hasActiveLevel && !hasOverride)
             {
                 notifyKey = "NOTIFY_RETRY_BLOCKED_STATE";
@@ -247,19 +253,51 @@ namespace HSRTimer
             // level, a run not entered from the menu, or an advance the engine
             // didn't tag — fall back to reloading the current level (the
             // pre-R6.4 behavior), preserving identical semantics for those cases.
-            int levelNumber = state.CampaignRetryLevel >= 0
-                ? state.CampaignRetryLevel
-                : game.currentLevelNumber;
-            WorkshopItemSource levelType = state.CampaignRetryLevel >= 0
+            //
+            // The campaign target only ever applies while the current level is a
+            // BuiltIn campaign level. Even if a stale value is still set from an
+            // earlier menu-entered campaign run (e.g. the player then entered an
+            // EditorPick/Workshop level from the menu), never let it redirect an
+            // EditorPick/Workshop retry to that old built-in level — always fall
+            // back to the current level (R6.4.5). TimerCore also clears
+            // CampaignRetryLevel on such menu entries; this check is a defensive
+            // guard in case a segment-start edge was ever missed.
+            bool useCampaignRetry = state.CampaignRetryLevel >= 0
+                && game.currentLevelType == WorkshopItemSource.BuiltIn;
+            ulong levelId = useCampaignRetry
+                ? (ulong)state.CampaignRetryLevel
+                : GetCurrentLevelId(game);
+            WorkshopItemSource levelType = useCampaignRetry
                 ? WorkshopItemSource.BuiltIn
                 : game.currentLevelType;
             float dwell = Mathf.Max(0f, settings.RetryMinDwell);
-            host.StartCoroutine(ReloadCoroutine(game, (ulong)levelNumber, levelType, dwell));
+            host.StartCoroutine(ReloadCoroutine(game, levelId, levelType, dwell));
 
-            notifyKey = state.CampaignRetryLevel >= 0
+            notifyKey = useCampaignRetry
                 ? "NOTIFY_CAMPAIGN_RESTARTED"
                 : "NOTIFY_LEVEL_RESTARTED";
             return true;
+        }
+
+        /// <summary>
+        /// Resolve the current level's id for a retry. BuiltIn and EditorPick
+        /// levels use <c>Game.currentLevelNumber</c> directly. Workshop levels
+        /// must use the full <c>Game.workshopLevel.workshopId</c> instead: the
+        /// game stores only a truncated <c>int</c> in
+        /// <c>Game.currentLevelNumber</c>, and <c>App.LaunchSinglePlayer</c>
+        /// needs the complete ulong Workshop id to look the level up again.
+        /// </summary>
+        private static ulong GetCurrentLevelId(Game game)
+        {
+            if (game.workshopLevel != null
+                && game.workshopLevel.workshopId != 0UL
+                && (game.currentLevelType == WorkshopItemSource.Subscription
+                    || game.currentLevelType == WorkshopItemSource.LocalWorkshop))
+            {
+                return game.workshopLevel.workshopId;
+            }
+
+            return (ulong)game.currentLevelNumber;
         }
 
         /// <summary>
@@ -291,7 +329,7 @@ namespace HSRTimer
             // 4. Re-launch the same level. LaunchSinglePlayer → BeginLoadLevel →
             //    LoadLevel reloads the scene (currentLevelNumber != levelNumber
             //    now) → AfterLoad (state = PlayingLevel, player reset to 0).
-            App.instance.LaunchSinglePlayer((ulong)levelNumber, levelType, 0, 0);
+            App.instance.LaunchSinglePlayer(levelNumber, levelType, 0, 0);
         }
     }
 }

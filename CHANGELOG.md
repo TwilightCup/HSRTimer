@@ -2,6 +2,20 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
+## 1.2.2
+
+- **Release Date:** *10 Sep 2026*
+- **Highlights:**
+  - Fixed subsegment leaderboard ordering, IL comparisons, and EditorPick/Workshop PB persistence.
+  - Fixed one-key retry so menu-entered EditorPick and Workshop levels retry the current level, with repeated Workshop retries working reliably.
+- **Details:**
+  - The subsegment leaderboard now lists settled entries from slowest to fastest (descending diff), keeping no-data entries at the bottom.
+  - In IL mode the subsegment leaderboard compares against the current segment time instead of cumulative game time, so IL references stay correct even during a multi-level run.
+  - Passing a level now keeps the subsegment leaderboard on screen until the next level settles its first subsegment, in both single-level (IL) and multi-run (ML) modes.
+  - Fixed subsegment PB persistence for EditorPick and Workshop levels: they previously collapsed into a single `E-1` / `W-1` record that overwrote every level, and are now stored under their own per-level id.
+  - Subsegment level IDs now follow the game's own identification scheme: single-level (IL) records use the English localized level name for BuiltIn and EditorPick levels and the raw numeric workshop id for Workshop levels (multi-run per-level files keep their `B{number}` timeline numbering).
+  - Fixed one-key retry so EditorPick and Workshop levels entered from the menu retry the current level instead of jumping back to a previously played built-in level; Workshop retries now preserve the full Steam Workshop id and keep working on every press.
+
 ## 1.2.1
 
 - **Release Date:** *09 Sep 2026*
