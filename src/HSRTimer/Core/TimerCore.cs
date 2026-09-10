@@ -228,6 +228,13 @@ namespace HSRTimer
             // here even after advancing to later campaign levels. The Credits
             // level is excluded because it has no gameplay; a collection-run
             // level is excluded because R6.3 (LC delegation) owns those retries.
+            //
+            // If a fresh menu entry instead starts an EditorPick, Workshop, LC
+            // collection, or Credits level, clear any previously remembered
+            // campaign target. Otherwise a stale BuiltIn target from an earlier
+            // menu-entered campaign run would make RetryAction reload that old
+            // level instead of falling back to the current EditorPick/Workshop
+            // level (R6.4.5).
             // The MenuEntryPending latch is cleared regardless — it only ever
             // describes the level that just started.
             if (State.MenuEntryPending)
@@ -240,6 +247,8 @@ namespace HSRTimer
                     && !inCollectionRunNow;
                 if (playableCampaign)
                     State.CampaignRetryLevel = game.currentLevelNumber;
+                else
+                    State.CampaignRetryLevel = -1;
             }
             State.MenuEntryPending = false;
 

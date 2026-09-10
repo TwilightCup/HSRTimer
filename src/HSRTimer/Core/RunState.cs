@@ -176,7 +176,9 @@ namespace HSRTimer
         /// advance (<c>PlayLevel → LoadLevel</c>, no <c>Menu</c>) does not
         /// re-trip the menu edge, so the remembered entry level survives until
         /// the run ends or a reset clears it. Only a fresh menu entry
-        /// overwrites it (starting a new campaign run from a different level).
+        /// overwrites it (starting a new campaign run from a different level);
+        /// a fresh menu entry that starts an EditorPick/Workshop/collection
+        /// level clears it back to -1 so retry falls back to the current level.
         /// </para>
         /// </summary>
         public int CampaignRetryLevel = -1;

@@ -228,13 +228,21 @@ just started.
 **Persistence.** `CampaignRetryLevel` survives campaign advances (they don't
 re-trip the menu edge), full-run resets, and retries themselves — it means "the
 level the player last entered from the menu", which stays meaningful until the
-next menu entry overwrites it (a new run at a different level). `MenuEntryPending`
-is cleared by `RunState.Reset`.
+next menu entry overwrites it (a new run at a different level). A fresh menu
+entry that starts an EditorPick/Workshop/collection level clears it back to -1,
+so retry falls back to the current level instead of a stale built-in target.
+`MenuEntryPending` is cleared by `RunState.Reset`.
 
 **Retry behavior.** In `RetryAction.TryExecute`, when `CampaignRetryLevel >= 0`
 the reload re-launches that level as `BuiltIn` (`NOTIFY_CAMPAIGN_RESTARTED`);
 otherwise — EditorPick, Workshop, or any run not tagged as menu-entered — the
-current-level reload runs unchanged (`NOTIFY_LEVEL_RESTARTED`). Timing semantics
+current-level reload runs unchanged (`NOTIFY_LEVEL_RESTARTED`). Workshop
+current-level reloads use the full `Game.workshopLevel.workshopId` with
+`App.LaunchSinglePlayer` so the complete Steam Workshop id is preserved even
+though `Game.currentLevelNumber` stores only a truncated `int`. Because a large
+Workshop id can truncate to a negative `currentLevelNumber`, the active-level
+guard also treats a set `Game.workshopLevel` as an active level; otherwise the
+retry key would stop responding after the first Workshop retry. Timing semantics
 are identical either way (see R6.2.2 above).
 
 ### R6.5 — user-specified retry target
