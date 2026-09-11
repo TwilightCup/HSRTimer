@@ -453,7 +453,7 @@ namespace HSRTimer
                 return;
 
             if (LeaderboardHud.Instance != null && InputUtil.GetKeyDown(s.SubsegmentToggleKey))
-                LeaderboardHud.Instance.ToggleVisible();
+                LeaderboardHud.Instance.CycleMode();
 
             if (InputUtil.GetKeyDown(s.ResetKey))
             {

@@ -164,7 +164,7 @@ LeaderboardMode = Subsegment
 | `Enable` | true | Master switch; disables sampling, loading, and the leaderboard. |
 | `PBPath` | `subsegment/pb` | Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. Created automatically when a PB is written. |
 | `LoadPath` | `subsegment/load` | Manually-placed reference samples. The directory is created automatically when the plugin loads, so it is ready for dropping reference samples into it. |
-| `ToggleKey` | `Tab` | Show/hide the subsegment leaderboard. |
+| `ToggleKey` | `Tab` | Cycle the shared leaderboard: hidden → Subsegment → Markers → hidden. |
 | `MultiProject` | `Any%` | Initial multi-run project used for live ML comparisons (`Aztec%`/`Dark%`/`Steam%`/`Any%`). Within a session it can auto-upgrade along the containment chain (Aztec% → Dark% → Steam% → Any%) without writing back to config; if the chosen project has no data at all, it falls back to the smallest project that has data (session-only). PB writes still use the actual last-completed endpoint. |
 | `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. |
 | `MinMove` | `0.5` | Minimum sampled move distance; smaller moves become zero-displacement samples and do not build planes. |
@@ -181,7 +181,7 @@ LeaderboardMode = Subsegment
 | `HudColorSlower` | `FF5959FF` | Color of entries where the current run is slower than the reference (red). |
 | `HudColorTie` | `FFFFFFFF` | Color of tie and no-data entries (shown as `--`, white). |
 | `DisabledLeaderboardSources` | *(empty)* | Comma-separated display ids hidden from the leaderboard (`PB` = the PB entry; otherwise each top-level folder name under `LoadPath`). Empty shows everything. |
-| `LeaderboardMode` | `Subsegment` | Content of the shared leaderboard HUD: `Subsegment` (reference comparison, R8) or `Markers` (current level's marker feed, R10.7). The same show/hide key and appearance settings apply to both. |
+| `LeaderboardMode` | `Subsegment` | Content of the shared leaderboard HUD: `Subsegment` (reference comparison, R8) or `Markers` (current level's marker feed, R10.7). The same mode-cycle key and appearance settings apply to both. |
 
 ## settings.ini — [Markers]
 

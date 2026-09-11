@@ -10,8 +10,8 @@ namespace HSRTimer
     /// The top edge is fixed at the screen center (plus the configured Y
     /// offset) and rows extend downward as content grows. Appearance (font
     /// size, offsets, entry colors) comes from the settings model and applies
-    /// to both modes; the display/hide toggle key
-    /// (<c>SubsegmentToggleKey</c>) lives here.
+    /// to both modes; the mode-cycle key (<c>SubsegmentToggleKey</c>) lives
+    /// here and cycles: hidden → Subsegment → Markers → hidden.
     /// </summary>
     public sealed class LeaderboardHud : MonoBehaviour
     {
@@ -42,11 +42,35 @@ namespace HSRTimer
             if (Instance == this) Instance = null;
         }
 
-        /// <summary>Flip the leaderboard show/hide flag (bound to the toggle key).</summary>
-        public void ToggleVisible()
+        /// <summary>
+        /// Cycle the leaderboard through hidden → Subsegment → Markers → hidden.
+        /// When turning it back on from hidden, it always starts in Subsegment
+        /// mode; while visible it switches between the two content modes.
+        /// </summary>
+        public void CycleMode()
         {
-            _visible = !_visible;
-            Plugin.Logger.LogInfo(_visible ? "HSRTimer: leaderboard shown." : "HSRTimer: leaderboard hidden.");
+            var cfg = ConfigService.Instance;
+            if (cfg == null) return;
+
+            if (!_visible)
+            {
+                _visible = true;
+                cfg.Settings.SubsegmentLeaderboardMode = "Subsegment";
+                Plugin.Logger.LogInfo("HSRTimer: leaderboard shown in Subsegment mode.");
+                return;
+            }
+
+            bool markersMode = string.Equals(cfg.Settings.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
+            if (markersMode)
+            {
+                _visible = false;
+                Plugin.Logger.LogInfo("HSRTimer: leaderboard hidden.");
+            }
+            else
+            {
+                cfg.Settings.SubsegmentLeaderboardMode = "Markers";
+                Plugin.Logger.LogInfo("HSRTimer: leaderboard switched to Markers mode.");
+            }
         }
 
         private void EnsureFont(int size)

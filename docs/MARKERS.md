@@ -121,10 +121,11 @@ once per level and skipped; re-capture the object in the editor.
 
 ## Leaderboard feed (R10.7)
 
-The shared leaderboard HUD (left side, toggled by the leaderboard toggle key)
-has a content switch on the **Leaderboard** settings tab: **Subsegment** or
-**Markers**. Its top edge is fixed at the screen center (plus the configured Y
-offset), so rows always extend downward as the feed grows.
+The shared leaderboard HUD (left side, cycled by the leaderboard mode-cycle
+key: hidden → Subsegment → Markers → hidden) has a content switch on the
+**Leaderboard** settings tab: **Subsegment** or **Markers**. Its top edge is
+fixed at the screen center (plus the configured Y offset), so rows always
+extend downward as the feed grows.
 
 In Markers mode:
 

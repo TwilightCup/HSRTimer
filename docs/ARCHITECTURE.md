@@ -431,13 +431,13 @@ Markers follow the same **poll, don't patch** principle as everything else:
   start), gated on passed + not-retrying + valid.
 - **The leaderboard is shared.** `LeaderboardHud` (renamed from `SubsegmentHud`)
   renders either the subsegment references or the marker feed based on
-  `SubsegmentLeaderboardMode`; the show/hide toggle moved from
-  `SubsegmentManager` to the HUD, so the same key and appearance settings work
-  for both modes. Its top edge is fixed at the screen center (plus
-  `HudOffsetY`), so content extends downward instead of re-centering as the
-  number of rows changes. The marker feed is newest-first, format
-  `{name}: {time}` (absolute segment time or signed diff vs the marker's PB),
-  with the faster/slower/tie colors applied in both time modes (R10.7).
+  `SubsegmentLeaderboardMode`; the mode-cycle key moved from `SubsegmentManager`
+  to the HUD, so the same key and appearance settings work for both modes. It
+  cycles hidden → Subsegment → Markers → hidden. Its top edge is fixed at the
+  screen center (plus `HudOffsetY`), so content extends downward instead of
+  re-centering as the number of rows changes. The marker feed is newest-first,
+  format `{name}: {time}` (absolute segment time or signed diff vs the marker's
+  PB), with the faster/slower/tie colors applied in both time modes (R10.7).
 - **Object identity has no GUID in the game.** A captured grab-object reference
   stores the serialized `NetIdentity.sceneId` (unique per scene object within a
   level build) when present, else the hierarchy path from the scene root, plus

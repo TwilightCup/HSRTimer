@@ -134,7 +134,7 @@ LeaderboardMode = Subsegment
 | `Enable` | true | 总开关；关闭后不记录、不加载、不显示。 |
 | `PBPath` | `subsegment/pb` | 相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。写入 PB 时自动创建目录。 |
 | `LoadPath` | `subsegment/load` | 玩家手动放置的采样目录。插件加载时会自动创建该目录，以便直接放入参考采样。 |
-| `ToggleKey` | `Tab` | 排行榜显示/隐藏键。 |
+| `ToggleKey` | `Tab` | 共享排行榜循环切换键：关闭 → 分段对比 → 标记 → 关闭。 |
 | `MultiProject` | `Any%` | 多关实时对比的初始子项目（`Aztec%`/`Dark%`/`Steam%`/`Any%`）。当前局内可沿包含关系自动升级（`Aztec%`→`Dark%`→`Steam%`→`Any%`），不写回配置；若所选项目完全没有数据，则回退到有数据的最小项目（仅当前局内）。PB 写入仍按实际最后完成关卡判定。 |
 | `PlaneRadius` | `50.0` | 虚拟检测平面半径（米）。 |
 | `MinMove` | `0.5` | 最小采样位移；低于该值的位移置零，且不建平面。 |
@@ -151,7 +151,7 @@ LeaderboardMode = Subsegment
 | `HudColorSlower` | `FF5959FF` | 当前比参考更慢的条目颜色（红色）。 |
 | `HudColorTie` | `FFFFFFFF` | 持平及无数据条目颜色（显示为 `--`，白色）。 |
 | `DisabledLeaderboardSources` | *(空)* | 从排行榜隐藏的资料 display id（逗号分隔；`PB` 表示 PB 项，其余为 `LoadPath` 下各顶层文件夹名）。空表示全部显示。 |
-| `LeaderboardMode` | `Subsegment` | 共享排行榜 HUD 的内容：`Subsegment`（参考对比，R8）或 `Markers`（当前关卡的标记 feed，R10.7）。两种模式共用同一个显示/隐藏键与外观设置。 |
+| `LeaderboardMode` | `Subsegment` | 共享排行榜 HUD 的内容：`Subsegment`（参考对比，R8）或 `Markers`（当前关卡的标记 feed，R10.7）。两种模式共用同一个模式循环键与外观设置。 |
 
 ## settings.ini — [Markers]
 

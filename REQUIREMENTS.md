@@ -698,7 +698,7 @@
 #### R8.5.1 显示与开关
 
 - **R8.5.1.1** 进入关卡计时起点后，排行榜自动准备；计时进行中显示在屏幕左侧，顶部固定在屏幕垂直中心（加上 `Subsegment.HudOffsetY`），内容向下延伸。
-- **R8.5.1.2** 提供可配置的切换键（默认 `Tab`），用于显示/隐藏排行榜；配置键见 R8.6。
+- **R8.5.1.2** 提供可配置的切换键（默认 `Tab`），在“关闭 / `Subsegment` / `Markers`”三种显示状态间轮询切换；配置键见 R8.6。
 - **R8.5.1.3** 本关离开关卡/回到菜单/多关运行结束（如通关最终关进入 Credits）时，排行榜清空并隐藏；过关推进到下一关时保留显示，直至下一关首次 subsegment 结算后刷新。
 - **R8.5.1.4** 排行榜为独立 HUD 元素，不并入现有行式计时器面板。
 
@@ -760,7 +760,7 @@
 | `Subsegment.Enable` | `true` | 总开关；关闭时不记录、不加载、不显示 |
 | `Subsegment.PBPath` | `<config>/subsegment/pb` | PB 采样总目录 |
 | `Subsegment.LoadPath` | `<config>/subsegment/load` | 手动加载采样总目录 |
-| `Subsegment.ToggleKey` | `Tab` | 排行榜显示/隐藏键 |
+| `Subsegment.ToggleKey` | `Tab` | 排行榜状态循环切换键（关闭 → `Subsegment` → `Markers` → 关闭） |
 | `Subsegment.MultiProject` | `Any%` | 多关实时对比的初始子项目；当前局内可自动升级（不写回） |
 | `Subsegment.PlaneRadius` | `50.0` | 检测平面半径（米） |
 | `Subsegment.MinMove` | `0.5` | 采样最小位移（米），低于则零向量不建面 |
@@ -882,7 +882,7 @@
 
 #### R10.7 排行榜（markers 模式）
 
-- **R10.7.1** 排行榜设置页提供内容切换：`Subsegment` / `Markers`；沿用现有排行榜显示 / 隐藏键与外观设置（字号、偏移、三色）。
+- **R10.7.1** 排行榜设置页提供内容切换：`Subsegment` / `Markers`；沿用现有排行榜循环切换键（关闭 / `Subsegment` / `Markers`）与外观设置（字号、偏移、三色）。
 - **R10.7.2** markers 模式内容 = 标题行（当前关卡名）+ **触发 feed**：仅在标记触发时新增一行，未触发的标记不占位。
 - **R10.7.3** 行文本格式为 `{标记名}: {时间}`；时间基准为分段时间，显示方式由配置 `Markers.LeaderboardTimeMode` 决定：
   - `Absolute`：本次触发的分段时间（`MM:SS.mmm`）；

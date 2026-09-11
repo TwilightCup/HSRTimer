@@ -29,12 +29,12 @@ HSRTimer saves.
 - **Language** — pick the active language from the loaded set (single-select).
   "Reload language files" re-scans `lang/*.txt`. External tabs that implement
   `ILocalizableSettingsPanelTab` follow this selection automatically.
-- **Keybinds** — reset / retry / settings / leaderboard toggle keys. The
-  leaderboard toggle key shows/hides the shared leaderboard HUD, whether it is
-  showing the subsegment references or the marker feed. To rebind: click the
-  field, then press the desired key. Pure modifier presses are ignored. Mouse
-  side buttons (`Mouse3`–`Mouse6`) can also be bound; mouse left/right buttons
-  remain reserved for normal UI use.
+- **Keybinds** — reset / retry / settings / leaderboard mode-cycle keys. The
+  leaderboard mode-cycle key cycles the shared leaderboard HUD through hidden →
+  Subsegment → Markers → hidden. To rebind: click the field, then press the
+  desired key. Pure modifier presses are ignored. Mouse side buttons
+  (`Mouse3`–`Mouse6`) can also be bound; mouse left/right buttons remain
+  reserved for normal UI use.
 
 ## Interface
 
@@ -63,7 +63,7 @@ HSRTimer saves.
   parameters. During a multi-run the project can auto-upgrade for that session
   only (Any% ⊃ Steam% ⊃ Dark% ⊃ Aztec%) without changing the saved setting; if
   the selected project has no data at all, it falls back to the smallest
-  project that has data (session-only). The leaderboard toggle key is in
+  project that has data (session-only). The leaderboard mode-cycle key is in
   **General → Keybinds**; the leaderboard appearance settings live on the
   **Leaderboard** tab below.
 
@@ -71,7 +71,7 @@ HSRTimer saves.
 
 - **Content** — choose what the shared leaderboard HUD shows: **Subsegment**
   (reference time comparison) or **Markers** (the current level's marker feed).
-  The show/hide key and the appearance settings below apply to both modes.
+  The mode-cycle key and the appearance settings below apply to both modes.
 - **HUD** — the leaderboard font size, X offset, and Y offset (relative to
   the fixed top anchor at the screen center; content extends downward).
 - **Entry colors** — three user-configurable colors for the three leaderboard
