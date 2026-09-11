@@ -204,29 +204,137 @@ namespace HSRTimer
                 if (target == null)
                     return false;
 
-                Vector3 localCenter;
-                Vector3 localSize;
-                if (!TryGetLocalBounds(target, out localCenter, out localSize))
-                {
-                    // The target has no solid mesh (for example only a line,
-                    // trail or particle renderer). Keep a small box at its
-                    // transform origin rather than using a stretching volume.
-                    localCenter = Vector3.zero;
-                    localSize = new Vector3(0.5f, 0.5f, 0.5f);
-                }
-                if (localSize.x <= 0f) localSize.x = 0.1f;
-                if (localSize.y <= 0f) localSize.y = 0.1f;
-                if (localSize.z <= 0f) localSize.z = 0.1f;
-
-                // Keep the box in the target's local space and let the
-                // transform carry it. A world-space AABB changes shape while
-                // the object rotates/moves, which made the cube appear to have
-                // one corner anchored at the old position.
-                box = target.localToWorldMatrix * Matrix4x4.TRS(localCenter, Quaternion.identity, localSize);
-                center = box.MultiplyPoint3x4(Vector3.zero);
+                if (!TryGetGrabObjectBox(target, out box, out center))
+                    return false;
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Build the grab-object highlight box. Movable targets use bounds in
+        /// the target transform's local space so the box follows translation
+        /// and rotation rigidly. Immovable targets (no Rigidbody in the parent
+        /// chain) use renderer world bounds instead: their meshes may be
+        /// statically batched, mesh-baked or otherwise combined into
+        /// world-space data, which makes <c>mesh.bounds</c> plus the renderer
+        /// transform produce huge, mispositioned boxes.
+        /// </summary>
+        private static bool TryGetGrabObjectBox(Transform target, out Matrix4x4 box, out Vector3 center)
+        {
+            box = Matrix4x4.identity;
+            center = Vector3.zero;
+            if (target == null)
+                return false;
+
+            if (!HasRigidbodyInParentChain(target) || HasStaticBatchedRenderer(target))
+            {
+                Bounds world;
+                if (TryGetWorldMeshBounds(target, out world))
+                {
+                    var size = world.size;
+                    if (size.x <= 0f) size.x = 0.1f;
+                    if (size.y <= 0f) size.y = 0.1f;
+                    if (size.z <= 0f) size.z = 0.1f;
+                    center = world.center;
+                    box = Matrix4x4.TRS(center, Quaternion.identity, size);
+                    return true;
+                }
+            }
+
+            Vector3 localCenter;
+            Vector3 localSize;
+            if (!TryGetLocalBounds(target, out localCenter, out localSize))
+            {
+                // The target has no solid mesh (for example only a line,
+                // trail or particle renderer). Keep a small box at its
+                // transform origin rather than using a stretching volume.
+                localCenter = Vector3.zero;
+                localSize = new Vector3(0.5f, 0.5f, 0.5f);
+            }
+            if (localSize.x <= 0f) localSize.x = 0.1f;
+            if (localSize.y <= 0f) localSize.y = 0.1f;
+            if (localSize.z <= 0f) localSize.z = 0.1f;
+
+            // Keep the box in the target's local space and let the transform
+            // carry it. A world-space AABB changes shape while the object
+            // rotates/moves, which made the cube appear to have one corner
+            // anchored at the old position.
+            box = target.localToWorldMatrix * Matrix4x4.TRS(localCenter, Quaternion.identity, localSize);
+            center = box.MultiplyPoint3x4(Vector3.zero);
+            return true;
+        }
+
+        private static bool HasRigidbodyInParentChain(Transform target)
+        {
+            try
+            {
+                return target.GetComponentInParent<Rigidbody>() != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool HasStaticBatchedRenderer(Transform target)
+        {
+            try
+            {
+                var meshRenderers = target.GetComponentsInChildren<MeshRenderer>(true);
+                if (meshRenderers != null)
+                {
+                    foreach (var r in meshRenderers)
+                        if (r != null && r.isPartOfStaticBatch)
+                            return true;
+                }
+                var skinnedRenderers = target.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                if (skinnedRenderers != null)
+                {
+                    foreach (var r in skinnedRenderers)
+                        if (r != null && r.isPartOfStaticBatch)
+                            return true;
+                }
+            }
+            catch
+            {
+                // ignore and use the local-bounds path
+            }
+            return false;
+        }
+
+        private static bool TryGetWorldMeshBounds(Transform target, out Bounds bounds)
+        {
+            bounds = new Bounds();
+            bool found = false;
+            try
+            {
+                var meshRenderers = target.GetComponentsInChildren<MeshRenderer>(true);
+                if (meshRenderers != null)
+                {
+                    foreach (var r in meshRenderers)
+                    {
+                        if (r == null) continue;
+                        if (!found) { bounds = r.bounds; found = true; }
+                        else bounds.Encapsulate(r.bounds);
+                    }
+                }
+                var skinnedRenderers = target.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                if (skinnedRenderers != null)
+                {
+                    foreach (var r in skinnedRenderers)
+                    {
+                        if (r == null) continue;
+                        if (!found) { bounds = r.bounds; found = true; }
+                        else bounds.Encapsulate(r.bounds);
+                    }
+                }
+            }
+            catch
+            {
+                return false;
+            }
+            return found;
         }
 
         private void WarnUnresolved(MarkerDef def)
