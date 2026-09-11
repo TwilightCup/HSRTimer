@@ -202,7 +202,7 @@ OverlayLabelColor = FFFFFFFF
 | Key | Default | Notes |
 |-----|---------|-------|
 | `Enable` | true | Master switch; disables trigger recording, PB writes, and marker leaderboard/overlay display. |
-| `EditMode` | false | Marker edit mode: shows the in-game overlay (R10.6) and the conspicuous HUD hint, and unlocks the panel's edit controls. Persisted, so it survives restarts. |
+| `EditMode` | false | Marker edit mode: shows the in-game overlay (R10.6), the conspicuous HUD hint at the bottom of the timer HUD, and the XYZ axis indicator below it; it also unlocks the panel's edit controls. Persisted, so it survives restarts. |
 | `Path` | `markers` | Directory for marker definition + PB files (`<config>/HSRTimer/markers`). Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. |
 | `DebugLogging` | false | Detailed marker logging (level key, marker count, triggers, object resolution, PB writes). |
 | `LeaderboardTimeMode` | `Relative` | Marker feed time display in the leaderboard (R10.7.3): `Relative` (signed diff vs the marker's PB) or `Absolute` (the marker's own segment time). Entry colors always reflect ahead/behind regardless. |

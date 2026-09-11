@@ -431,7 +431,12 @@ namespace HSRTimer
             }
         }
 
-        private Camera GetCamera()
+        /// <summary>
+        /// Returns the camera that is actually rendering the current view.
+        /// Shared with the timer HUD's edit-mode XYZ axis indicator so it keeps
+        /// following the view angle in normal gameplay and in F8 free roam.
+        /// </summary>
+        internal static Camera GetCamera()
         {
             // Prefer the local player's camera when it is actually rendering.
             // In free-roam mode the game disables the player cameras and switches

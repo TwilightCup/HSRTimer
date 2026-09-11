@@ -171,7 +171,7 @@ OverlayLabelColor = FFFFFFFF
 | 键 | 默认 | 说明 |
 |----|------|------|
 | `Enable` | true | 总开关；关闭后不触发、不写 PB、不显示标记排行榜与可视化。 |
-| `EditMode` | false | 标记编辑模式：开启游戏内可视化（R10.6）与醒目的 HUD 提示，并解锁面板编辑控件。持久化，重启后保留。 |
+| `EditMode` | false | 标记编辑模式：开启游戏内可视化（R10.6）、计时器 HUD 底部的醒目提示及其下方的 XYZ 轴向指示器，并解锁面板编辑控件。持久化，重启后保留。 |
 | `Path` | `markers` | 标记定义与 PB 文件目录（`<config>/HSRTimer/markers`）。相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。 |
 | `DebugLogging` | false | 详细标记日志（关卡 key、标记数、触发、物体解析、PB 写入）。 |
 | `LeaderboardTimeMode` | `Relative` | 排行榜中标记 feed 的时间显示（R10.7.3）：`Relative`（与标记 PB 的带符号差值）或 `Absolute`（标记自身的分段时间）。无论哪种模式，条目颜色都始终体现领先/落后。 |

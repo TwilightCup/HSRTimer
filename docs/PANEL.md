@@ -89,8 +89,9 @@ HSRTimer saves.
 ## Markers
 
 - **Markers** — enable/disable the marker module, toggle **marker edit mode**
-  (which also turns on the in-game overlay and the conspicuous HUD hint), and
-  browse levels: **Main Dreams** (built-in levels), **Extra Dreams**
+  (which also turns on the in-game overlay, the conspicuous HUD hint at the
+  bottom of the timer HUD, and the XYZ axis indicator below it), and browse
+  levels: **Main Dreams** (built-in levels), **Extra Dreams**
   (editor-pick levels), and **Workshop**. Each level button opens that level's
   marker page.
 - **Level page** — a **Back** button, the list of the level's markers (each

@@ -79,7 +79,10 @@ written by an explicit serializer so every field — including an empty
 Settings panel → **Markers** tab:
 
 1. Turn on **marker edit mode** (persisted). While it is on, the timer HUD
-   shows a conspicuous hint line (independent of `show_hud`).
+   shows a conspicuous hint line at the very bottom (independent of `show_hud`;
+   when the HUD is hidden it appears at the bottom-left). A small XYZ axis
+   indicator like a 3D editor's orientation gizmo is drawn directly below the
+   hint; it follows the active view angle, including the F8 free camera.
 2. Pick a level group — **Main Dreams** (built-in), **Extra Dreams**
    (editor-pick), **Workshop** — and open a level.
 3. **New marker** (only in edit mode) creates a `Range` marker and expands its

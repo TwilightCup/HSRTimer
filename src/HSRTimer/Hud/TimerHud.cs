@@ -13,9 +13,12 @@ namespace HSRTimer
     /// </summary>
     public class TimerHud : MonoBehaviour
     {
+        private const float MarkerAxisIndicatorHeight = 38f;
+
         private GUIStyle _rowStyle;
         private GUIStyle _bannerStyle;
         private GUIStyle _customStyle;
+        private GUIStyle _axisLabelStyle;
         private Font _font;
         private int _appliedFontSize = -1;
 
@@ -42,6 +45,13 @@ namespace HSRTimer
             {
                 fontSize = 16,
                 alignment = TextAnchor.UpperLeft,
+                normal = { textColor = Color.white },
+            };
+            _axisLabelStyle = new GUIStyle
+            {
+                fontSize = 12,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
                 normal = { textColor = Color.white },
             };
         }
@@ -81,12 +91,13 @@ namespace HSRTimer
             if (!cfg.Settings.ShowHud)
             {
                 // R10.4.2: the marker-edit-mode hint is independent of show_hud.
-                if (cfg.Settings.MarkersEnable && cfg.Settings.MarkersEditMode)
-                {
-                    string line = cfg.Localization.Get("MARKER_HUD_EDIT_MODE");
-                    _bannerStyle.normal.textColor = new Color(1f, 0.7f, 0.2f, 1f);
-                    GUI.Label(new Rect(12f, 12f, 800f, 48f), line, _bannerStyle);
-                }
+                // With the timer HUD hidden there is no block to anchor to, so
+                // the hint (and its XYZ axis indicator) is drawn at the
+                // bottom-left of the screen instead.
+                float x = 12f;
+                float y = Screen.height - MarkerEditModeBlockHeight(cfg) - 12f;
+                y += DrawMarkerEditModeLine(cfg, cfg.Localization, x, y);
+                y += DrawMarkerAxisIndicator(cfg, x, y);
                 DrawCustomTexts(cfg);
                 return;
             }
@@ -191,12 +202,9 @@ namespace HSRTimer
 
             // Current rule tags: one line right under the timer rows listing the
             // enabled tags (localized). Skipped when none are enabled. Rendered
-            // before the tag extras and the invalid banner so the banner — the
-            // most important line — always stays last.
+            // before the tag extras and the invalid banner; the marker-edit-mode
+            // block is drawn last, at the very bottom of the HUD.
             y += DrawTagsLine(cfg, loc, layout, x, y);
-
-            // R10.4.2: marker edit mode hint (only when the HUD block is visible).
-            y += DrawMarkerEditModeLine(cfg, loc, x, y);
 
             // Voiceline / checkpoint extras (R3.3.3, R3.6.3) for the active category.
             y += DrawTagExtras(cfg, state, loc, x, y);
@@ -224,6 +232,11 @@ namespace HSRTimer
                 y += _bannerStyle.CalcSize(new GUIContent(banner)).y + 2f;
             }
 
+            // R10.4.2: the marker-edit-mode hint is the last line of the timer
+            // HUD, and the edit-mode XYZ axis indicator sits directly beneath it.
+            y += DrawMarkerEditModeLine(cfg, loc, x, y);
+            y += DrawMarkerAxisIndicator(cfg, x, y);
+
             return widest;
         }
 
@@ -250,6 +263,69 @@ namespace HSRTimer
             string line = loc.Get("MARKER_HUD_EDIT_MODE");
             DrawGradientLine(line, new Color(1f, 0.8f, 0.2f, 1f), new Color(1f, 0.55f, 0.1f, 1f), x, y, _rowStyle);
             return _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+        }
+
+        /// <summary>
+        /// R10.4.2: a small XYZ axis indicator like a 3D editor's orientation
+        /// gizmo. It projects the world axes through the active camera, so it
+        /// follows the player's view angle in normal gameplay and in F8 free
+        /// roam. Returns the vertical space consumed (0 when not in edit mode).
+        /// </summary>
+        private float DrawMarkerAxisIndicator(ConfigService cfg, float x, float y)
+        {
+            if (cfg.Settings == null || !cfg.Settings.MarkersEnable || !cfg.Settings.MarkersEditMode)
+                return 0f;
+            var cam = MarkerOverlay.GetCamera();
+            if (cam == null || cam.transform == null)
+                return 0f;
+
+            const float size = 30f;
+            Vector2 origin = new Vector2(x + size * 0.5f, y + size * 0.5f);
+
+            DrawAxisLine(origin, origin + ProjectAxis(cam, Vector3.right, size), new Color(1f, 0.3f, 0.3f, 1f), "X");
+            DrawAxisLine(origin, origin + ProjectAxis(cam, Vector3.up, size), new Color(0.3f, 1f, 0.3f, 1f), "Y");
+            DrawAxisLine(origin, origin + ProjectAxis(cam, Vector3.forward, size), new Color(0.3f, 0.6f, 1f, 1f), "Z");
+
+            return MarkerAxisIndicatorHeight;
+        }
+
+        private float MarkerEditModeBlockHeight(ConfigService cfg)
+        {
+            if (cfg.Settings == null || !cfg.Settings.MarkersEnable || !cfg.Settings.MarkersEditMode)
+                return 0f;
+            string line = cfg.Localization.Get("MARKER_HUD_EDIT_MODE");
+            float height = _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+            var cam = MarkerOverlay.GetCamera();
+            if (cam != null && cam.transform != null)
+                height += MarkerAxisIndicatorHeight;
+            return height;
+        }
+
+        private static Vector2 ProjectAxis(Camera cam, Vector3 worldAxis, float size)
+        {
+            Vector3 local = cam.transform.InverseTransformDirection(worldAxis);
+            return new Vector2(local.x, -local.y) * size;
+        }
+
+        private void DrawAxisLine(Vector2 a, Vector2 b, Color color, string label)
+        {
+            var prevColor = GUI.color;
+            GUI.color = color;
+
+            Vector2 dir = b - a;
+            float len = dir.magnitude;
+            if (len > 0.5f)
+            {
+                float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                var prevMatrix = GUI.matrix;
+                GUIUtility.RotateAroundPivot(angle, a);
+                GUI.DrawTexture(new Rect(a.x, a.y - 1.5f, len, 3f), Texture2D.whiteTexture);
+                GUI.matrix = prevMatrix;
+
+                GUI.Label(new Rect(b.x - 8f, b.y - 8f, 16f, 16f), label, _axisLabelStyle);
+            }
+
+            GUI.color = prevColor;
         }
 
         private float DrawTagExtras(ConfigService cfg, RunState state, LocalizationService loc, float x, float y)
@@ -380,6 +456,7 @@ namespace HSRTimer
                 if (_rowStyle.font != _font) _rowStyle.font = _font;
                 if (_bannerStyle.font != _font) _bannerStyle.font = _font;
                 if (_customStyle.font != _font) _customStyle.font = _font;
+                if (_axisLabelStyle.font != _font) _axisLabelStyle.font = _font;
             }
             if (_rowStyle.fontSize != size) _rowStyle.fontSize = size;
             // The invalid banner matches the timer rows' size (the fixed smaller
