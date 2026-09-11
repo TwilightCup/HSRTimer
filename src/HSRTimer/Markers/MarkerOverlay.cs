@@ -325,16 +325,55 @@ namespace HSRTimer
 
         private Camera GetCamera()
         {
+            // Prefer the local player's camera when it is actually rendering.
+            // In free-roam mode the game disables the player cameras and switches
+            // to a separate camera, so using a disabled player camera here would
+            // project labels as if the view were still attached to the character.
             try
             {
                 var human = Human.Localplayer;
                 if (human != null && human.player != null && human.player.cameraController != null)
-                    return human.player.cameraController.gameCam;
+                {
+                    var cam = human.player.cameraController.gameCam;
+                    if (cam != null && cam.isActiveAndEnabled)
+                        return cam;
+                }
             }
             catch
             {
-                // fall through to Camera.main
+                // fall through to the active-camera search below
             }
+
+            try
+            {
+                var main = Camera.main;
+                if (main != null && main.isActiveAndEnabled)
+                    return main;
+            }
+            catch
+            {
+                // fall through to the all-cameras scan
+            }
+
+            // Last resort: any enabled camera, so labels still follow the real
+            // view when the active camera is not tagged MainCamera.
+            try
+            {
+                var cameras = Camera.allCameras;
+                if (cameras != null)
+                {
+                    foreach (var cam in cameras)
+                    {
+                        if (cam != null && cam.isActiveAndEnabled)
+                            return cam;
+                    }
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
             return Camera.main;
         }
 

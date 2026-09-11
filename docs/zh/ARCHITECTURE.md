@@ -209,4 +209,4 @@ dotnet build src/HSRTimer/HSRTimer.csproj
 - **PB 时机与 R8 一致**:在 `TimerCore.EndSegment` 中、`State.EndSegment` *之前*写入(这样整局重置不会毁掉分段起点),门控条件为"通过 + 非重试 + 成绩有效"。
 - **排行榜是共享的。** `LeaderboardHud`(由 `SubsegmentHud` 改名)根据 `SubsegmentLeaderboardMode` 渲染 subsegment 参考或标记 feed;显示 / 隐藏开关从 `SubsegmentManager` 移到了 HUD,因此两种模式共用同一个键与外观设置。标记 feed 最新在上,格式为 `{名称}: {时间}`(绝对分段时间或与标记 PB 的带符号差值),两种时间模式下都应用领先 / 落后 / 持平颜色(R10.7)。
 - **物体身份在游戏里没有 GUID。** 捕获的抓取物体引用会在存在时记录序列化的 `NetIdentity.sceneId`(在关卡构建内对场景物体唯一),否则记录从场景根算起的层级路径,外加名称与世界坐标。解析顺序:sceneId 扫描 → 路径逐级匹配 → 名称 + 位置(5 m 容差,最后手段,记日志)。无法解析的目标在本次尝试中跳过,每关记一次警告(R10.6.4)。
-- **可视化无副作用。** `MarkerOverlay` 用 `Graphics.DrawMesh` + 透明 unlit 材质渲染范围立方体与抓取物体高亮(不创建碰撞体、不改游戏物体 / 材质,因此不影响联机);找不到 shader 时降级为一次 IMGUI 线框投影。标签是把标记中心经本地玩家相机(`NetPlayer.cameraController.gameCam`)投影后绘制的 IMGUI 标签。
+- **可视化无副作用。** `MarkerOverlay` 用 `Graphics.DrawMesh` + 透明 unlit 材质渲染范围立方体与抓取物体高亮(不创建碰撞体、不改游戏物体 / 材质,因此不影响联机);找不到 shader 时降级为一次 IMGUI 线框投影。标签是把标记中心经当前活动相机投影后绘制的 IMGUI 标签:本地玩家相机启用时优先使用它,否则使用 `Camera.main`(或任意启用中的相机),这样自由视角下名称会显示在自由相机投影后的真实位置,而不是角色相对相机的位置。

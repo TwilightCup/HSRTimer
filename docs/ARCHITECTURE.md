@@ -446,5 +446,7 @@ Markers follow the same **poll, don't patch** principle as everything else:
   grab-object highlights with `Graphics.DrawMesh` + a transparent unlit material
   (no colliders, no game-object/material mutation, so netcode is unaffected); if
   no shader is found it degrades once to an IMGUI wireframe projection. Labels
-  are IMGUI labels projected through the local player's camera
-  (`NetPlayer.cameraController.gameCam`).
+  are IMGUI labels projected through the currently active camera: the local
+  player's camera when it is enabled, otherwise `Camera.main` (or any enabled
+  camera), so free-roam mode shows labels at the free camera's true projected
+  positions instead of the character-relative player camera.
