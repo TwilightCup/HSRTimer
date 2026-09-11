@@ -39,6 +39,10 @@ namespace HSRTimer
                     state.Flags.ClearForgivable();
                 if (!cfg.Settings.OnlyRecordFirstWakeUpTime)
                     TimerCore.RestartWakeUpMeasurement();
+                // R10.1.6: a pause-menu level restart restarts the level from
+                // checkpoint 0, so the level's marker records and feed reset.
+                if (MarkersManager.Instance != null)
+                    MarkersManager.Instance.OnRestartLevel();
             }
             catch (System.Exception ex)
             {
@@ -70,6 +74,11 @@ namespace HSRTimer
                     return;
                 if (!cfg.Settings.OnlyRecordFirstWakeUpTime)
                     TimerCore.RestartWakeUpMeasurement();
+                // R10.2.4: a pause-menu checkpoint load may trigger markers that
+                // are configured with "load at checkpoint" semantics.
+                var markers = MarkersManager.Instance;
+                if (markers != null)
+                    markers.OnCheckpointLoaded(Game.instance != null ? Game.instance.currentCheckpointNumber : -1);
             }
             catch (System.Exception ex)
             {

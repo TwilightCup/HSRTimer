@@ -156,6 +156,7 @@ HudColorFaster = 59FF66FF
 HudColorSlower = FF5959FF
 HudColorTie = FFFFFFFF
 DisabledLeaderboardSources =
+LeaderboardMode = Subsegment
 ```
 
 | Key | Default | Notes |
@@ -180,6 +181,39 @@ DisabledLeaderboardSources =
 | `HudColorSlower` | `FF5959FF` | Color of entries where the current run is slower than the reference (red). |
 | `HudColorTie` | `FFFFFFFF` | Color of tie and no-data entries (shown as `--`, white). |
 | `DisabledLeaderboardSources` | *(empty)* | Comma-separated display ids hidden from the leaderboard (`PB` = the PB entry; otherwise each top-level folder name under `LoadPath`). Empty shows everything. |
+| `LeaderboardMode` | `Subsegment` | Content of the shared leaderboard HUD: `Subsegment` (reference comparison, R8) or `Markers` (current level's marker feed, R10.7). The same show/hide key and appearance settings apply to both. |
+
+## settings.ini — [Markers]
+
+Starting with R10, marker data and the marker module are configured by the
+`[Markers]` section in `settings.ini` (same tolerant reader/writer):
+
+```ini
+[Markers]
+Enable = true
+EditMode = false
+Path = markers
+DebugLogging = false
+LeaderboardTimeMode = Relative
+OverlayFillColor = 3F7FFF66
+OverlayLabelColor = FFFFFFFF
+```
+
+| Key | Default | Notes |
+|-----|---------|-------|
+| `Enable` | true | Master switch; disables trigger recording, PB writes, and marker leaderboard/overlay display. |
+| `EditMode` | false | Marker edit mode: shows the in-game overlay (R10.6) and the conspicuous HUD hint, and unlocks the panel's edit controls. Persisted, so it survives restarts. |
+| `Path` | `markers` | Directory for marker definition + PB files (`<config>/HSRTimer/markers`). Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. |
+| `DebugLogging` | false | Detailed marker logging (level key, marker count, triggers, object resolution, PB writes). |
+| `LeaderboardTimeMode` | `Relative` | Marker feed time display in the leaderboard (R10.7.3): `Relative` (signed diff vs the marker's PB) or `Absolute` (the marker's own segment time). Entry colors always reflect ahead/behind regardless. |
+| `OverlayFillColor` | `3F7FFF66` | Fill color (with alpha) of the translucent range cubes and grab-object highlights. |
+| `OverlayLabelColor` | `FFFFFFFF` | Color of the marker name labels in the edit-mode overlay. |
+
+Marker data files live under `<config>/HSRTimer/markers/{level}/{category}.json`
+(the level key uses the same scheme as subsegment IL ids: English localized
+name for BuiltIn/EditorPick levels, the numeric Workshop id, or the local level
+folder name when it has no id; the category key follows R8.2.4). There is no
+load/import directory — markers only store your own PB.
 
 ## lang/*.txt
 

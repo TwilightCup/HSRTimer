@@ -29,10 +29,12 @@ HSRTimer saves.
 - **Language** — pick the active language from the loaded set (single-select).
   "Reload language files" re-scans `lang/*.txt`. External tabs that implement
   `ILocalizableSettingsPanelTab` follow this selection automatically.
-- **Keybinds** — reset / retry / settings / subsegment leaderboard toggle keys.
-  To rebind: click the field, then press the desired key. Pure modifier presses
-  are ignored. Mouse side buttons (`Mouse3`–`Mouse6`) can also be bound; mouse
-  left/right buttons remain reserved for normal UI use.
+- **Keybinds** — reset / retry / settings / leaderboard toggle keys. The
+  leaderboard toggle key shows/hides the shared leaderboard HUD, whether it is
+  showing the subsegment references or the marker feed. To rebind: click the
+  field, then press the desired key. Pure modifier presses are ignored. Mouse
+  side buttons (`Mouse3`–`Mouse6`) can also be bound; mouse left/right buttons
+  remain reserved for normal UI use.
 
 ## Interface
 
@@ -67,17 +69,43 @@ HSRTimer saves.
 
 ## Leaderboard
 
-- **HUD** — the subsegment leaderboard font size, X offset, and Y offset
-  (relative to automatic vertical centering). These were moved here from the
-  Subsegment tab.
+- **Content** — choose what the shared leaderboard HUD shows: **Subsegment**
+  (reference time comparison) or **Markers** (the current level's marker feed).
+  The show/hide key and the appearance settings below apply to both modes.
+- **HUD** — the leaderboard font size, X offset, and Y offset (relative to
+  automatic vertical centering).
 - **Entry colors** — three user-configurable colors for the three leaderboard
   entry states: faster/ahead (default green), slower/behind (default red), and
-  tie/no-data (default white, shown as `--`). All colors include RGBA sliders
-  and a hex input.
-- **Displayed sources** — at the bottom, a toggle for every subsegment source:
-  **PB** and each top-level folder under the load directory. Only checked
-  sources appear on the leaderboard. The list is still truncated to
-  `MaxLeaderboardEntries` after filtering and sorting.
+  tie/no-data (default white, shown as `--`). In Markers mode the colors still
+  reflect ahead/behind vs the marker's PB even when absolute times are shown.
+- **Marker time display** — (Markers mode only) whether each triggered marker
+  row shows its absolute segment time or the signed difference to that marker's
+  PB.
+- **Displayed sources** — (Subsegment mode only) at the bottom, a toggle for
+  every subsegment source: **PB** and each top-level folder under the load
+  directory. Only checked sources appear on the leaderboard. The list is still
+  truncated to `MaxLeaderboardEntries` after filtering and sorting.
 
-See [CATEGORIES.md](CATEGORIES.md) for what each tag does and
-[CHECKPOINTS.md](CHECKPOINTS.md) for the Checkpoint tag's rules.
+## Markers
+
+- **Markers** — enable/disable the marker module, toggle **marker edit mode**
+  (which also turns on the in-game overlay and the conspicuous HUD hint), and
+  browse levels: **Main Dreams** (built-in levels), **Extra Dreams**
+  (editor-pick levels), and **Workshop**. Each level button opens that level's
+  marker page.
+- **Level page** — a **Back** button, the list of the level's markers (each
+  row expands into its editor), and a **New marker** button at the bottom
+  (visible only while edit mode is on).
+- **Marker editor** — a name text field and a type dropdown (Range trigger /
+  Checkpoint trigger / Grab object), with per-type controls: for Range, "Set to
+  player position" plus center/length inputs and grab/jump requirement toggles;
+  for Checkpoint, the checkpoint number and an optional "trigger when loaded
+  from the pause menu" toggle; for Grab object, "Set to currently grabbed
+  object" (invalid when more than one object is grabbed) and a read-only object
+  id. Markers can be enabled/disabled and deleted (with confirmation), and the
+  current PB times are shown read-only.
+- When edit mode is off, expanded markers are read-only.
+
+See [CATEGORIES.md](CATEGORIES.md) for what each tag does,
+[CHECKPOINTS.md](CHECKPOINTS.md) for the Checkpoint tag's rules, and
+[MARKERS.md](MARKERS.md) for the marker feature details.

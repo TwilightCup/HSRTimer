@@ -81,6 +81,7 @@ namespace HSRTimer
                 Accumulate(game, gState, aState);
                 TrackWakeUp(game, gState);
                 SubsegmentManager.Instance?.OnPhysicsTick(game, gState, State);
+                MarkersManager.Instance?.OnPhysicsTick(game, gState, State);
                 RunRules(game, gState);
             }
 
@@ -108,6 +109,9 @@ namespace HSRTimer
             // Subsegment quiet-settle windows run in unscaled time so they
             // continue through pauses (R8.4.3.4).
             SubsegmentManager.Instance?.OnUpdate();
+
+            // Markers: flush dirty marker-set edits (R10.5.8).
+            MarkersManager.Instance?.OnUpdate();
 
             // Real-time clock: unlike game time this is not tied to a playable
             // state, so it keeps advancing through level loading screens and
@@ -163,6 +167,7 @@ namespace HSRTimer
             if (_opt.AutoReset && SegmentLogic.IsAutoReset(prevG, gState, prevA, aState, isLocal, State.Retrying))
             {
                 SubsegmentManager.Instance?.OnRunExit();
+                MarkersManager.Instance?.OnRunExit();
                 DoFullReset(keepLastValues: false, keepLastRun: true);
                 return;
             }
@@ -179,6 +184,7 @@ namespace HSRTimer
             if (SegmentLogic.IsMenuEntry(prevA, aState))
             {
                 SubsegmentManager.Instance?.OnRunExit();
+                MarkersManager.Instance?.OnRunExit();
                 DoFullReset(keepLastValues: false, keepLastRun: true);
                 State.MenuEntryPending = true;
             }
@@ -262,6 +268,9 @@ namespace HSRTimer
             // Start/reload the local subsegment module (R8).
             SubsegmentManager.Instance?.OnLevelStart(game, State);
 
+            // Start/reload the markers module (R10).
+            MarkersManager.Instance?.OnLevelStart(game, State);
+
             // Fire tag OnLevelEnter for every enabled tag.
             ForEachEnabledRule(rule => Safe(rule, r => r.OnLevelEnter(MakeContext(game))));
         }
@@ -271,6 +280,9 @@ namespace HSRTimer
             double end = State.GameTime;
             bool retrying = State.Retrying;
             SubsegmentManager.Instance?.OnLevelEnd(
+                game, State, end, completed, retrying,
+                game != null ? game.state : GameState.Inactive, App.state);
+            MarkersManager.Instance?.OnLevelEnd(
                 game, State, end, completed, retrying,
                 game != null ? game.state : GameState.Inactive, App.state);
             State.EndSegment(end, completed);
@@ -440,8 +452,8 @@ namespace HSRTimer
             if (SettingsPanel.Instance != null && SettingsPanel.Instance.IsVisible)
                 return;
 
-            if (SubsegmentManager.Instance != null)
-                SubsegmentManager.Instance.HandleKeybind(s.SubsegmentToggleKey);
+            if (LeaderboardHud.Instance != null && InputUtil.GetKeyDown(s.SubsegmentToggleKey))
+                LeaderboardHud.Instance.ToggleVisible();
 
             if (InputUtil.GetKeyDown(s.ResetKey))
             {
@@ -484,6 +496,7 @@ namespace HSRTimer
         private void DoFullReset(bool keepLastValues, bool keepLastRun = false)
         {
             SubsegmentManager.Instance?.OnRunReset();
+            MarkersManager.Instance?.OnRunReset();
             State.Reset(keepLastValues, keepLastRun);
             State.Flags.ClearAll();
             _cpEdgeInit = false;

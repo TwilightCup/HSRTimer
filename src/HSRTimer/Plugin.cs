@@ -80,7 +80,13 @@ namespace HSRTimer
             var subGo = new GameObject("HSRTimer.Subsegment");
             Object.DontDestroyOnLoad(subGo);
             subGo.AddComponent<SubsegmentManager>();
-            subGo.AddComponent<SubsegmentHud>();
+            subGo.AddComponent<LeaderboardHud>();
+
+            // 7. Markers module (R10): trigger engine + 3D edit-mode overlay.
+            var markersGo = new GameObject("HSRTimer.Markers");
+            Object.DontDestroyOnLoad(markersGo);
+            markersGo.AddComponent<MarkersManager>();
+            markersGo.AddComponent<MarkerOverlay>();
         }
 
         /// <summary>

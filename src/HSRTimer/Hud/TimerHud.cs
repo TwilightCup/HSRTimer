@@ -73,16 +73,23 @@ namespace HSRTimer
             var cfg = ConfigService.Instance;
             if (cfg == null) return;
 
-            // Global show/hide toggle.
-            if (!cfg.Settings.ShowHud)
-            {
-                DrawCustomTexts(cfg);
-                return;
-            }
-
             int size = cfg.Layout.FontSize;
             EnsureFont(size);
             ApplyFontToStyles(size);
+
+            // Global show/hide toggle.
+            if (!cfg.Settings.ShowHud)
+            {
+                // R10.4.2: the marker-edit-mode hint is independent of show_hud.
+                if (cfg.Settings.MarkersEnable && cfg.Settings.MarkersEditMode)
+                {
+                    string line = cfg.Localization.Get("MARKER_HUD_EDIT_MODE");
+                    _bannerStyle.normal.textColor = new Color(1f, 0.7f, 0.2f, 1f);
+                    GUI.Label(new Rect(12f, 12f, 800f, 48f), line, _bannerStyle);
+                }
+                DrawCustomTexts(cfg);
+                return;
+            }
 
             float mainBlockWidth = DrawMainBlock(cfg);
 
@@ -188,6 +195,9 @@ namespace HSRTimer
             // most important line — always stays last.
             y += DrawTagsLine(cfg, loc, layout, x, y);
 
+            // R10.4.2: marker edit mode hint (only when the HUD block is visible).
+            y += DrawMarkerEditModeLine(cfg, loc, x, y);
+
             // Voiceline / checkpoint extras (R3.3.3, R3.6.3) for the active category.
             y += DrawTagExtras(cfg, state, loc, x, y);
 
@@ -226,6 +236,19 @@ namespace HSRTimer
                 return 0f;
             string line = loc.Get("HUD_TAGS_LABEL") + ":  " + TemplateVars.CategoryName(cfg);
             DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
+            return _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+        }
+
+        /// <summary>
+        /// R10.4.2: one conspicuous amber line while the marker edit mode is on.
+        /// Returns the vertical space consumed (0 when not in edit mode).
+        /// </summary>
+        private float DrawMarkerEditModeLine(ConfigService cfg, LocalizationService loc, float x, float y)
+        {
+            if (cfg.Settings == null || !cfg.Settings.MarkersEnable || !cfg.Settings.MarkersEditMode)
+                return 0f;
+            string line = loc.Get("MARKER_HUD_EDIT_MODE");
+            DrawGradientLine(line, new Color(1f, 0.8f, 0.2f, 1f), new Color(1f, 0.55f, 0.1f, 1f), x, y, _rowStyle);
             return _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
         }
 

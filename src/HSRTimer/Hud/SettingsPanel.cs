@@ -36,7 +36,7 @@ namespace HSRTimer
         // Active tab page.
         private int _tab;
         private string[] _tabDisplays;
-        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD" };
+        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD", "PANEL_TAB_MARKERS" };
 
         // Keybind rebind state: which logical action is awaiting a keypress.
         private string _pendingRebind;
@@ -202,6 +202,7 @@ namespace HSRTimer
                 case 2: DrawCategory(cfg, loc); break;
                 case 3: DrawSubsegment(cfg, s, loc); break;
                 case 4: DrawLeaderboard(cfg, s, loc); break;
+                case 5: DrawMarkers(cfg, loc); break;
                 default: DrawExternalTab(_tab - _tabKeys.Length); break;
             }
 
@@ -319,10 +320,22 @@ namespace HSRTimer
             s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
         }
 
-        // ── Page: Leaderboard (R8.5 HUD appearance + entry state colors) ──
+        // ── Page: Leaderboard (R8.5 HUD appearance + entry state colors + content mode) ──
         private void DrawLeaderboard(ConfigService cfg, SettingsModel s, LocalizationService loc)
         {
             Section(loc.Get("PANEL_LEADERBOARD"));
+
+            // R10.7.1: the shared leaderboard shows either the subsegment
+            // references or the current level's marker feed.
+            Section(loc.Get("SETTINGS_LEADERBOARD_MODE"));
+            string[] modes = { loc.Get("SETTINGS_LEADERBOARD_MODE_SUBSEGMENT"), loc.Get("SETTINGS_LEADERBOARD_MODE_MARKERS") };
+            int mi = string.Equals(s.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+            int nextMode = GUILayout.SelectionGrid(mi, modes, 2, _button);
+            if (nextMode != mi)
+                s.SubsegmentLeaderboardMode = nextMode == 1 ? "Markers" : "Subsegment";
+            bool markersMode = string.Equals(s.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
+
+            Section(loc.Get("PANEL_HUD"));
             s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
             s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
             s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
@@ -332,7 +345,28 @@ namespace HSRTimer
             ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_SLOWER", s.SubsegmentHudColorSlower, c => s.SubsegmentHudColorSlower = c);
             ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_TIE", s.SubsegmentHudColorTie, c => s.SubsegmentHudColorTie = c);
 
-            Section(loc.Get("SETTINGS_LEADERBOARD_SOURCES"));
+            if (markersMode)
+            {
+                // R10.7.3: marker feed time display (absolute segment time or
+                // signed diff vs PB); the entry colors above apply to both.
+                Section(loc.Get("SETTINGS_MARKERS_TIME_MODE"));
+                string[] timeModes = { loc.Get("SETTINGS_MARKERS_TIME_MODE_RELATIVE"), loc.Get("SETTINGS_MARKERS_TIME_MODE_ABSOLUTE") };
+                int ti = string.Equals(s.MarkersLeaderboardTimeMode, "Absolute", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                int nextTime = GUILayout.SelectionGrid(ti, timeModes, 2, _button);
+                if (nextTime != ti)
+                    s.MarkersLeaderboardTimeMode = nextTime == 1 ? "Absolute" : "Relative";
+                GUILayout.Label(loc.Get("SETTINGS_LEADERBOARD_MARKERS_NOTE"), _small);
+            }
+            else
+            {
+                Section(loc.Get("SETTINGS_LEADERBOARD_SOURCES"));
+                DrawSubsegmentSources(cfg, s, loc);
+            }
+        }
+
+        // ── subsegment source visibility toggles (subsegment leaderboard mode only) ──
+        private void DrawSubsegmentSources(ConfigService cfg, SettingsModel s, LocalizationService loc)
+        {
             bool pbEnabled = s.IsSubsegmentSourceEnabled("PB");
             bool pbNext = Toggle(loc.Get("SETTINGS_LEADERBOARD_SOURCE_PB"), pbEnabled);
             if (pbNext != pbEnabled) s.SetSubsegmentSourceEnabled("PB", pbNext);
@@ -364,6 +398,12 @@ namespace HSRTimer
             {
                 GUILayout.Label(loc.Get("SETTINGS_LEADERBOARD_NO_LOAD_DIR"), _small);
             }
+        }
+
+        // ── Page: Markers (R10) ──
+        private void DrawMarkers(ConfigService cfg, LocalizationService loc)
+        {
+            MarkersPanel.Draw(cfg, loc, _section, _label, _value, _small, _toggle, _button, _textField);
         }
 
         // ── Page: external plugin tab (ISettingsPanelTab) ──
