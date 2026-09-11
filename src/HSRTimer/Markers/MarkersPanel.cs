@@ -71,7 +71,8 @@ namespace HSRTimer
         private static void DrawSourceDropdown(string id, string titleKey, List<MarkerLevelEntry> levels,
             LocalizationService loc, GUIStyle small, GUIStyle button)
         {
-            if (GUILayout.Button(loc.Get(titleKey), button))
+            string title = (_sourceExpanded == id ? "▾ " : "▸ ") + loc.Get(titleKey);
+            if (GUILayout.Button(title, button))
                 _sourceExpanded = _sourceExpanded == id ? null : id;
 
             if (_sourceExpanded != id)
@@ -234,7 +235,7 @@ namespace HSRTimer
             // Type dropdown (button + collapsible list).
             GUILayout.BeginHorizontal();
             GUILayout.Label(loc.Get("MARKER_TYPE"), label, GUILayout.Width(120));
-            string current = loc.Get(TypeKey(def.Kind));
+            string current = (_typeOpen ? "▾ " : "▸ ") + loc.Get(TypeKey(def.Kind));
             if (GUILayout.Button(current, button, GUILayout.Width(200)))
                 _typeOpen = !_typeOpen;
             GUILayout.EndHorizontal();

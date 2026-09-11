@@ -575,7 +575,7 @@ namespace HSRTimer
             int current = System.Array.IndexOf(_langCodes, cfg.Localization.CurrentCode);
             if (current < 0) current = 0;
 
-            string selected = _langDisplays[current] + "  " + loc.Get("PANEL_LANG_SELECT_HINT");
+            string selected = (_langDropdownOpen ? "▾ " : "▸ ") + _langDisplays[current] + "  " + loc.Get("PANEL_LANG_SELECT_HINT");
             if (GUILayout.Button(selected, _button))
                 _langDropdownOpen = !_langDropdownOpen;
 
