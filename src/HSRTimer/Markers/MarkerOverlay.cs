@@ -11,7 +11,9 @@ namespace HSRTimer
     /// <item>every enabled Range marker is drawn as a blue translucent cube with
     /// a white name label at its center (R10.6.1);</item>
     /// <item>every enabled GrabObject marker highlights its resolved target
-    /// object's bounds with the same cube + label (R10.6.2).</item>
+    /// object's bounds with the same cube + label (R10.6.2); the bounds are
+    /// kept in the target's local space so the cube follows its motion and
+    /// rotation instead of stretching from an old world-space AABB.</item>
     /// </list>
     /// No colliders are created and no game materials are modified. The cube is
     /// rendered with <c>Graphics.DrawMesh</c> (depth-correct, camera-agnostic);
@@ -101,18 +103,15 @@ namespace HSRTimer
             if (set == null || set.markers == null)
                 return;
 
-            Color fill = _cubeMaterial.color;
             foreach (var def in set.markers)
             {
                 if (def == null || !def.enabled || !MarkerKindUtil.IsKnown(def.type))
                     continue;
+                Matrix4x4 box;
                 Vector3 center;
-                Vector3 size;
-                if (!TryGetBox(def, mgr, out center, out size))
+                if (!TryGetBox(def, mgr, out box, out center))
                     continue;
-                if (size.x <= 0f || size.y <= 0f || size.z <= 0f)
-                    continue;
-                Graphics.DrawMesh(_cubeMesh, Matrix4x4.TRS(center, Quaternion.identity, size), _cubeMaterial, 0);
+                Graphics.DrawMesh(_cubeMesh, box, _cubeMaterial, 0);
             }
         }
 
@@ -140,9 +139,9 @@ namespace HSRTimer
             {
                 if (def == null || !def.enabled || !MarkerKindUtil.IsKnown(def.type))
                     continue;
+                Matrix4x4 box;
                 Vector3 center;
-                Vector3 size;
-                if (!TryGetBox(def, mgr, out center, out size))
+                if (!TryGetBox(def, mgr, out box, out center))
                     continue;
 
                 var sp = cam.WorldToScreenPoint(center);
@@ -152,7 +151,7 @@ namespace HSRTimer
                 float sy = Screen.height - sp.y;
 
                 if (_useWireframeFallback)
-                    DrawWireframe(cam, center, size);
+                    DrawWireframe(cam, box);
 
                 // Only draw the label when its anchor is on screen.
                 if (sx >= -20f && sx <= Screen.width + 20f && sy >= -20f && sy <= Screen.height + 20f)
@@ -180,14 +179,17 @@ namespace HSRTimer
             return game != null && game.state == GameState.PlayingLevel;
         }
 
-        private bool TryGetBox(MarkerDef def, MarkersManager mgr, out Vector3 center, out Vector3 size)
+        private bool TryGetBox(MarkerDef def, MarkersManager mgr, out Matrix4x4 box, out Vector3 center)
         {
+            box = Matrix4x4.identity;
             center = Vector3.zero;
-            size = Vector3.one;
             if (def.Kind == MarkerKind.Range)
             {
+                var size = new Vector3(def.sx, def.sy, def.sz);
+                if (size.x <= 0f || size.y <= 0f || size.z <= 0f)
+                    return false;
                 center = new Vector3(def.cx, def.cy, def.cz);
-                size = new Vector3(def.sx, def.sy, def.sz);
+                box = Matrix4x4.TRS(center, Quaternion.identity, size);
                 return true;
             }
             if (def.Kind == MarkerKind.GrabObject)
@@ -198,20 +200,30 @@ namespace HSRTimer
                     WarnUnresolved(def);
                     return false;
                 }
-                Bounds? b = ObjectBounds(go);
-                if (b.HasValue)
+                var target = go.transform;
+                if (target == null)
+                    return false;
+
+                Vector3 localCenter;
+                Vector3 localSize;
+                if (!TryGetLocalBounds(target, out localCenter, out localSize))
                 {
-                    center = b.Value.center;
-                    size = b.Value.size;
-                    if (size.x <= 0f) size.x = 0.1f;
-                    if (size.y <= 0f) size.y = 0.1f;
-                    if (size.z <= 0f) size.z = 0.1f;
+                    // The target has no solid mesh (for example only a line,
+                    // trail or particle renderer). Keep a small box at its
+                    // transform origin rather than using a stretching volume.
+                    localCenter = Vector3.zero;
+                    localSize = new Vector3(0.5f, 0.5f, 0.5f);
                 }
-                else
-                {
-                    center = go.transform != null ? go.transform.position : Vector3.zero;
-                    size = new Vector3(0.5f, 0.5f, 0.5f);
-                }
+                if (localSize.x <= 0f) localSize.x = 0.1f;
+                if (localSize.y <= 0f) localSize.y = 0.1f;
+                if (localSize.z <= 0f) localSize.z = 0.1f;
+
+                // Keep the box in the target's local space and let the
+                // transform carry it. A world-space AABB changes shape while
+                // the object rotates/moves, which made the cube appear to have
+                // one corner anchored at the old position.
+                box = target.localToWorldMatrix * Matrix4x4.TRS(localCenter, Quaternion.identity, localSize);
+                center = box.MultiplyPoint3x4(Vector3.zero);
                 return true;
             }
             return false;
@@ -230,33 +242,85 @@ namespace HSRTimer
                 Plugin.Logger.LogWarning($"HSRTimer[markers]: grab-object marker '{def.name}' ({def.id}) target could not be resolved in this level; highlight skipped (R10.6.4).");
         }
 
-        private static Bounds? ObjectBounds(GameObject go)
+        /// <summary>
+        /// Bounds of the target's solid geometry in <paramref name="target"/>'s
+        /// local space. Only mesh renderers are considered: line, trail and
+        /// particle renderers can have world bounds that span from an old
+        /// emission position to the current one, which made a world-space box
+        /// stretch instead of following the object.
+        /// </summary>
+        private static bool TryGetLocalBounds(Transform target, out Vector3 center, out Vector3 size)
         {
+            center = Vector3.zero;
+            size = Vector3.zero;
+            Bounds? acc = null;
             try
             {
-                var renderers = go.GetComponentsInChildren<Renderer>(true);
-                if (renderers == null || renderers.Length == 0)
-                    return null;
-                Bounds? acc = null;
-                foreach (var r in renderers)
+                var meshRenderers = target.GetComponentsInChildren<MeshRenderer>(true);
+                if (meshRenderers != null)
                 {
-                    if (r == null) continue;
-                    if (!acc.HasValue) acc = r.bounds;
-                    else acc = Union(acc.Value, r.bounds);
+                    foreach (var r in meshRenderers)
+                        AccumulateMeshRendererBounds(r, target, ref acc);
                 }
-                return acc;
+                var skinnedRenderers = target.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                if (skinnedRenderers != null)
+                {
+                    foreach (var r in skinnedRenderers)
+                        AccumulateSkinnedRendererBounds(r, target, ref acc);
+                }
             }
             catch
             {
-                return null;
+                return false;
             }
+            if (!acc.HasValue)
+                return false;
+            center = acc.Value.center;
+            size = acc.Value.size;
+            return true;
         }
 
-        private static Bounds Union(Bounds a, Bounds b)
+        private static void AccumulateMeshRendererBounds(MeshRenderer renderer, Transform target, ref Bounds? acc)
         {
-            var min = Vector3.Min(a.min, b.min);
-            var max = Vector3.Max(a.max, b.max);
-            return new Bounds((min + max) * 0.5f, max - min);
+            if (renderer == null || renderer.transform == null || target == null)
+                return;
+            var filter = renderer.GetComponent<MeshFilter>();
+            var mesh = filter != null ? filter.sharedMesh : null;
+            if (mesh == null)
+                return;
+            AccumulateLocalBounds(mesh.bounds, renderer.transform, target, ref acc);
+        }
+
+        private static void AccumulateSkinnedRendererBounds(SkinnedMeshRenderer renderer, Transform target, ref Bounds? acc)
+        {
+            if (renderer == null || renderer.transform == null || target == null)
+                return;
+            AccumulateLocalBounds(renderer.localBounds, renderer.transform, target, ref acc);
+        }
+
+        private static void AccumulateLocalBounds(Bounds local, Transform rendererTransform, Transform target, ref Bounds? acc)
+        {
+            if (rendererTransform == null || target == null)
+                return;
+            Matrix4x4 toTarget = target.worldToLocalMatrix * rendererTransform.localToWorldMatrix;
+            Vector3 min = local.min;
+            Vector3 max = local.max;
+            for (int i = 0; i < 8; i++)
+            {
+                var corner = new Vector3(
+                    (i & 1) == 0 ? min.x : max.x,
+                    (i & 2) == 0 ? min.y : max.y,
+                    (i & 4) == 0 ? min.z : max.z);
+                var p = toTarget.MultiplyPoint3x4(corner);
+                if (!acc.HasValue)
+                    acc = new Bounds(p, Vector3.zero);
+                else
+                {
+                    var b = acc.Value;
+                    b.Encapsulate(p);
+                    acc = b;
+                }
+            }
         }
 
         private Camera GetCamera()
@@ -283,24 +347,23 @@ namespace HSRTimer
             { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 },
         };
 
-        private void DrawWireframe(Camera cam, Vector3 center, Vector3 size)
+        private void DrawWireframe(Camera cam, Matrix4x4 box)
         {
-            var half = size * 0.5f;
-            Vector3[] corners =
+            Vector3[] localCorners =
             {
-                center + new Vector3(-half.x, -half.y, -half.z),
-                center + new Vector3( half.x, -half.y, -half.z),
-                center + new Vector3( half.x,  half.y, -half.z),
-                center + new Vector3(-half.x,  half.y, -half.z),
-                center + new Vector3(-half.x, -half.y,  half.z),
-                center + new Vector3( half.x, -half.y,  half.z),
-                center + new Vector3( half.x,  half.y,  half.z),
-                center + new Vector3(-half.x,  half.y,  half.z),
+                new Vector3(-0.5f, -0.5f, -0.5f),
+                new Vector3( 0.5f, -0.5f, -0.5f),
+                new Vector3( 0.5f,  0.5f, -0.5f),
+                new Vector3(-0.5f,  0.5f, -0.5f),
+                new Vector3(-0.5f, -0.5f,  0.5f),
+                new Vector3( 0.5f, -0.5f,  0.5f),
+                new Vector3( 0.5f,  0.5f,  0.5f),
+                new Vector3(-0.5f,  0.5f,  0.5f),
             };
             var screen = new Vector3[8];
             for (int i = 0; i < 8; i++)
             {
-                var sp = cam.WorldToScreenPoint(corners[i]);
+                var sp = cam.WorldToScreenPoint(box.MultiplyPoint3x4(localCorners[i]));
                 screen[i] = new Vector3(sp.x, Screen.height - sp.y, sp.z);
             }
             var prevColor = GUI.color;
