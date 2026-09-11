@@ -174,46 +174,10 @@ namespace HSRTimer
 
         /// <summary>
         /// Return the English (not current-language) translation for a game
-        /// localization term such as <c>LEVEL/Aztec</c>. Copied from
-        /// <see cref="SubsegmentManager.GetEnglishLocalizedLevelName"/> so the
-        /// retry override works no matter what language the game is in.
+        /// localization term such as <c>LEVEL/Aztec</c>. Delegates to the shared
+        /// <see cref="LevelIdentity"/> helper.
         /// </summary>
         private static string GetEnglishLocalizedLevelName(string term, string fallback)
-        {
-            try
-            {
-                var codes = I2.Loc.LocalizationManager.GetLanguageCodes();
-                var translations = I2.Loc.LocalizationManager.GetAllTranslationsForKey(term);
-                if (codes != null && translations != null)
-                {
-                    for (int i = 0; i < codes.Count && i < translations.Count; i++)
-                    {
-                        string code = codes[i];
-                        if (string.IsNullOrEmpty(code)) continue;
-                        bool isEnglish = string.Equals(code, "English", StringComparison.OrdinalIgnoreCase)
-                            || string.Equals(code, "en", StringComparison.OrdinalIgnoreCase)
-                            || code.StartsWith("en-", StringComparison.OrdinalIgnoreCase)
-                            || code.StartsWith("en_", StringComparison.OrdinalIgnoreCase);
-                        if (isEnglish && !string.IsNullOrEmpty(translations[i])
-                            && !translations[i].StartsWith("Missing:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return translations[i];
-                        }
-                    }
-                }
-
-                // Fallback to the game's current-language translation, or the
-                // internal scene name if localization is not ready.
-                string current = I2.Loc.ScriptLocalization.Get(term);
-                return !string.IsNullOrEmpty(current) && !current.StartsWith("Missing:", StringComparison.OrdinalIgnoreCase)
-                    ? current
-                    : fallback;
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogWarning($"HSRTimer: failed to resolve English level name for '{term}': {ex.Message}");
-                return fallback;
-            }
-        }
+            => LevelIdentity.EnglishLevelName(term, fallback);
     }
 }

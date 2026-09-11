@@ -23,6 +23,7 @@ retry_level_override =
 show_hud = true
 show_real_time = true
 show_wake_up_time = true
+only_record_first_wake_up_time = false
 center_loading_saving = false
 language = en
 category = any
@@ -40,7 +41,8 @@ menu_key = Home
 | `retry_level_override` | string (English level name or Workshop numeric id) | (empty) | R6.5 — the one-key retry target. Case-insensitive name for BuiltIn/EditorPick levels, or a loaded Steam Workshop id. Invalid values show a red HUD hint when Retry is pressed and do not start a retry. When enabled and no level is active (e.g. the main menu), pressing Retry directly enters the specified level. |
 | `show_hud` | true/false | true | R2.5.1 |
 | `show_real_time` | true/false | true | R2.5.3 — show the always-active Real Time clock in the HUD (default shown below Game Time; can still be hidden) |
-| `show_wake_up_time` | true/false | true | Show the Wake Up time — from level start to the first time the local player leaves the soft/spawn state — in the right-hand HUD column, below Last Run when both are visible |
+| `show_wake_up_time` | true/false | true | Show Wake Up Time in the right-hand HUD column, below Last Run when both are visible. By default it measures from the latest wake-up-relevant moment (level start, respawn, pause-menu checkpoint load, or pause-menu level restart) to the next wake-up |
+| `only_record_first_wake_up_time` | true/false | false | R2.5.5 — restore the original Wake Up Time behavior: measure only the first wake-up after a level starts and ignore later respawns/checkpoint loads/level restarts. Visible in the settings panel only while `show_wake_up_time` is enabled |
 | `center_loading_saving` | true/false | false | Move the game's own top-right "Loading"/"Saving" progress indicator to the top-center of the screen |
 | `language` | BCP-47 code | en | matches a `lang/<code>.txt` |
 | `category` | category id | any | R3.1 |
@@ -154,6 +156,7 @@ HudColorFaster = 59FF66FF
 HudColorSlower = FF5959FF
 HudColorTie = FFFFFFFF
 DisabledLeaderboardSources =
+LeaderboardMode = Subsegment
 ```
 
 | Key | Default | Notes |
@@ -161,7 +164,7 @@ DisabledLeaderboardSources =
 | `Enable` | true | Master switch; disables sampling, loading, and the leaderboard. |
 | `PBPath` | `subsegment/pb` | Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. Created automatically when a PB is written. |
 | `LoadPath` | `subsegment/load` | Manually-placed reference samples. The directory is created automatically when the plugin loads, so it is ready for dropping reference samples into it. |
-| `ToggleKey` | `Tab` | Show/hide the subsegment leaderboard. |
+| `ToggleKey` | `Tab` | Cycle the shared leaderboard: hidden → Subsegment → Markers → hidden. |
 | `MultiProject` | `Any%` | Initial multi-run project used for live ML comparisons (`Aztec%`/`Dark%`/`Steam%`/`Any%`). Within a session it can auto-upgrade along the containment chain (Aztec% → Dark% → Steam% → Any%) without writing back to config; if the chosen project has no data at all, it falls back to the smallest project that has data (session-only). PB writes still use the actual last-completed endpoint. |
 | `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. |
 | `MinMove` | `0.5` | Minimum sampled move distance; smaller moves become zero-displacement samples and do not build planes. |
@@ -173,11 +176,44 @@ DisabledLeaderboardSources =
 | `DebugLogging` | false | Detailed subsegment logging (sample/load/plane/settle/PB writes). |
 | `HudFontSize` | 16 | Subsegment leaderboard font size, independent of the main timer HUD. |
 | `HudOffsetX` | 16 | Left edge of the subsegment leaderboard. |
-| `HudOffsetY` | 0 | Vertical offset from the automatic left-middle centering. |
+| `HudOffsetY` | 0 | Vertical offset from the fixed top anchor (the screen center); leaderboard rows extend downward from there. |
 | `HudColorFaster` | `59FF66FF` | Color of entries where the current run is faster than the reference (green). |
 | `HudColorSlower` | `FF5959FF` | Color of entries where the current run is slower than the reference (red). |
 | `HudColorTie` | `FFFFFFFF` | Color of tie and no-data entries (shown as `--`, white). |
 | `DisabledLeaderboardSources` | *(empty)* | Comma-separated display ids hidden from the leaderboard (`PB` = the PB entry; otherwise each top-level folder name under `LoadPath`). Empty shows everything. |
+| `LeaderboardMode` | `Subsegment` | Content of the shared leaderboard HUD: `Subsegment` (reference comparison, R8) or `Markers` (current level's marker feed, R10.7). The same mode-cycle key and appearance settings apply to both. |
+
+## settings.ini — [Markers]
+
+Starting with R10, marker data and the marker module are configured by the
+`[Markers]` section in `settings.ini` (same tolerant reader/writer):
+
+```ini
+[Markers]
+Enable = true
+EditMode = false
+Path = markers
+DebugLogging = false
+LeaderboardTimeMode = Relative
+OverlayFillColor = 3F7FFF66
+OverlayLabelColor = FFFFFFFF
+```
+
+| Key | Default | Notes |
+|-----|---------|-------|
+| `Enable` | true | Master switch; disables trigger recording, PB writes, and marker leaderboard/overlay display. |
+| `EditMode` | false | Marker edit mode: shows the in-game overlay (R10.6), the conspicuous HUD hint at the bottom of the timer HUD, and the XYZ axis indicator below it; it also unlocks the panel's edit controls. Persisted, so it survives restarts. |
+| `Path` | `markers` | Directory for marker definition + PB files (`<config>/HSRTimer/markers`). Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. |
+| `DebugLogging` | false | Detailed marker logging (level key, marker count, triggers, object resolution, PB writes). |
+| `LeaderboardTimeMode` | `Relative` | Marker feed time display in the leaderboard (R10.7.3): `Relative` (signed diff vs the marker's PB) or `Absolute` (the marker's own segment time). Entry colors always reflect ahead/behind regardless. |
+| `OverlayFillColor` | `3F7FFF66` | Fill color (with alpha) of the translucent range cubes and grab-object highlights. |
+| `OverlayLabelColor` | `FFFFFFFF` | Color of the marker name labels in the edit-mode overlay. |
+
+Marker data files live under `<config>/HSRTimer/markers/{level}/{category}.json`
+(the level key uses the same scheme as subsegment IL ids: English localized
+name for BuiltIn/EditorPick levels, the numeric Workshop id, or the local level
+folder name when it has no id; the category key follows R8.2.4). There is no
+load/import directory — markers only store your own PB.
 
 ## lang/*.txt
 

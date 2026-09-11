@@ -26,18 +26,27 @@ height adapts to the number of rows.
 ## Wake Up Time
 
 The right-hand column (the one that holds **Last Run**) also shows **Wake Up
-Time** when enabled. It is the time from the start of a level to the first time
-the local player leaves the soft/spawn state (`Spawning` / `Unconscious` /
-`Dead`) — i.e. the first time the character wakes up after loading. Once
-recorded for a level it is not reset by later manual play-dead or checkpoint
-respawns within that same level; it is cleared when the level is passed or
-exited.
+Time** when enabled. By default it is the time from the most recent
+wake-up-relevant moment to the first time the local player leaves the
+soft/spawn state (`Spawning` / `Unconscious` / `Dead`). The measurement
+restarts whenever the player respawns (e.g. after a fall), loads the current
+checkpoint from the pause menu, or restarts the level from the pause menu —
+the value then reflects how long it took to get up after that particular
+respawn. Once recorded within one measurement, later manual play-dead does not
+reset it; a new respawn/restart clears it and starts a fresh measurement.
+
+When the **Only record first wake-up time** option is enabled (visible only
+while Wake Up Time display is on), the original behavior is restored: only the
+first wake-up after a level starts is measured, and later respawns / checkpoint
+loads / level restarts do not reset the value. The value is cleared when the
+level is passed or exited.
 
 The value is formatted as `SS:mmm` (seconds and milliseconds, no minute/hour
 breakdown). When Last Run is visible, Wake Up Time is drawn as the second row in
 the same column; otherwise it appears as the only row in that column so it
 remains available during the run. Toggle it from the settings panel's Interface
-page, or set `show_wake_up_time = false` in `settings.ini`.
+page, or set `show_wake_up_time = false` in `settings.ini`. The "only first"
+behavior is controlled by `only_record_first_wake_up_time` in the same file.
 
 ## Real Time clock
 

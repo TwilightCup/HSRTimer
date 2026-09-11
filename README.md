@@ -30,6 +30,7 @@ and is fully localizable.
 - **Validity detection** — cheat codes, game-speed change, game-clock
   tampering; unforgivable vs forgivable flags.
 - **One-key retry** — instantly reload the current level, or directly enter a user-specified level by English name / Workshop ID (works from the menu too).
+- **Markers** — per-level manual trigger points (range / checkpoint / grab-object) that record each marker's first segment-time trigger and compare it against the level's own local PB; the leaderboard HUD can switch to a newest-first marker feed (absolute or relative times), and an edit mode shows 3D cubes + labels in-game.
 - **Localization** — community-translatable `key:translation` files; English is
   the shipped base; a Simplified Chinese example is included. Settings-panel
   tabs from other plugins can opt into the same language selection.

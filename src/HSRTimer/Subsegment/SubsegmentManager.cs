@@ -106,7 +106,6 @@ namespace HSRTimer
         // to both multi-run (ML) and single-level (IL) transitions.
         private List<SubsegmentReference> _references = new List<SubsegmentReference>();
         private List<SubsegmentReference> _displayReferences;
-        private bool _visible = true;
         private string _leaderboardTitle = "";
         // True while a completed level is advancing to the next one and the
         // previous leaderboard is being kept on screen (covers the loading gap
@@ -162,9 +161,6 @@ namespace HSRTimer
 
         private static SettingsModel SettingsFromConfig()
             => ConfigService.Instance != null ? ConfigService.Instance.Settings : new SettingsModel();
-
-        /// <summary>Whether the leaderboard is currently shown (R8.5.1.2).</summary>
-        public bool Visible => _visible;
 
         /// <summary>True during an official-campaign multi-run attempt (candidate or active).</summary>
         public bool InMultiRunActive => _multiRunCandidate || _multiRunActive;
@@ -495,16 +491,6 @@ namespace HSRTimer
                 ActivatePendingLeaderboard();
         }
 
-        /// <summary>Handle the configurable subsegment leaderboard toggle key.</summary>
-        public void HandleKeybind(KeyCode key)
-        {
-            UpdateOptions();
-            if (!_options.Enable || key != _options.ToggleKey) return;
-            if (!InputUtil.GetKeyDown(key)) return;
-            _visible = !_visible;
-            Plugin.Logger.LogInfo(_visible ? "HSRTimer: subsegment leaderboard shown." : "HSRTimer: subsegment leaderboard hidden.");
-        }
-
         private void UpdateOptions()
             => _options = SubsegmentOptions.FromSettings(SettingsFromConfig());
 
@@ -778,166 +764,33 @@ namespace HSRTimer
 
         /// <summary>
         /// Machine level id used by the multi-run (ML) per-level files and as a
-        /// fallback: BuiltIn keeps <c>B{number}</c> timeline numbering,
-        /// EditorPick keeps <c>E{number}</c>, Workshop uses the raw numeric
-        /// workshop id.
+        /// fallback (R8.2.3). Delegates to <see cref="LevelIdentity"/>.
         /// </summary>
-        private string GetLevelId(Game game)
-        {
-            switch (game.currentLevelType)
-            {
-                case WorkshopItemSource.BuiltIn:
-                    return SubsegmentFileStore.SanitizeId("B" + game.currentLevelNumber);
-                case WorkshopItemSource.EditorPick:
-                    return SubsegmentFileStore.SanitizeId("E" + game.currentLevelNumber);
-                case WorkshopItemSource.Subscription:
-                case WorkshopItemSource.LocalWorkshop:
-                    return GetWorkshopId(game) ?? SubsegmentFileStore.SanitizeId("W" + game.currentLevelNumber);
-                default:
-                    return SubsegmentFileStore.SanitizeId("L" + game.currentLevelNumber);
-            }
-        }
+        private string GetLevelId(Game game) => LevelIdentity.MachineLevelId(game);
 
         /// <summary>
-        /// IL persistence id: official BuiltIn / EditorPick levels are
-        /// identified by the game's English localized name (e.g. <c>Intro</c>,
-        /// <c>Power Plant</c>, <c>Aztec</c> — the same names the one-key retry
-        /// feature matches), Workshop levels by the raw numeric workshop id.
-        /// Falls back to the synthetic <c>B{number}</c>/<c>E{number}</c> ids
-        /// when the game doesn't expose a usable level name at runtime.
+        /// IL persistence id (R8.2.3 IL rule): English localized name for
+        /// BuiltIn / EditorPick, numeric workshop id for Workshop levels.
+        /// Delegates to <see cref="LevelIdentity"/>. Subsegment deliberately keeps
+        /// the legacy LocalWorkshop fallback (<c>W{levelNumber}</c>) so existing
+        /// PB directories stay addressable.
         /// </summary>
-        private string GetIlLevelId(Game game)
-        {
-            switch (game.currentLevelType)
-            {
-                case WorkshopItemSource.BuiltIn:
-                case WorkshopItemSource.EditorPick:
-                    string fallback = game.currentLevelType == WorkshopItemSource.BuiltIn ? "B" : "E";
-                    return GetOfficialLocalizedLevelId(game, game.currentLevelNumber, fallback);
-                case WorkshopItemSource.Subscription:
-                case WorkshopItemSource.LocalWorkshop:
-                    return GetWorkshopId(game) ?? GetLevelId(game);
-                default:
-                    return GetLevelId(game);
-            }
-        }
-
-        /// <summary>
-        /// The English localized level name for a BuiltIn/EditorPick level, used
-        /// as its persistence id, falling back to the synthetic numbered id when
-        /// no name is available.
-        /// </summary>
-        private string GetOfficialLocalizedLevelId(Game game, int levelNumber, string fallbackPrefix)
-        {
-            string internalName = GetOfficialInternalName(game, levelNumber);
-            if (string.IsNullOrEmpty(internalName))
-                return SubsegmentFileStore.SanitizeId(fallbackPrefix + levelNumber);
-            string english = GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
-            return SubsegmentFileStore.SanitizeId(english);
-        }
-
-        /// <summary>
-        /// Canonical internal name for a BuiltIn/EditorPick level. Prefers the
-        /// level metadata's <c>internalName</c> (e.g. <c>Train</c>), which is the
-        /// key the <c>LEVEL/</c> localization terms are stored under, over the
-        /// raw scene id from <c>Game.levels</c>/<c>Game.editorPickLevels</c>
-        /// (e.g. the Train scene's id <c>Push</c>), which has no localization
-        /// term of its own.
-        /// </summary>
-        private string GetOfficialInternalName(Game game, int levelNumber)
-        {
-            var repo = WorkshopRepository.instance != null ? WorkshopRepository.instance.levelRepo : null;
-            if (repo != null)
-            {
-                var items = repo.BySource(game.currentLevelType);
-                if (items != null)
-                {
-                    foreach (var item in items)
-                    {
-                        if (item == null || item.workshopId != (ulong)levelNumber)
-                            continue;
-                        var builtin = item as BuiltinLevelMetadata;
-                        if (builtin != null && !string.IsNullOrEmpty(builtin.internalName))
-                            return builtin.internalName;
-                    }
-                }
-            }
-
-            if (game.currentLevelType == WorkshopItemSource.BuiltIn
-                && game.levels != null
-                && levelNumber >= 0
-                && levelNumber < game.levels.Length)
-            {
-                return game.levels[levelNumber];
-            }
-            if (game.currentLevelType == WorkshopItemSource.EditorPick
-                && game.editorPickLevels != null
-                && levelNumber >= 0
-                && levelNumber < game.editorPickLevels.Length)
-            {
-                return game.editorPickLevels[levelNumber];
-            }
-            return null;
-        }
-
-        /// <summary>Raw numeric workshop id when available, else null.</summary>
-        private static string GetWorkshopId(Game game)
-        {
-            return game.workshopLevel != null && game.workshopLevel.workshopId != 0UL
-                ? SubsegmentFileStore.SanitizeId(game.workshopLevel.workshopId.ToString())
-                : null;
-        }
+        private string GetIlLevelId(Game game) => LevelIdentity.CurrentLevelKey(game, folderFallbackForLocalWorkshop: false);
 
         private string GetCurrentLevelDisplayName(Game game)
         {
             if (game.currentLevelType == WorkshopItemSource.BuiltIn
                 || game.currentLevelType == WorkshopItemSource.EditorPick)
             {
-                string internalName = GetOfficialInternalName(game, game.currentLevelNumber);
+                string internalName = LevelIdentity.OfficialInternalName(game, game.currentLevelNumber);
                 if (!string.IsNullOrEmpty(internalName))
-                    return GetEnglishLocalizedLevelName("LEVEL/" + internalName, internalName);
+                    return LevelIdentity.EnglishLevelName("LEVEL/" + internalName, internalName);
             }
             if (game.workshopLevel != null && !string.IsNullOrEmpty(game.workshopLevel.title))
                 return game.workshopLevel.title;
             return GetLevelId(game);
         }
 
-        private static string GetEnglishLocalizedLevelName(string term, string fallback)
-        {
-            try
-            {
-                var codes = I2.Loc.LocalizationManager.GetLanguageCodes();
-                var translations = I2.Loc.LocalizationManager.GetAllTranslationsForKey(term);
-                if (codes != null && translations != null)
-                {
-                    for (int i = 0; i < codes.Count && i < translations.Count; i++)
-                    {
-                        string code = codes[i];
-                        if (string.IsNullOrEmpty(code)) continue;
-                        bool isEnglish = string.Equals(code, "English", StringComparison.OrdinalIgnoreCase)
-                            || string.Equals(code, "en", StringComparison.OrdinalIgnoreCase)
-                            || code.StartsWith("en-", StringComparison.OrdinalIgnoreCase)
-                            || code.StartsWith("en_", StringComparison.OrdinalIgnoreCase);
-                        if (isEnglish && !string.IsNullOrEmpty(translations[i])
-                            && !translations[i].StartsWith("Missing:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return translations[i];
-                        }
-                    }
-                }
-                // Fallback to the game's current-language translation, or the
-                // internal scene name if the localization is not ready.
-                string current = I2.Loc.ScriptLocalization.Get(term);
-                return !string.IsNullOrEmpty(current) && !current.StartsWith("Missing:", StringComparison.OrdinalIgnoreCase)
-                    ? current
-                    : fallback;
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogWarning($"HSRTimer: failed to resolve English level name for '{term}': {ex.Message}");
-                return fallback;
-            }
-        }
 
         private string MultiProjectForLoading
             => _pendingMultiProject ?? _activeMultiProject ?? _options.MultiProject;

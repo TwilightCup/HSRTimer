@@ -39,10 +39,15 @@ namespace HSRTimer
         // controls its HUD visibility.
         public bool ShowRealTime = true;
 
-        // Wake Up time is a per-level stat: the time from level start to the
-        // first time the local player leaves the soft/spawn state. Shown in the
-        // right-hand column (the one that also holds Last Run).
+        // Wake Up time is a per-level stat: the time from a wake-up measurement
+        // start to the local player leaving the soft/spawn state. By default the
+        // measurement restarts on each player respawn / pause-menu checkpoint
+        // load / level restart. When OnlyRecordFirstWakeUpTime is enabled, it
+        // keeps the original behavior: only the first wake-up after a level
+        // starts is measured. Shown in the right-hand column (the one that also
+        // holds Last Run).
         public bool ShowWakeUpTime = true;
+        public bool OnlyRecordFirstWakeUpTime = false;
 
         // Move the game's own top-right Loading/Saving progress indicator to
         // the top-center of the screen (default off).
@@ -74,8 +79,8 @@ namespace HSRTimer
         public bool SubsegmentDebugLogging = false;
 
         // Subsegment leaderboard HUD appearance (R8.5); independent of the main
-        // timer panel's layout. OffsetY is an offset from the automatic
-        // left-middle vertical centering.
+        // timer panel's layout. OffsetY is an offset from the fixed top anchor
+        // at the screen center; rows extend downward from there.
         public int SubsegmentHudFontSize = 16;
         public float SubsegmentHudOffsetX = 16f;
         public float SubsegmentHudOffsetY = 0f;
@@ -91,8 +96,28 @@ namespace HSRTimer
         // identified by its folder name. Empty string means everything is shown.
         public string SubsegmentDisabledSources = "";
 
+        // ── Markers (R10) ──────────────────────────────────────────────
+        public bool MarkersEnable = true;
+        public bool MarkersEditMode = false;
+        public string MarkersPath = "markers";
+        public bool MarkersDebugLogging = false;
+
+        // Leaderboard content mode (R10.7.1): the shared leaderboard HUD shows
+        // either the subsegment references or the current level's marker feed.
+        public string SubsegmentLeaderboardMode = "Subsegment";
+
+        // Marker feed time display (R10.7.3): "Absolute" shows the marker's own
+        // segment time, "Relative" shows the signed diff vs the marker's PB.
+        public string MarkersLeaderboardTimeMode = "Relative";
+
+        // Marker overlay appearance (R10.6.1/2): range-cube fill color (with
+        // alpha) and the marker-name label color.
+        public Color MarkersOverlayFillColor = GradientText.ParseColor("3F7FFF66", new Color(0.25f, 0.5f, 1f, 0.4f));
+        public Color MarkersOverlayLabelColor = Color.white;
+
         private const string Section = "settings";
         private const string SubsegmentSection = "Subsegment";
+        private const string MarkersSection = "Markers";
 
         public void Load()
         {
@@ -105,6 +130,10 @@ namespace HSRTimer
                 else if (p.Section == SubsegmentSection)
                 {
                     ApplySubsegment(p.Key, p.Value);
+                }
+                else if (p.Section == MarkersSection)
+                {
+                    ApplyMarkers(p.Key, p.Value);
                 }
             }
         }
@@ -123,6 +152,7 @@ namespace HSRTimer
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
                     case "show_real_time": ShowRealTime = ParseBool(value, ShowRealTime); break;
                     case "show_wake_up_time": ShowWakeUpTime = ParseBool(value, ShowWakeUpTime); break;
+                    case "only_record_first_wake_up_time": OnlyRecordFirstWakeUpTime = ParseBool(value, OnlyRecordFirstWakeUpTime); break;
                     case "center_loading_saving": CenterLoadingSaving = ParseBool(value, CenterLoadingSaving); break;
                     case "language": CurrentLang = value; break;
                     case "reset_key": ResetKey = ParseKeyCode(value, ResetKey); break;
@@ -165,6 +195,7 @@ namespace HSRTimer
                     case "HudColorSlower": SubsegmentHudColorSlower = GradientText.ParseColor(value, SubsegmentHudColorSlower); break;
                     case "HudColorTie": SubsegmentHudColorTie = GradientText.ParseColor(value, SubsegmentHudColorTie); break;
                     case "DisabledLeaderboardSources": SubsegmentDisabledSources = value; break;
+                    case "LeaderboardMode": SubsegmentLeaderboardMode = value; break;
                     default:
                         Plugin.Logger.LogWarning($"HSRTimer: settings.ini: unknown Subsegment key '{key}', ignored.");
                         break;
@@ -173,6 +204,30 @@ namespace HSRTimer
             catch
             {
                 Plugin.Logger.LogWarning($"HSRTimer: settings.ini: bad Subsegment value for '{key}' = '{value}', kept default.");
+            }
+        }
+
+        private void ApplyMarkers(string key, string value)
+        {
+            try
+            {
+                switch (key)
+                {
+                    case "Enable": MarkersEnable = ParseBool(value, MarkersEnable); break;
+                    case "EditMode": MarkersEditMode = ParseBool(value, MarkersEditMode); break;
+                    case "Path": MarkersPath = value; break;
+                    case "DebugLogging": MarkersDebugLogging = ParseBool(value, MarkersDebugLogging); break;
+                    case "LeaderboardTimeMode": MarkersLeaderboardTimeMode = value; break;
+                    case "OverlayFillColor": MarkersOverlayFillColor = GradientText.ParseColor(value, MarkersOverlayFillColor); break;
+                    case "OverlayLabelColor": MarkersOverlayLabelColor = GradientText.ParseColor(value, MarkersOverlayLabelColor); break;
+                    default:
+                        Plugin.Logger.LogWarning($"HSRTimer: settings.ini: unknown Markers key '{key}', ignored.");
+                        break;
+                }
+            }
+            catch
+            {
+                Plugin.Logger.LogWarning($"HSRTimer: settings.ini: bad Markers value for '{key}' = '{value}', kept default.");
             }
         }
 
@@ -188,6 +243,7 @@ namespace HSRTimer
                 ["show_hud"] = ShowHud ? "true" : "false",
                 ["show_real_time"] = ShowRealTime ? "true" : "false",
                 ["show_wake_up_time"] = ShowWakeUpTime ? "true" : "false",
+                ["only_record_first_wake_up_time"] = OnlyRecordFirstWakeUpTime ? "true" : "false",
                 ["center_loading_saving"] = CenterLoadingSaving ? "true" : "false",
                 ["language"] = CurrentLang,
                 ["reset_key"] = ResetKey.ToString(),
@@ -216,6 +272,17 @@ namespace HSRTimer
                 ["HudColorSlower"] = GradientText.ToHex(SubsegmentHudColorSlower),
                 ["HudColorTie"] = GradientText.ToHex(SubsegmentHudColorTie),
                 ["DisabledLeaderboardSources"] = SubsegmentDisabledSources,
+                ["LeaderboardMode"] = SubsegmentLeaderboardMode,
+            };
+            var markers = new Dictionary<string, string>
+            {
+                ["Enable"] = MarkersEnable ? "true" : "false",
+                ["EditMode"] = MarkersEditMode ? "true" : "false",
+                ["Path"] = MarkersPath,
+                ["DebugLogging"] = MarkersDebugLogging ? "true" : "false",
+                ["LeaderboardTimeMode"] = MarkersLeaderboardTimeMode,
+                ["OverlayFillColor"] = GradientText.ToHex(MarkersOverlayFillColor),
+                ["OverlayLabelColor"] = GradientText.ToHex(MarkersOverlayLabelColor),
             };
             PersistenceService.Write(
                 PersistenceService.PathFor("settings.ini"),
@@ -223,6 +290,7 @@ namespace HSRTimer
                 {
                     new KeyValuePair<string, IDictionary<string, string>>(Section, kv),
                     new KeyValuePair<string, IDictionary<string, string>>(SubsegmentSection, sub),
+                    new KeyValuePair<string, IDictionary<string, string>>(MarkersSection, markers),
                 },
                 "HSRTimer settings. Lines of the form 'key = value'. Bad lines are ignored.");
         }

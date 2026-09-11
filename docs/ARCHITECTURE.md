@@ -47,6 +47,7 @@ Core/
   SegmentLogic.cs         pure Appendix-B truth table
   RetryAction.cs          one-key retry (R6)
   RetryTargetResolver.cs  user-specified retry target resolution (R6.5)
+  LevelIdentity.cs        shared level id / English-name helpers (R8.2.3, R10.1.2)
 Validation/
   InvalidReason.cs        enum + severity map
   ValidityFlags.cs        unforgivable/forgivable flag sets
@@ -61,15 +62,16 @@ Patches/
   PatchModule.cs          Harmony.CreateAndPatchAll
   NarrativeBlockPatches.cs    postfix on NarrativeBlock.Play
   SubtitleManagerPatches.cs   postfix on SubtitleManager.PlayNarrative
-  PauseMenuPatches.cs         postfix on PauseMenu.RestartClick
+  PauseMenuPatches.cs         postfix on PauseMenu.RestartClick / LoadClick
   HumanControlsPatches.cs     postfix on HumanControls.HandleInput (Jumpless enforcement)
 Hud/
   TimerHud.cs             IMGUI panel (R2)
+  LeaderboardHud.cs       shared left-side fixed-top leaderboard HUD (subsegment R8.5 / markers R10.7)
   SettingsPanel.cs        IMGUI settings panel + built-in tab pages
   ISettingsPanelTab.cs    external settings-panel tab interface
   ILocalizableSettingsPanelTab.cs  optional language-aware external tab interface
   SettingsPanelTabRegistry.cs  external tab registry + language/save notifications
-  GradientText.cs         color hex/alpha + gradient helper
+  GradientText.cs         color hex/alpha + gradient helper + TimeFormatter
   TemplateVars.cs         {date}/{time}/{version}/{collection}/{category}/{gametime}/{realtime}
 Config/
   ConfigService.cs        facade
@@ -79,11 +81,25 @@ Subsegment/
   SubsegmentModels.cs      sample/meta/reference/plane data types
   SubsegmentManager.cs      recorder + loader + comparator lifecycle
   SubsegmentFileStore.cs   JSONL/meta file I/O
-  SubsegmentHud.cs         independent left-middle leaderboard HUD
+Markers/
+  MarkerModels.cs          marker set / def / PB data types (R10.1/10.3)
+  MarkerStore.cs           marker JSON file I/O + category key (R10.1.1)
+  MarkerCatalog.cs         Main/Extra/Workshop level lists (R10.5.1)
+  MarkersManager.cs        trigger evaluation + feed + PB (R10.2/10.3/10.7)
+  MarkersPanel.cs          "Markers" settings tab pages/editors (R10.5)
+  MarkerOverlay.cs         edit-mode 3D cubes + labels (R10.6)
 Localization/
   LocalizationService.cs, LanguageFile.cs
 LcIntegration.cs          optional LevelCollections soft integration
 ```
+
+> **Note on LevelIdentity**: `SubsegmentManager` delegates its IL/ML level-id
+> derivation to the shared `LevelIdentity` helpers so the on-disk layout never
+> drifts from the ids the markers module computes. Subsegment keeps its legacy
+> LocalWorkshop fallback (`W{levelNumber}`, `folderFallbackForLocalWorkshop:
+> false`) so pre-existing PB directories stay addressable; markers use the
+> folder-name fallback (`true`) so a marker created in the panel resolves to the
+> same level key while playing.
 
 ## The timing truth table (Appendix B)
 
@@ -328,8 +344,11 @@ only on these genuine completions.
 (`!InSegment && GameTime == 0`) — once a new run starts timing it hides until
 the next completion. That same right-hand column can also show the current level's **Wake Up Time**
 as its second row (gated by `show_wake_up_time`), so the per-level value stays
-visible during a run even when `LastRun` is hidden. It is cleared when the
-level ends or is exited. The one exception is the campaign epilogue: the game loads
+visible during a run even when `LastRun` is hidden. By default the measurement
+restarts on player respawns, pause-menu checkpoint loads, and pause-menu level
+restarts; the `only_record_first_wake_up_time` setting restores the original
+level-start-to-first-wake-up behavior. It is cleared when the level ends or is
+exited. The one exception is the campaign epilogue: the game loads
 Credits (BuiltIn index == `levelCount`) as an ordinary level right after the
 final playable level is passed, and that segment is flagged
 `InEpilogueSegment` — it belongs to the run that just finished, so the column
@@ -391,3 +410,45 @@ dotnet build src/HSRTimer/HSRTimer.csproj
 
 `Directory.Build.props` points at the default Steam install's managed DLLs and
 BepInEx core. Override `GAME_MANAGED` / `BEPINEX_CORE` for other platforms.
+
+## The Markers module (R10)
+
+Markers follow the same **poll, don't patch** principle as everything else:
+
+- **Triggers are polling.** `MarkersManager.OnPhysicsTick` runs inside
+  `TimerCore.FixedUpdate` (right after the subsegment tick) and reads public
+  fields only: `Human.Localplayer.transform.position`, `Human.jump`,
+  `Human.state`, `Human.Localplayer.GetComponent<GrabManager>().grabbedObjects`,
+  `Game.currentCheckpointNumber`, and `RunState.GameTime`/`SegmentStart`.
+- **The one non-pollable event** is the pause-menu checkpoint load
+  (`PauseMenu.LoadClick` → `Game.RestartCheckpoint`), which runs while
+  `FixedUpdate` is halted. It is delivered through the *existing*
+  `PauseMenuLoadPatch` postfix (no new Harmony class); the pause-menu level
+  restart (`PauseMenu.RestartClick`) similarly notifies the manager to clear the
+  level's marker records and feed (R10.1.6).
+- **PB timing matches R8**: written at level end in `TimerCore.EndSegment`
+  before `State.EndSegment` (so the run's reset does not destroy the segment
+  start), gated on passed + not-retrying + valid.
+- **The leaderboard is shared.** `LeaderboardHud` (renamed from `SubsegmentHud`)
+  renders either the subsegment references or the marker feed based on
+  `SubsegmentLeaderboardMode`; the mode-cycle key moved from `SubsegmentManager`
+  to the HUD, so the same key and appearance settings work for both modes. It
+  cycles hidden → Subsegment → Markers → hidden. Its top edge is fixed at the
+  screen center (plus `HudOffsetY`), so content extends downward instead of
+  re-centering as the number of rows changes. The marker feed is newest-first,
+  format `{name}: {time}` (absolute segment time or signed diff vs the marker's
+  PB), with the faster/slower/tie colors applied in both time modes (R10.7).
+- **Object identity has no GUID in the game.** A captured grab-object reference
+  stores the serialized `NetIdentity.sceneId` (unique per scene object within a
+  level build) when present, else the hierarchy path from the scene root, plus
+  name and world position. Resolution order: sceneId scan → path walk → name +
+  position within 5 m (last resort, logged). Unresolvable targets are skipped
+  for the attempt with a per-level warning (R10.6.4).
+- **Visualization is side-effect free.** `MarkerOverlay` renders range cubes and
+  grab-object highlights with `Graphics.DrawMesh` + a transparent unlit material
+  (no colliders, no game-object/material mutation, so netcode is unaffected); if
+  no shader is found it degrades once to an IMGUI wireframe projection. Labels
+  are IMGUI labels projected through the currently active camera: the local
+  player's camera when it is enabled, otherwise `Camera.main` (or any enabled
+  camera), so free-roam mode shows labels at the free camera's true projected
+  positions instead of the character-relative player camera.

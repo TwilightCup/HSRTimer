@@ -2,9 +2,23 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
+## 1.3.0
+
+- **Release Date:** _11 Sep 2026_
+- **Highlights:**
+  - New **Markers** feature: create per-level trigger markers, record their trigger times, and compare them against your local PB.
+  - Added a wake-up time display mode that restarts on respawns and pause-menu loads/restarts, with an optional "only record first wake-up time" setting.
+  - Optimized the leaderboard HUD with a fixed top edge, a Subsegment/Markers content switch, and a one-key mode cycle.
+- **Details:**
+  - Wake Up Time now restarts its measurement whenever the player respawns, loads a checkpoint from the pause menu, or restarts the level from the pause menu, so it shows how long the latest respawn took to get up; a new "Only record first wake-up time" option (visible only while Wake Up Time display is on) restores the previous first-wake-up-only behavior.
+  - New **Markers** feature: create per-level trigger markers (range / checkpoint / grab-object) from a new **Markers** settings tab (Main Dreams / Extra Dreams / Workshop), record each marker's first segment-time trigger, and compare it against the level's own local PB (no external data import). A marker edit mode shows a HUD hint plus in-game blue translucent cubes and grab-object highlights. The leaderboard HUD gains a content switch (Subsegment / Markers) and shows a newest-first marker feed with absolute or relative times; faster/slower colors apply in both modes.
+  - The leaderboard top edge is now fixed at the screen center (plus the configured Y offset) so rows always extend downward instead of re-centering when the number of entries changes.
+  - The leaderboard toggle key now cycles the shared HUD through hidden → Subsegment → Markers → hidden, so you can switch between the two content modes without opening the settings panel.
+  - Settings-panel dropdown buttons now show expand/collapse arrows, making open/closed state clearer.
+
 ## 1.2.2
 
-- **Release Date:** *10 Sep 2026*
+- **Release Date:** _10 Sep 2026_
 - **Highlights:**
   - Fixed subsegment leaderboard ordering, IL comparisons, and EditorPick/Workshop PB persistence.
   - Fixed one-key retry so menu-entered EditorPick and Workshop levels retry the current level, with repeated Workshop retries working reliably.
@@ -18,7 +32,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 
 ## 1.2.1
 
-- **Release Date:** *09 Sep 2026*
+- **Release Date:** _09 Sep 2026_
 - **Highlights:**
   - Improved integration for other plugins.
 - **Details:**
@@ -27,7 +41,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 
 ## 1.2.0
 
-- **Release Date:** *08 Sep 2026*
+- **Release Date:** _08 Sep 2026_
 - **Highlights:**
   - Mouse side buttons can now be bound to hotkeys.
   - Improved the subsegment leaderboard experience.
@@ -43,7 +57,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 
 ## 1.1.0
 
-- **Release Date:** *06 Sep 2026*
+- **Release Date:** _06 Sep 2026_
 - **Highlights:**
   - Redesigned the settings panel with a language dropdown, left-side navigation, and clearer input fields.
   - Added a "Specify retry level" option so one-key retry can target a chosen level by English name (e.g., Mansion. Case-insensitive) or Workshop ID, and can be triggered directly from the menu.

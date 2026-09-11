@@ -114,6 +114,34 @@ namespace HSRTimer
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Format a signed millisecond diff as <c>+MM:SS.mmm</c> / <c>-MM:SS.mmm</c>
+        /// (R8.5.2.2, R10.7.3). Null or zero renders as <c>--</c>.
+        /// </summary>
+        public static string FormatSignedDiff(long? diffMs)
+        {
+            if (!diffMs.HasValue || diffMs.Value == 0)
+                return "--";
+            long d = diffMs.Value;
+            char sign = d < 0 ? '-' : d > 0 ? '+' : ' ';
+            long abs = d < 0 ? -d : d;
+            long totalSeconds = abs / 1000L;
+            long ms = abs % 1000L;
+            long minutes = totalSeconds / 60L;
+            long seconds = totalSeconds % 60L;
+            var sb = new StringBuilder();
+            if (sign != ' ')
+                sb.Append(sign);
+            else
+                sb.Append(' ');
+            sb.Append(minutes.ToString("D2", CultureInfo.InvariantCulture));
+            sb.Append(':');
+            sb.Append(seconds.ToString("D2", CultureInfo.InvariantCulture));
+            sb.Append('.');
+            sb.Append(ms.ToString("D3", CultureInfo.InvariantCulture));
+            return sb.ToString();
+        }
+
         private static string Two(int v) => v.ToString("D2", CultureInfo.InvariantCulture);
         private static string Three(int v) => v.ToString("D3", CultureInfo.InvariantCulture);
     }

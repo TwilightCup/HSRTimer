@@ -213,6 +213,7 @@ namespace HSRTimer
                 else
                 {
                     SubsegmentManager.Instance?.OnRetryStart();
+                    MarkersManager.Instance?.OnRetryStart();
                     notifyKey = "NOTIFY_COLLECTION_RESTARTED";
                     return true;
                 }
@@ -231,6 +232,7 @@ namespace HSRTimer
             state.RealTime = 0d;
             state.RealTimeActive = false;
             SubsegmentManager.Instance?.OnRetryStart();
+            MarkersManager.Instance?.OnRetryStart();
 
             // R6.5: if the user specified a retry target, re-launch exactly that
             // level (BuiltIn/EditorPick by English name, Workshop by numeric id)

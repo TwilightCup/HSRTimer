@@ -20,6 +20,7 @@ retry_level_override =
 show_hud = true
 show_real_time = true
 show_wake_up_time = true
+only_record_first_wake_up_time = false
 center_loading_saving = false
 language = en
 reset_key = Backspace
@@ -36,7 +37,8 @@ menu_key = Home
 | `retry_level_override` | 字符串(关卡英文名或创意工坊数字 id) | (空) | R6.5 —— 一键重试目标。官方关卡按英文名不区分大小写匹配;创意工坊关卡填已加载的 Steam Workshop 数字 id。无效值会在按下重试键时用计时器面板的红色无效样式提示,且不执行重试。开启且当前没有活动关卡时(例如主菜单),按重试键会**直接进入**该指定关卡。 |
 | `show_hud` | true/false | true | R2.5.1 |
 | `show_real_time` | true/false | true | R2.5.3 —— 在面板中显示始终活跃的现实时间计时器(默认显示在游戏总时间下方;可关闭) |
-| `show_wake_up_time` | true/false | true | 在右侧列显示“起身时间”——从关卡开始到本地玩家首次离开瘫软状态(出生/装死/死亡)的时间;与“上一局游戏时间”同时可见时显示在其下一行 |
+| `show_wake_up_time` | true/false | true | 在右侧列显示“起身时间”;与“上一局游戏时间”同时可见时显示在其下一行。默认从最近一次可起身起点(本关开始、玩家重生、暂停菜单加载存档点、暂停菜单重新开始关卡)开始测量,到下一次起身为止 |
+| `only_record_first_wake_up_time` | true/false | false | R2.5.5 —— 恢复原来的起身时间机制:只记录本关开始后的第一次起身,后续重生、加载存档点或重新开始关卡不重置。设置面板中仅在 `show_wake_up_time` 开启时可见 |
 | `center_loading_saving` | true/false | false | 将游戏自带的右上角"加载/保存"进度提示移动到画面顶部居中 |
 | `language` | BCP-47 代码 | en | 对应一个 `lang/<code>.txt` |
 | `reset_key` | KeyCode | Backspace | 重置成绩键 |
@@ -124,6 +126,7 @@ HudColorFaster = 59FF66FF
 HudColorSlower = FF5959FF
 HudColorTie = FFFFFFFF
 DisabledLeaderboardSources =
+LeaderboardMode = Subsegment
 ```
 
 | 键 | 默认 | 说明 |
@@ -131,7 +134,7 @@ DisabledLeaderboardSources =
 | `Enable` | true | 总开关；关闭后不记录、不加载、不显示。 |
 | `PBPath` | `subsegment/pb` | 相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。写入 PB 时自动创建目录。 |
 | `LoadPath` | `subsegment/load` | 玩家手动放置的采样目录。插件加载时会自动创建该目录，以便直接放入参考采样。 |
-| `ToggleKey` | `Tab` | 排行榜显示/隐藏键。 |
+| `ToggleKey` | `Tab` | 共享排行榜循环切换键：关闭 → 分段对比 → 标记 → 关闭。 |
 | `MultiProject` | `Any%` | 多关实时对比的初始子项目（`Aztec%`/`Dark%`/`Steam%`/`Any%`）。当前局内可沿包含关系自动升级（`Aztec%`→`Dark%`→`Steam%`→`Any%`），不写回配置；若所选项目完全没有数据，则回退到有数据的最小项目（仅当前局内）。PB 写入仍按实际最后完成关卡判定。 |
 | `PlaneRadius` | `50.0` | 虚拟检测平面半径（米）。 |
 | `MinMove` | `0.5` | 最小采样位移；低于该值的位移置零，且不建平面。 |
@@ -143,11 +146,39 @@ DisabledLeaderboardSources =
 | `DebugLogging` | false | 详细 subsegment 日志（采样/加载/平面/结算/PB 写入）。 |
 | `HudFontSize` | 16 | 排行榜字号，独立于主计时面板。 |
 | `HudOffsetX` | 16 | 排行榜左边缘偏移。 |
-| `HudOffsetY` | 0 | 相对自动垂直居中的纵向偏移。 |
+| `HudOffsetY` | 0 | 相对固定顶部锚点（屏幕垂直中心）的纵向偏移；排行榜行从该位置向下延伸。 |
 | `HudColorFaster` | `59FF66FF` | 当前比参考更快的条目颜色（绿色）。 |
 | `HudColorSlower` | `FF5959FF` | 当前比参考更慢的条目颜色（红色）。 |
 | `HudColorTie` | `FFFFFFFF` | 持平及无数据条目颜色（显示为 `--`，白色）。 |
 | `DisabledLeaderboardSources` | *(空)* | 从排行榜隐藏的资料 display id（逗号分隔；`PB` 表示 PB 项，其余为 `LoadPath` 下各顶层文件夹名）。空表示全部显示。 |
+| `LeaderboardMode` | `Subsegment` | 共享排行榜 HUD 的内容：`Subsegment`（参考对比，R8）或 `Markers`（当前关卡的标记 feed，R10.7）。两种模式共用同一个模式循环键与外观设置。 |
+
+## settings.ini — [Markers]
+
+自 R10 起，标记数据与标记模块由 `settings.ini` 中的 `[Markers]` 节配置（同一容错读写器）：
+
+```ini
+[Markers]
+Enable = true
+EditMode = false
+Path = markers
+DebugLogging = false
+LeaderboardTimeMode = Relative
+OverlayFillColor = 3F7FFF66
+OverlayLabelColor = FFFFFFFF
+```
+
+| 键 | 默认 | 说明 |
+|----|------|------|
+| `Enable` | true | 总开关；关闭后不触发、不写 PB、不显示标记排行榜与可视化。 |
+| `EditMode` | false | 标记编辑模式：开启游戏内可视化（R10.6）、计时器 HUD 底部的醒目提示及其下方的 XYZ 轴向指示器，并解锁面板编辑控件。持久化，重启后保留。 |
+| `Path` | `markers` | 标记定义与 PB 文件目录（`<config>/HSRTimer/markers`）。相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。 |
+| `DebugLogging` | false | 详细标记日志（关卡 key、标记数、触发、物体解析、PB 写入）。 |
+| `LeaderboardTimeMode` | `Relative` | 排行榜中标记 feed 的时间显示（R10.7.3）：`Relative`（与标记 PB 的带符号差值）或 `Absolute`（标记自身的分段时间）。无论哪种模式，条目颜色都始终体现领先/落后。 |
+| `OverlayFillColor` | `3F7FFF66` | 范围立方体与抓取物体高亮的填充色（含透明度）。 |
+| `OverlayLabelColor` | `FFFFFFFF` | 编辑模式叠加层中标记名称文字的颜色。 |
+
+标记数据文件位于 `<config>/HSRTimer/markers/{关卡}/{类别}.json`（关卡 key 与 subsegment IL 目录同规则：BuiltIn/EditorPick 用英文本地化关卡名，工坊用数字 id，本地工坊无 id 时用关卡文件夹名；类别键规则见 R8.2.4）。**没有加载/导入目录——标记只保存你自己的 PB。**
 
 ## lang/*.txt
 

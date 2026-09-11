@@ -44,6 +44,7 @@ SETTINGS_RETRY_LEVEL_OVERRIDE:Retry level (English name or Workshop ID)
 SETTINGS_SHOW_HUD:Show timer HUD
 SETTINGS_SHOW_REAL_TIME:Show Real Time
 SETTINGS_SHOW_WAKE_UP_TIME:Show Wake Up Time
+SETTINGS_ONLY_RECORD_FIRST_WAKE_UP_TIME:Only record first wake-up time
 SETTINGS_CENTER_LOADING_SAVING:Center Loading/Saving prompts
 
 # ===== Settings panel (GUI) =====
@@ -120,7 +121,7 @@ PANEL_SUBSEGMENT:Subsegment
 SETTINGS_SUBSEGMENT_ENABLE:Enable subsegment time comparison
 SETTINGS_SUBSEGMENT_PB_PATH:PB sample path
 SETTINGS_SUBSEGMENT_LOAD_PATH:Load sample path
-SETTINGS_SUBSEGMENT_TOGGLE_KEY:Leaderboard Toggle Key
+SETTINGS_SUBSEGMENT_TOGGLE_KEY:Leaderboard Mode Cycle Key
 SETTINGS_SUBSEGMENT_MULTI_PROJECT:Multi-run project
 SETTINGS_SUBSEGMENT_DETAILS:Detailed parameters
 SETTINGS_SUBSEGMENT_PLANE_RADIUS:Detection plane radius (m)
@@ -133,7 +134,7 @@ SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES:Max leaderboard entries
 SETTINGS_SUBSEGMENT_DEBUG_LOGGING:Debug logging
 SETTINGS_SUBSEGMENT_HUD_FONT_SIZE:Leaderboard font size
 SETTINGS_SUBSEGMENT_HUD_OFFSET_X:Leaderboard X offset
-SETTINGS_SUBSEGMENT_HUD_OFFSET_Y:Leaderboard Y offset (from center)
+SETTINGS_SUBSEGMENT_HUD_OFFSET_Y:Leaderboard Y offset (from fixed top anchor)
 
 # ===== Leaderboard (R8.5) =====
 PANEL_TAB_LEADERBOARD:Leaderboard
@@ -145,3 +146,70 @@ SETTINGS_LEADERBOARD_COLOR_TIE:Tie/no-data color
 SETTINGS_LEADERBOARD_SOURCES:Displayed subsegment sources
 SETTINGS_LEADERBOARD_SOURCE_PB:PB
 SETTINGS_LEADERBOARD_NO_LOAD_DIR:Load directory is empty or missing.
+
+# ===== Leaderboard content mode (R10.7.1) =====
+SETTINGS_LEADERBOARD_MODE:Leaderboard content
+SETTINGS_LEADERBOARD_MODE_SUBSEGMENT:Subsegment
+SETTINGS_LEADERBOARD_MODE_MARKERS:Markers
+SETTINGS_LEADERBOARD_MARKERS_NOTE:Markers mode lists the current level's markers as they trigger (newest on top). Absolute shows each marker's segment time; Relative shows the signed difference to that marker's PB. Colors always show ahead/behind vs PB.
+
+# ===== Markers (R10) =====
+PANEL_TAB_MARKERS:Markers
+PANEL_MARKERS:Markers
+SETTINGS_MARKERS_ENABLE:Enable markers
+SETTINGS_MARKERS_DISABLED_HINT:Markers are disabled. Enable them to edit and use markers.
+SETTINGS_MARKERS_EDIT_MODE:Marker edit mode
+SETTINGS_MARKERS_TIME_MODE:Marker time display
+SETTINGS_MARKERS_TIME_MODE_RELATIVE:Relative (vs PB)
+SETTINGS_MARKERS_TIME_MODE_ABSOLUTE:Absolute (segment time)
+
+# ===== Markers panel (R10.5) =====
+MARKER_SOURCE_MAIN_DREAMS:Main Dreams
+MARKER_SOURCE_EXTRA_DREAMS:Extra Dreams
+MARKER_SOURCE_WORKSHOP:Workshop
+MARKER_LEVEL_META_PENDING:Level metadata is not loaded yet. Enter the main menu's level select once, then press Refresh.
+MARKER_LEVEL_UNAVAILABLE:Metadata unavailable
+MARKER_BACK:Back
+MARKER_NEW:New marker
+MARKER_DELETE:Delete
+MARKER_DELETE_CONFIRM:Confirm delete?
+MARKER_DELETE_CANCEL:Cancel
+MARKER_ENABLED:Enabled
+MARKER_NAME:Name
+MARKER_TYPE:Type
+MARKER_TYPE_RANGE:Range trigger
+MARKER_TYPE_CHECKPOINT:Checkpoint trigger
+MARKER_TYPE_GRAB:Grab object
+MARKER_DEFAULT_NAME:Marker
+
+# ===== Range trigger editor (R10.5.3) =====
+MARKER_SET_TO_PLAYER_POS:Set to player position
+MARKER_POS_X:Center X
+MARKER_POS_Y:Center Y
+MARKER_POS_Z:Center Z
+MARKER_SIZE_X:Length X
+MARKER_SIZE_Y:Length Y
+MARKER_SIZE_Z:Length Z
+MARKER_GRAB_ANY:Require grabbing any object
+MARKER_JUMP:Require jumping
+MARKER_INVALID_RANGE:Range is invalid: all three side lengths must be > 0.
+
+# ===== Checkpoint trigger editor =====
+MARKER_CHECKPOINT_INDEX:Checkpoint number
+MARKER_TRIGGER_ON_LOAD:Trigger when loaded from the pause menu
+
+# ===== Grab-object trigger editor =====
+MARKER_SET_CURRENT_GRAB:Set to currently grabbed object
+MARKER_GRABBED_ID:Object
+MARKER_GRABBED_ID_EMPTY:(none)
+
+# ===== Marker capture errors (R10.5.4) =====
+MARKER_NEED_LEVEL:Not in a level; this action needs the local player.
+MARKER_GRAB_NONE:Not grabbing anything.
+MARKER_GRAB_MULTIPLE:Invalid: grabbing more than one object.
+MARKER_OBJECT_UNRESOLVED:The target object could not be found in this level.
+
+# ===== HUD / PB =====
+MARKER_HUD_EDIT_MODE:★ MARKER EDIT MODE ON ★
+MARKER_PB_LABEL:PB
+MARKER_NO_PB:--
