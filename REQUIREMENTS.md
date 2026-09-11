@@ -861,7 +861,7 @@
 
 #### R10.5 设置面板
 
-- **R10.5.1** 设置面板新增「标记」标签页：顶部为「标记编辑模式」开关，下方为「主梦境」「额外梦境」「工坊」三个下拉列表（分别对应内置关卡 / editor pick 关卡 / 工坊关卡，数据来自 `WorkshopRepository.instance.levelRepo.BySource(...)`）；每个关卡是一个按钮，点击进入该关卡的标记页。
+- **R10.5.1** 设置面板新增「标记」标签页：顶部为「标记编辑模式」开关，下方为「主梦境」「额外梦境」「工坊」三个下拉列表（分别对应内置关卡 / editor pick 关卡 / 工坊关卡，数据来自 `WorkshopRepository.instance.levelRepo.BySource(...)`）；每个关卡是一个按钮，点击进入该关卡的标记页。由于游戏的 `WorkshopRepository.LoadBuiltinLevels` 未注册最终关 `Intro_Reprise`（BuiltIn 12，显示名 Reprise），主梦境列表在仓库条目之后补充该关卡，且存储键沿用 `LevelIdentity.MetadataLevelKey` 的派生规则，确保面板创建的标记与运行时关卡 key 一致。
 - **R10.5.2** 关卡页：顶部仍是编辑模式开关，下方为返回按钮（回到上一级），再下方为标记列表（每项为按钮，点击展开编辑菜单），列表底部为「新建标记」按钮（**仅编辑模式启用时显示**）。
 - **R10.5.3** 每个标记的编辑菜单：顶部为名称文本输入框，下方为类型下拉列表；各类型的控件：
   - `Range`：`设为玩家位置` 按钮（需要关卡内本地玩家，否则灰化并提示）、中心点 `posX/posY/posZ`、三轴边长 `lengthX/lengthY/lengthZ`、「抓取」「跳跃」两个开关。

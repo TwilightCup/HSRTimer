@@ -26,7 +26,19 @@ namespace HSRTimer
     /// </summary>
     public static class MarkerCatalog
     {
-        public static List<MarkerLevelEntry> MainDreams() => Build(WorkshopItemSource.BuiltIn);
+        public static List<MarkerLevelEntry> MainDreams()
+        {
+            var list = Build(WorkshopItemSource.BuiltIn);
+            // The game's WorkshopRepository does not register the final campaign
+            // level Intro_Reprise (BuiltIn 12) in LoadBuiltinLevels, so it is
+            // missing from the Main Dreams panel list. Add it explicitly after
+            // the repository entries (Ice is 11), while keeping the same
+            // level-key derivation used by the runtime so markers resolve.
+            if (list.Count > 0)
+                EnsureIntroReprise(list);
+            return list;
+        }
+
         public static List<MarkerLevelEntry> ExtraDreams() => Build(WorkshopItemSource.EditorPick);
 
         public static List<MarkerLevelEntry> Workshop()
@@ -76,6 +88,46 @@ namespace HSRTimer
                 result.Clear();
             }
             return result;
+        }
+
+        /// <summary>
+        /// Adds the final campaign level (BuiltIn 12, Intro_Reprise / "Reprise")
+        /// to the Main Dreams list. The game's <c>WorkshopRepository</c> only
+        /// registers built-ins 0–11, so without this the panel cannot edit
+        /// markers for the level where an Any% run ends.
+        /// </summary>
+        private static void EnsureIntroReprise(List<MarkerLevelEntry> list)
+        {
+            const ulong repriseId = 12UL;
+            foreach (var entry in list)
+            {
+                if (entry != null
+                    && entry.Source == WorkshopItemSource.BuiltIn
+                    && entry.WorkshopId == repriseId)
+                    return; // the game metadata now includes it; do not duplicate
+            }
+
+            var meta = new BuiltinLevelMetadata
+            {
+                folder = "builtin:" + repriseId,
+                workshopId = repriseId,
+                levelType = WorkshopItemSource.BuiltIn,
+                itemType = WorkshopItemType.Level,
+                internalName = "Intro_Reprise",
+                title = "Reprise",
+                _thumbPath = "res:LevelImages/Intro_Reprise",
+            };
+            string key = LevelIdentity.MetadataLevelKey(WorkshopItemSource.BuiltIn, (int)repriseId, meta);
+            if (string.IsNullOrEmpty(key))
+                key = "Intro_Reprise"; // same runtime fallback when localization is unavailable
+            list.Add(new MarkerLevelEntry
+            {
+                Source = WorkshopItemSource.BuiltIn,
+                WorkshopId = repriseId,
+                LevelKey = key,
+                DisplayName = "Reprise",
+                InternalName = "Intro_Reprise",
+            });
         }
     }
 }

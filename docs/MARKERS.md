@@ -84,7 +84,9 @@ Settings panel → **Markers** tab:
    indicator like a 3D editor's orientation gizmo is drawn directly below the
    hint; it follows the active view angle, including the F8 free camera.
 2. Pick a level group — **Main Dreams** (built-in), **Extra Dreams**
-   (editor-pick), **Workshop** — and open a level.
+   (editor-pick), **Workshop** — and open a level. Main Dreams also includes
+   the final campaign level **Reprise** (`Intro_Reprise`, BuiltIn 12), which
+   the game's built-in workshop repository does not enumerate.
 3. **New marker** (only in edit mode) creates a `Range` marker and expands its
    editor: name, type dropdown, and per-type controls.
    - Range: *Set to player position* (needs the local player in a level),
