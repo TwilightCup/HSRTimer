@@ -18,7 +18,7 @@
 
 ## 界面
 
-- **面板** —— `show_hud`;`show_real_time`(显示始终活跃的现实时间计时器);`show_wake_up_time`(在右侧列显示起身时间);`center_loading_saving`(将游戏自带的右上角"加载/保存"提示移到顶部居中);主文本块的横向 / 纵向偏移(`offset_x`、`offset_y`)、字号(`font_size`),以及双色渐变(`color_a`、`color_b`,每通道 RGBA 滑块)。
+- **面板** —— `show_hud`;`show_real_time`(显示始终活跃的现实时间计时器);`show_wake_up_time`(在右侧列显示起身时间);`only_record_first_wake_up_time`(仅当起身时间显示开启时可见,开启后恢复“只记第一次起身”的原机制);`center_loading_saving`(将游戏自带的右上角"加载/保存"提示移到顶部居中);主文本块的横向 / 纵向偏移(`offset_x`、`offset_y`)、字号(`font_size`),以及双色渐变(`color_a`、`color_b`,每通道 RGBA 滑块)。
 
 ## 类别
 

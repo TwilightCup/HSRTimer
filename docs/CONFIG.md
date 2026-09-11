@@ -23,6 +23,7 @@ retry_level_override =
 show_hud = true
 show_real_time = true
 show_wake_up_time = true
+only_record_first_wake_up_time = false
 center_loading_saving = false
 language = en
 category = any
@@ -40,7 +41,8 @@ menu_key = Home
 | `retry_level_override` | string (English level name or Workshop numeric id) | (empty) | R6.5 — the one-key retry target. Case-insensitive name for BuiltIn/EditorPick levels, or a loaded Steam Workshop id. Invalid values show a red HUD hint when Retry is pressed and do not start a retry. When enabled and no level is active (e.g. the main menu), pressing Retry directly enters the specified level. |
 | `show_hud` | true/false | true | R2.5.1 |
 | `show_real_time` | true/false | true | R2.5.3 — show the always-active Real Time clock in the HUD (default shown below Game Time; can still be hidden) |
-| `show_wake_up_time` | true/false | true | Show the Wake Up time — from level start to the first time the local player leaves the soft/spawn state — in the right-hand HUD column, below Last Run when both are visible |
+| `show_wake_up_time` | true/false | true | Show Wake Up Time in the right-hand HUD column, below Last Run when both are visible. By default it measures from the latest wake-up-relevant moment (level start, respawn, pause-menu checkpoint load, or pause-menu level restart) to the next wake-up |
+| `only_record_first_wake_up_time` | true/false | false | R2.5.5 — restore the original Wake Up Time behavior: measure only the first wake-up after a level starts and ignore later respawns/checkpoint loads/level restarts. Visible in the settings panel only while `show_wake_up_time` is enabled |
 | `center_loading_saving` | true/false | false | Move the game's own top-right "Loading"/"Saving" progress indicator to the top-center of the screen |
 | `language` | BCP-47 code | en | matches a `lang/<code>.txt` |
 | `category` | category id | any | R3.1 |

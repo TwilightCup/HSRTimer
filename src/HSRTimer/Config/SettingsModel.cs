@@ -39,10 +39,15 @@ namespace HSRTimer
         // controls its HUD visibility.
         public bool ShowRealTime = true;
 
-        // Wake Up time is a per-level stat: the time from level start to the
-        // first time the local player leaves the soft/spawn state. Shown in the
-        // right-hand column (the one that also holds Last Run).
+        // Wake Up time is a per-level stat: the time from a wake-up measurement
+        // start to the local player leaving the soft/spawn state. By default the
+        // measurement restarts on each player respawn / pause-menu checkpoint
+        // load / level restart. When OnlyRecordFirstWakeUpTime is enabled, it
+        // keeps the original behavior: only the first wake-up after a level
+        // starts is measured. Shown in the right-hand column (the one that also
+        // holds Last Run).
         public bool ShowWakeUpTime = true;
+        public bool OnlyRecordFirstWakeUpTime = false;
 
         // Move the game's own top-right Loading/Saving progress indicator to
         // the top-center of the screen (default off).
@@ -123,6 +128,7 @@ namespace HSRTimer
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
                     case "show_real_time": ShowRealTime = ParseBool(value, ShowRealTime); break;
                     case "show_wake_up_time": ShowWakeUpTime = ParseBool(value, ShowWakeUpTime); break;
+                    case "only_record_first_wake_up_time": OnlyRecordFirstWakeUpTime = ParseBool(value, OnlyRecordFirstWakeUpTime); break;
                     case "center_loading_saving": CenterLoadingSaving = ParseBool(value, CenterLoadingSaving); break;
                     case "language": CurrentLang = value; break;
                     case "reset_key": ResetKey = ParseKeyCode(value, ResetKey); break;
@@ -188,6 +194,7 @@ namespace HSRTimer
                 ["show_hud"] = ShowHud ? "true" : "false",
                 ["show_real_time"] = ShowRealTime ? "true" : "false",
                 ["show_wake_up_time"] = ShowWakeUpTime ? "true" : "false",
+                ["only_record_first_wake_up_time"] = OnlyRecordFirstWakeUpTime ? "true" : "false",
                 ["center_loading_saving"] = CenterLoadingSaving ? "true" : "false",
                 ["language"] = CurrentLang,
                 ["reset_key"] = ResetKey.ToString(),

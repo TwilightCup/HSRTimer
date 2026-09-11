@@ -328,8 +328,11 @@ only on these genuine completions.
 (`!InSegment && GameTime == 0`) — once a new run starts timing it hides until
 the next completion. That same right-hand column can also show the current level's **Wake Up Time**
 as its second row (gated by `show_wake_up_time`), so the per-level value stays
-visible during a run even when `LastRun` is hidden. It is cleared when the
-level ends or is exited. The one exception is the campaign epilogue: the game loads
+visible during a run even when `LastRun` is hidden. By default the measurement
+restarts on player respawns, pause-menu checkpoint loads, and pause-menu level
+restarts; the `only_record_first_wake_up_time` setting restores the original
+level-start-to-first-wake-up behavior. It is cleared when the level ends or is
+exited. The one exception is the campaign epilogue: the game loads
 Credits (BuiltIn index == `levelCount`) as an ordinary level right after the
 final playable level is passed, and that segment is flagged
 `InEpilogueSegment` — it belongs to the run that just finished, so the column

@@ -24,6 +24,9 @@ namespace HSRTimer
         private ConfigService _cfg;
         private TimingOptions _opt;
 
+        private HumanState _prevHumanState;
+        private bool _prevHumanStateInit;
+
         private void Awake()
         {
             Instance = this;
@@ -71,9 +74,10 @@ namespace HSRTimer
                         State.OnCollectionLastLevel = true;
                 }
 
-                // Detect transitions first (uses cached prev), then accumulate,
-                // then run per-tick rules.
+                // Detect transitions first (uses cached prev), then respawns,
+                // then accumulate, then run per-tick rules.
                 HandleTransitions(game, gState, aState, isLocal);
+                TrackRespawn(game, gState);
                 Accumulate(game, gState, aState);
                 TrackWakeUp(game, gState);
                 SubsegmentManager.Instance?.OnPhysicsTick(game, gState, State);
@@ -199,6 +203,7 @@ namespace HSRTimer
 
             int cp = game.currentCheckpointNumber;
             State.BeginSegment(State.GameTime, game.currentLevelNumber, game.currentLevelType, cp);
+            _prevHumanStateInit = false;
             // The Credits level (BuiltIn index == levelCount) is the epilogue of
             // the campaign run that just finished — not a new run. Mark it so the
             // HUD keeps showing the recorded LastRun during it and recording
@@ -308,13 +313,50 @@ namespace HSRTimer
                 _cfg.SaveSettings();
         }
 
-        // ── Wake Up time (per level) ───────────────────────────────────────
+        // ── Wake Up time (per level / per respawn) ────────────────────────
         /// <summary>
-        /// Record the first time the local player leaves the soft/spawn state
-        /// after a level starts. The duration is measured on the authoritative
-        /// game clock from <see cref="RunState.SegmentStart"/> (the moment the
-        /// level became playable). Once recorded it is not reset by later manual
-        /// play-dead/checkpoint respawns within the same segment.
+        /// In the default (respawn-aware) mode, detect a local-player respawn by
+        /// the transition into <c>Spawning</c> and restart the Wake Up Time
+        /// measurement from that instant. Pause-menu Load/Restart are handled by
+        /// Harmony postfixes while FixedUpdate is halted; they call
+        /// <see cref="RestartWakeUpMeasurement"/> and mark this transition cache
+        /// as already seen so this polling path does not double-reset.
+        /// </summary>
+        private void TrackRespawn(Game game, GameState gState)
+        {
+            if (_cfg.Settings.OnlyRecordFirstWakeUpTime)
+                return;
+            if (!State.InSegment || gState != GameState.PlayingLevel)
+                return;
+
+            var human = Human.Localplayer;
+            if (human == null)
+            {
+                _prevHumanStateInit = false;
+                return;
+            }
+
+            if (!_prevHumanStateInit)
+            {
+                _prevHumanState = human.state;
+                _prevHumanStateInit = true;
+                return;
+            }
+
+            var prev = _prevHumanState;
+            if (human.state == HumanState.Spawning && prev != HumanState.Spawning)
+                State.RestartWakeUpMeasurement(State.GameTime);
+            _prevHumanState = human.state;
+        }
+
+        /// <summary>
+        /// Record the current Wake Up Time when the local player leaves the
+        /// soft/spawn state. The duration is measured from
+        /// <see cref="RunState.WakeUpMeasureStart"/>, which is the segment start
+        /// in "only first wake-up" mode and the latest respawn/restart moment in
+        /// the default mode. Once recorded it is not reset by later manual
+        /// play-dead within the same measurement; a new respawn clears it so the
+        /// next wake-up can be measured.
         /// </summary>
         private void TrackWakeUp(Game game, GameState gState)
         {
@@ -326,7 +368,7 @@ namespace HSRTimer
             if (human.state == HumanState.Spawning || human.state == HumanState.Unconscious || human.state == HumanState.Dead)
                 return;
 
-            State.WakeUpTime = State.GameTime - State.SegmentStart;
+            State.WakeUpTime = State.GameTime - State.WakeUpMeasureStart;
         }
 
         // ── Accumulation (B.1) ─────────────────────────────────────────────
@@ -415,12 +457,37 @@ namespace HSRTimer
             }
         }
 
+        /// <summary>
+        /// Public entry point used by pause-menu patches to clear the current
+        /// Wake Up Time and start a fresh measurement from the current game time.
+        /// Also records the current human state as already seen so the normal
+        /// FixedUpdate respawn detection does not immediately restart again.
+        /// </summary>
+        public static void RestartWakeUpMeasurement()
+        {
+            var core = Instance;
+            if (core == null || State == null)
+                return;
+            State.RestartWakeUpMeasurement(State.GameTime);
+            var human = Human.Localplayer;
+            if (human != null)
+            {
+                core._prevHumanState = human.state;
+                core._prevHumanStateInit = true;
+            }
+            else
+            {
+                core._prevHumanStateInit = false;
+            }
+        }
+
         private void DoFullReset(bool keepLastValues, bool keepLastRun = false)
         {
             SubsegmentManager.Instance?.OnRunReset();
             State.Reset(keepLastValues, keepLastRun);
             State.Flags.ClearAll();
             _cpEdgeInit = false;
+            _prevHumanStateInit = false;
             UpdateOptions();
         }
 

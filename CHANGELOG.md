@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - Wake Up Time now restarts its measurement whenever the player respawns, loads a checkpoint from the pause menu, or restarts the level from the pause menu, so it shows how long the latest respawn took to get up; a new "Only record first wake-up time" option (visible only while Wake Up Time display is on) restores the previous first-wake-up-only behavior.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.2.2

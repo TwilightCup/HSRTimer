@@ -44,6 +44,7 @@ SETTINGS_RETRY_LEVEL_OVERRIDE:Retry level (English name or Workshop ID)
 SETTINGS_SHOW_HUD:Show timer HUD
 SETTINGS_SHOW_REAL_TIME:Show Real Time
 SETTINGS_SHOW_WAKE_UP_TIME:Show Wake Up Time
+SETTINGS_ONLY_RECORD_FIRST_WAKE_UP_TIME:Only record first wake-up time
 SETTINGS_CENTER_LOADING_SAVING:Center Loading/Saving prompts
 
 # ===== Settings panel (GUI) =====

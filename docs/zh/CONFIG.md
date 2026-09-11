@@ -20,6 +20,7 @@ retry_level_override =
 show_hud = true
 show_real_time = true
 show_wake_up_time = true
+only_record_first_wake_up_time = false
 center_loading_saving = false
 language = en
 reset_key = Backspace
@@ -36,7 +37,8 @@ menu_key = Home
 | `retry_level_override` | 字符串(关卡英文名或创意工坊数字 id) | (空) | R6.5 —— 一键重试目标。官方关卡按英文名不区分大小写匹配;创意工坊关卡填已加载的 Steam Workshop 数字 id。无效值会在按下重试键时用计时器面板的红色无效样式提示,且不执行重试。开启且当前没有活动关卡时(例如主菜单),按重试键会**直接进入**该指定关卡。 |
 | `show_hud` | true/false | true | R2.5.1 |
 | `show_real_time` | true/false | true | R2.5.3 —— 在面板中显示始终活跃的现实时间计时器(默认显示在游戏总时间下方;可关闭) |
-| `show_wake_up_time` | true/false | true | 在右侧列显示“起身时间”——从关卡开始到本地玩家首次离开瘫软状态(出生/装死/死亡)的时间;与“上一局游戏时间”同时可见时显示在其下一行 |
+| `show_wake_up_time` | true/false | true | 在右侧列显示“起身时间”;与“上一局游戏时间”同时可见时显示在其下一行。默认从最近一次可起身起点(本关开始、玩家重生、暂停菜单加载存档点、暂停菜单重新开始关卡)开始测量,到下一次起身为止 |
+| `only_record_first_wake_up_time` | true/false | false | R2.5.5 —— 恢复原来的起身时间机制:只记录本关开始后的第一次起身,后续重生、加载存档点或重新开始关卡不重置。设置面板中仅在 `show_wake_up_time` 开启时可见 |
 | `center_loading_saving` | true/false | false | 将游戏自带的右上角"加载/保存"进度提示移动到画面顶部居中 |
 | `language` | BCP-47 代码 | en | 对应一个 `lang/<code>.txt` |
 | `reset_key` | KeyCode | Backspace | 重置成绩键 |
