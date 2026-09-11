@@ -146,7 +146,7 @@ LeaderboardMode = Subsegment
 | `DebugLogging` | false | 详细 subsegment 日志（采样/加载/平面/结算/PB 写入）。 |
 | `HudFontSize` | 16 | 排行榜字号，独立于主计时面板。 |
 | `HudOffsetX` | 16 | 排行榜左边缘偏移。 |
-| `HudOffsetY` | 0 | 相对自动垂直居中的纵向偏移。 |
+| `HudOffsetY` | 0 | 相对固定顶部锚点（屏幕垂直中心）的纵向偏移；排行榜行从该位置向下延伸。 |
 | `HudColorFaster` | `59FF66FF` | 当前比参考更快的条目颜色（绿色）。 |
 | `HudColorSlower` | `FF5959FF` | 当前比参考更慢的条目颜色（红色）。 |
 | `HudColorTie` | `FFFFFFFF` | 持平及无数据条目颜色（显示为 `--`，白色）。 |

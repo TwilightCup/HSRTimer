@@ -176,7 +176,7 @@ LeaderboardMode = Subsegment
 | `DebugLogging` | false | Detailed subsegment logging (sample/load/plane/settle/PB writes). |
 | `HudFontSize` | 16 | Subsegment leaderboard font size, independent of the main timer HUD. |
 | `HudOffsetX` | 16 | Left edge of the subsegment leaderboard. |
-| `HudOffsetY` | 0 | Vertical offset from the automatic left-middle centering. |
+| `HudOffsetY` | 0 | Vertical offset from the fixed top anchor (the screen center); leaderboard rows extend downward from there. |
 | `HudColorFaster` | `59FF66FF` | Color of entries where the current run is faster than the reference (green). |
 | `HudColorSlower` | `FF5959FF` | Color of entries where the current run is slower than the reference (red). |
 | `HudColorTie` | `FFFFFFFF` | Color of tie and no-data entries (shown as `--`, white). |

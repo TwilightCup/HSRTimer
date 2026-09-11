@@ -66,7 +66,7 @@ Patches/
   HumanControlsPatches.cs     postfix on HumanControls.HandleInput (Jumpless enforcement)
 Hud/
   TimerHud.cs             IMGUI panel (R2)
-  LeaderboardHud.cs       shared left-middle leaderboard HUD (subsegment R8.5 / markers R10.7)
+  LeaderboardHud.cs       shared left-side fixed-top leaderboard HUD (subsegment R8.5 / markers R10.7)
   SettingsPanel.cs        IMGUI settings panel + built-in tab pages
   ISettingsPanelTab.cs    external settings-panel tab interface
   ILocalizableSettingsPanelTab.cs  optional language-aware external tab interface
@@ -433,7 +433,9 @@ Markers follow the same **poll, don't patch** principle as everything else:
   renders either the subsegment references or the marker feed based on
   `SubsegmentLeaderboardMode`; the show/hide toggle moved from
   `SubsegmentManager` to the HUD, so the same key and appearance settings work
-  for both modes. The marker feed is newest-first, format
+  for both modes. Its top edge is fixed at the screen center (plus
+  `HudOffsetY`), so content extends downward instead of re-centering as the
+  number of rows changes. The marker feed is newest-first, format
   `{name}: {time}` (absolute segment time or signed diff vs the marker's PB),
   with the faster/slower/tie colors applied in both time modes (R10.7).
 - **Object identity has no GUID in the game.** A captured grab-object reference

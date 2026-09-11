@@ -134,7 +134,7 @@ SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES:Max leaderboard entries
 SETTINGS_SUBSEGMENT_DEBUG_LOGGING:Debug logging
 SETTINGS_SUBSEGMENT_HUD_FONT_SIZE:Leaderboard font size
 SETTINGS_SUBSEGMENT_HUD_OFFSET_X:Leaderboard X offset
-SETTINGS_SUBSEGMENT_HUD_OFFSET_Y:Leaderboard Y offset (from center)
+SETTINGS_SUBSEGMENT_HUD_OFFSET_Y:Leaderboard Y offset (from fixed top anchor)
 
 # ===== Leaderboard (R8.5) =====
 PANEL_TAB_LEADERBOARD:Leaderboard

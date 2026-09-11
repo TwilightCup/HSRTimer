@@ -79,8 +79,8 @@ namespace HSRTimer
         public bool SubsegmentDebugLogging = false;
 
         // Subsegment leaderboard HUD appearance (R8.5); independent of the main
-        // timer panel's layout. OffsetY is an offset from the automatic
-        // left-middle vertical centering.
+        // timer panel's layout. OffsetY is an offset from the fixed top anchor
+        // at the screen center; rows extend downward from there.
         public int SubsegmentHudFontSize = 16;
         public float SubsegmentHudOffsetX = 16f;
         public float SubsegmentHudOffsetY = 0f;

@@ -4,11 +4,13 @@ using UnityEngine;
 namespace HSRTimer
 {
     /// <summary>
-    /// The shared IMGUI leaderboard HUD (left-middle of the screen). It shows
+    /// The shared IMGUI leaderboard HUD (left side of the screen). It shows
     /// either the subsegment reference leaderboard (R8.5) or the markers
     /// trigger feed (R10.7), chosen by <c>Settings.SubsegmentLeaderboardMode</c>.
-    /// Appearance (font size, offsets, entry colors) comes from the settings
-    /// model and applies to both modes; the display/hide toggle key
+    /// The top edge is fixed at the screen center (plus the configured Y
+    /// offset) and rows extend downward as content grows. Appearance (font
+    /// size, offsets, entry colors) comes from the settings model and applies
+    /// to both modes; the display/hide toggle key
     /// (<c>SubsegmentToggleKey</c>) lives here.
     /// </summary>
     public sealed class LeaderboardHud : MonoBehaviour
@@ -105,10 +107,11 @@ namespace HSRTimer
             ApplyFont();
             _rowStyle.fontSize = hudSize;
 
-            int size = entries.Count;
             float lineHeight = _rowStyle.CalcSize(new GUIContent("Wg")).y + 2f;
             float x = settings.SubsegmentHudOffsetX;
-            float y = Screen.height * 0.5f - (size + 1) * lineHeight * 0.5f + settings.SubsegmentHudOffsetY;
+            // Fixed top anchor: the title/rows always start here and extend
+            // downward, so the top edge does not move as entries change.
+            float y = Screen.height * 0.5f + settings.SubsegmentHudOffsetY;
 
             string title = mgr.LeaderboardTitle;
             if (!string.IsNullOrEmpty(title))
@@ -159,10 +162,11 @@ namespace HSRTimer
 
             string title = mgr.LeaderboardTitle;
             bool hasTitle = !string.IsNullOrEmpty(title);
-            int size = feed.Count;
             float lineHeight = _rowStyle.CalcSize(new GUIContent("Wg")).y + 2f;
             float x = settings.SubsegmentHudOffsetX;
-            float y = Screen.height * 0.5f - (size + (hasTitle ? 1 : 0)) * lineHeight * 0.5f + settings.SubsegmentHudOffsetY;
+            // Fixed top anchor: the title/rows always start here and extend
+            // downward, so adding a new feed row does not move the top edge.
+            float y = Screen.height * 0.5f + settings.SubsegmentHudOffsetY;
 
             if (hasTitle)
             {

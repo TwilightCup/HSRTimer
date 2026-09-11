@@ -9,6 +9,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Details:**
   - Wake Up Time now restarts its measurement whenever the player respawns, loads a checkpoint from the pause menu, or restarts the level from the pause menu, so it shows how long the latest respawn took to get up; a new "Only record first wake-up time" option (visible only while Wake Up Time display is on) restores the previous first-wake-up-only behavior.
   - New **Markers** feature: create per-level trigger markers (range / checkpoint / grab-object) from a new **Markers** settings tab (Main Dreams / Extra Dreams / Workshop), record each marker's first segment-time trigger, and compare it against the level's own local PB (no external data import). A marker edit mode shows a HUD hint plus in-game blue translucent cubes and grab-object highlights. The leaderboard HUD gains a content switch (Subsegment / Markers) and shows a newest-first marker feed with absolute or relative times; faster/slower colors apply in both modes.
+  - The leaderboard top edge is now fixed at the screen center (plus the configured Y offset) so rows always extend downward instead of re-centering when the number of entries changes.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.2.2

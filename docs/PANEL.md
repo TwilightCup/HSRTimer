@@ -73,7 +73,7 @@ HSRTimer saves.
   (reference time comparison) or **Markers** (the current level's marker feed).
   The show/hide key and the appearance settings below apply to both modes.
 - **HUD** — the leaderboard font size, X offset, and Y offset (relative to
-  automatic vertical centering).
+  the fixed top anchor at the screen center; content extends downward).
 - **Entry colors** — three user-configurable colors for the three leaderboard
   entry states: faster/ahead (default green), slower/behind (default red), and
   tie/no-data (default white, shown as `--`). In Markers mode the colors still
