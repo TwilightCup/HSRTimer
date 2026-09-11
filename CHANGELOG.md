@@ -15,7 +15,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 
 ## 1.2.2
 
-- **Release Date:** *10 Sep 2026*
+- **Release Date:** _10 Sep 2026_
 - **Highlights:**
   - Fixed subsegment leaderboard ordering, IL comparisons, and EditorPick/Workshop PB persistence.
   - Fixed one-key retry so menu-entered EditorPick and Workshop levels retry the current level, with repeated Workshop retries working reliably.
@@ -29,7 +29,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 
 ## 1.2.1
 
-- **Release Date:** *09 Sep 2026*
+- **Release Date:** _09 Sep 2026_
 - **Highlights:**
   - Improved integration for other plugins.
 - **Details:**
@@ -38,7 +38,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 
 ## 1.2.0
 
-- **Release Date:** *08 Sep 2026*
+- **Release Date:** _08 Sep 2026_
 - **Highlights:**
   - Mouse side buttons can now be bound to hotkeys.
   - Improved the subsegment leaderboard experience.
@@ -54,7 +54,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 
 ## 1.1.0
 
-- **Release Date:** *06 Sep 2026*
+- **Release Date:** _06 Sep 2026_
 - **Highlights:**
   - Redesigned the settings panel with a language dropdown, left-side navigation, and clearer input fields.
   - Added a "Specify retry level" option so one-key retry can target a chosen level by English name (e.g., Mansion. Case-insensitive) or Workshop ID, and can be triggered directly from the menu.

@@ -123,10 +123,6 @@ namespace HSRTimer
             var s = cfg.Settings;
             GUILayout.Space(6);
 
-            bool editMode = Toggle(loc.Get("SETTINGS_MARKERS_EDIT_MODE"), s.MarkersEditMode, toggle);
-            if (editMode != s.MarkersEditMode)
-                s.MarkersEditMode = editMode;
-
             if (GUILayout.Button(loc.Get("MARKER_BACK"), button))
             {
                 _levelPage = null;
