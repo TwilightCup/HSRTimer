@@ -36,8 +36,9 @@ that plays a particular story clip.
    - the Easter source was present but never played, **or**
    - any `NarrativeBlock` was never triggered.
 
-When all voicelines are satisfied, the HUD shows a green "all voicelines
-triggered" hint (R3.6.3).
+When the Voiceline tag is active, the HUD shows a live progress line in the
+same style as the Checkpoint tag — `Voice: triggered/total` — and a green
+"all voicelines triggered" hint when complete (R3.6.3).
 
 ## Why two signals
 

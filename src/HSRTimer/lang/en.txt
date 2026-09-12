@@ -89,6 +89,7 @@ SEVERITY_UNFORGIVABLE:unforgivable
 SEVERITY_FORGIVABLE:forgivable
 
 # ===== Voiceline tag display (R3.6.3) =====
+VOICELINE_COUNT:Voice
 VOICELINE_ALL_DONE:All voicelines triggered
 
 # ===== Checkpoint tag display (R3.3.3) =====

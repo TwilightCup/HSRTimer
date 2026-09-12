@@ -122,5 +122,29 @@ namespace HSRTimer
 
         /// <summary>True when the Easter source, if present, has played.</summary>
         public bool EasterSatisfied => !_easterPresent || _easterPlayed;
+
+        /// <summary>Number of voicelines triggered so far, including the Easter clip when present.</summary>
+        public int TriggeredCount
+        {
+            get
+            {
+                int count = _triggered.Count;
+                if (_easterPresent && _easterPlayed)
+                    count++;
+                return count;
+            }
+        }
+
+        /// <summary>Total voicelines required for the current level, including the Easter clip when present.</summary>
+        public int TotalCount
+        {
+            get
+            {
+                int count = _triggered.Count + _pending.Count;
+                if (_easterPresent)
+                    count++;
+                return count;
+            }
+        }
     }
 }
