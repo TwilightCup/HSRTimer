@@ -310,6 +310,9 @@ namespace HSRTimer
             if (completed && _firstAwake)
                 AddFinalSample(_multiRunActive ? endTime : Math.Max(0d, endTime - state.SegmentStart));
 
+            // TimerCore.EndSegment runs tag OnLevelExit before this hook, so
+            // final-validity checks (R4.2 checkpoint-final / voiceline) have
+            // already raised any invalid flag; an invalid run never gets a PB.
             bool valid = !state.Flags.IsInvalid;
             // Use the ids captured at segment start: the game clears
             // currentLevelNumber / workshopLevel before the level-ending

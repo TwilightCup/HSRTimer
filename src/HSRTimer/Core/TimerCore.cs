@@ -279,6 +279,22 @@ namespace HSRTimer
         {
             double end = State.GameTime;
             bool retrying = State.Retrying;
+
+            // Fire tag OnLevelExit first — but only for a genuine level
+            // completion. A retry or a mid-level quit abandons the level (its
+            // reload/leave drives it through PlayingLevel → Inactive/LoadingLevel,
+            // a segment end); running OnLevelExit then would let the checkpoint
+            // final-check (R4.2) and voiceline-completion check fire against the
+            // abandoned state and spuriously raise INVALID_CHECKPOINT_FINAL /
+            // Voiceline.
+            //
+            // Running it before the subsegment/marker PB writes matters: those
+            // final checks are what raise INVALID_CHECKPOINT_FINAL / Voiceline,
+            // and a run with any invalid flag (cheat, skipped checkpoint, missed
+            // voiceline, etc.) must not record subsegment or marker PBs.
+            if (!retrying && completed)
+                ForEachEnabledRule(rule => Safe(rule, r => r.OnLevelExit(MakeContext(game))));
+
             SubsegmentManager.Instance?.OnLevelEnd(
                 game, State, end, completed, retrying,
                 game != null ? game.state : GameState.Inactive, App.state);
@@ -286,15 +302,6 @@ namespace HSRTimer
                 game, State, end, completed, retrying,
                 game != null ? game.state : GameState.Inactive, App.state);
             State.EndSegment(end, completed);
-
-            // Fire tag OnLevelExit — but only for a genuine level completion. A
-            // retry or a mid-level quit abandons the level (its reload/leave
-            // drives it through PlayingLevel → Inactive/LoadingLevel, a segment
-            // end); running OnLevelExit then would let the checkpoint final-check
-            // (R4.2) and voiceline-completion check fire against the abandoned
-            // state and spuriously raise INVALID_CHECKPOINT_FINAL / Voiceline.
-            if (!retrying && completed)
-                ForEachEnabledRule(rule => Safe(rule, r => r.OnLevelExit(MakeContext(game))));
 
             // R1.6: record the completed run's total time. Three cases count as
             // "the run is over": (a) the campaign's final level was passed (the

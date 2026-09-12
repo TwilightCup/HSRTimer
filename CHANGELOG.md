@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - Subsegment and marker PBs are no longer recorded when a run has any invalid flag (e.g. cheat codes, skipped checkpoints, missed voicelines), including invalid flags that are only detected at level exit.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.3.0

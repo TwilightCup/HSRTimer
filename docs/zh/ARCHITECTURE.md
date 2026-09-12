@@ -206,7 +206,7 @@ dotnet build src/HSRTimer/HSRTimer.csproj
 
 - **触发是轮询的。** `MarkersManager.OnPhysicsTick` 在 `TimerCore.FixedUpdate` 内运行(紧接 subsegment tick 之后),只读取公开字段:`Human.Localplayer.transform.position`、`Human.jump`、`Human.state`、`Human.Localplayer.GetComponent<GrabManager>().grabbedObjects`、`Game.currentCheckpointNumber`,以及 `RunState.GameTime` / `SegmentStart`。
 - **唯一不可轮询的事件**是暂停菜单的存档点加载(`PauseMenu.LoadClick` → `Game.RestartCheckpoint`),它在 `FixedUpdate` 停止期间发生。该事件通过*既有*的 `PauseMenuLoadPatch` 后缀投递(不新增 Harmony 类);暂停菜单的关卡重开(`PauseMenu.RestartClick`)同样通知管理器清空本关的标记记录与 feed(R10.1.6)。
-- **PB 时机与 R8 一致**:在 `TimerCore.EndSegment` 中、`State.EndSegment` *之前*写入(这样整局重置不会毁掉分段起点),门控条件为"通过 + 非重试 + 成绩有效"。
+- **PB 时机与 R8 一致**:在 `TimerCore.EndSegment` 中、`State.EndSegment` *之前*写入(这样整局重置不会毁掉分段起点),门控条件为"通过 + 非重试 + 成绩有效"。tag 的 `OnLevelExit` 完成校验(最终检查点 / 旁白)会在 subsegment 与标记的 PB 写入**之前**执行,因此只有在关卡结束时才被发现无效的成绩也不会被记为 PB。
 - **排行榜是共享的。** `LeaderboardHud`(由 `SubsegmentHud` 改名)根据 `SubsegmentLeaderboardMode` 渲染 subsegment 参考或标记 feed;模式循环键从 `SubsegmentManager` 移到了 HUD,因此两种模式共用同一个键与外观设置。该键按“关闭 → `Subsegment` → `Markers` → 关闭”循环。其顶部固定在屏幕垂直中心(加上 `HudOffsetY`),内容向下延伸而不再随行数变化重新居中。标记 feed 最新在上,格式为 `{名称}: {时间}`(绝对分段时间或与标记 PB 的带符号差值),两种时间模式下都应用领先 / 落后 / 持平颜色(R10.7)。
 - **物体身份在游戏里没有 GUID。** 捕获的抓取物体引用会在存在时记录序列化的 `NetIdentity.sceneId`(在关卡构建内对场景物体唯一),否则记录从场景根算起的层级路径,外加名称与世界坐标。解析顺序:sceneId 扫描 → 路径逐级匹配 → 名称 + 位置(5 m 容差,最后手段,记日志)。无法解析的目标在本次尝试中跳过,每关记一次警告(R10.6.4)。
 - **可视化无副作用。** `MarkerOverlay` 用 `Graphics.DrawMesh` + 透明 unlit 材质渲染范围立方体与抓取物体高亮(不创建碰撞体、不改游戏物体 / 材质,因此不影响联机);找不到 shader 时降级为一次 IMGUI 线框投影。标签是把标记中心经当前活动相机投影后绘制的 IMGUI 标签:本地玩家相机启用时优先使用它,否则使用 `Camera.main`(或任意启用中的相机),这样自由视角下名称会显示在自由相机投影后的真实位置,而不是角色相对相机的位置。

@@ -214,6 +214,9 @@ namespace HSRTimer
         /// </summary>
         public void OnLevelEnd(Game game, RunState state, double endTime, bool completed, bool retrying, GameState nowGameState, AppSate nowAppState)
         {
+            // TimerCore.EndSegment runs tag OnLevelExit before this hook, so
+            // final-validity checks (R4.2 checkpoint-final / voiceline) have
+            // already raised any invalid flag; an invalid run never gets a PB.
             if (Enabled && completed && !retrying && state != null && !state.Flags.IsInvalid && _currentSet != null && state.InSegment)
             {
                 long levelMs = (long)Math.Round((endTime - state.SegmentStart) * 1000.0);
