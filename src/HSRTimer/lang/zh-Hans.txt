@@ -90,7 +90,6 @@ SEVERITY_FORGIVABLE:可原谅
 
 # ===== 旁白标签显示 (R3.6.3) =====
 VOICELINE_COUNT:旁白
-VOICELINE_ALL_DONE:全部旁白已达成
 
 # ===== 检查点标签显示 (R3.3.3) =====
 CHECKPOINT_CURRENT:检查点

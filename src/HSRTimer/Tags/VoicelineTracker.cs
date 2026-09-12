@@ -22,11 +22,14 @@ namespace HSRTimer
         private readonly HashSet<int> _triggered = new HashSet<int>();
 
         private bool _easterPresent;   // an "Easter" AudioSource exists in the scene
-        private bool _easterPlayed;    // it was observed playing via PlayNarrative
+        private bool _easterPlayed;    // it was observed playing via PlayNarrative or polling
         private bool _satisfied;       // current satisfied state
 
         // The AudioClip bound to the Easter source, if found, for matching.
         private AudioClip _easterClip;
+        // The actual Easter AudioSource, kept so a direct AudioSource.Play()
+        // (the hidden easter-egg triggers) can be detected by polling isPlaying.
+        private AudioSource _easterSource;
 
         /// <summary>The tracker to use for the current level, set by the engine.</summary>
         public static VoicelineTracker Current { get; set; }
@@ -37,6 +40,7 @@ namespace HSRTimer
             _pending.Clear();
             _triggered.Clear();
             _easterClip = null;
+            _easterSource = null;
             _easterPresent = false;
             _easterPlayed = false;
             _satisfied = true; // R5.5.1: optimistic until proven otherwise
@@ -72,6 +76,7 @@ namespace HSRTimer
                     {
                         _easterPresent = true;
                         _easterClip = src.clip;
+                        _easterSource = src;
                         _satisfied = false; // present-but-unplayed is suspicious
                         return;
                     }
@@ -100,6 +105,23 @@ namespace HSRTimer
         {
             if (clip == null) return;
             if (_easterPresent && (_easterClip == clip || _easterClip == null))
+            {
+                _easterPlayed = true;
+                _satisfied = true;
+            }
+        }
+
+        /// <summary>
+        /// Poll the Easter audio source each tick. Some hidden easter-egg
+        /// triggers call <c>AudioSource.Play()</c> directly instead of going
+        /// through <see cref="SubtitleManager.PlayNarrative"/>, so the
+        /// PlayNarrative postfix alone would miss them. isPlaying is pollable,
+        /// so no extra Harmony patch is needed.
+        /// </summary>
+        public void PollEaster()
+        {
+            if (_easterPlayed || _easterSource == null) return;
+            if (_easterSource.isPlaying)
             {
                 _easterPlayed = true;
                 _satisfied = true;

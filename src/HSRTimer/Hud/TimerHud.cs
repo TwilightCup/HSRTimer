@@ -342,8 +342,7 @@ namespace HSRTimer
                 added += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
             }
 
-            // Voiceline tag: show triggered/total progress, plus the green hint
-            // when all voicelines are satisfied (R3.6.3).
+            // Voiceline tag: show triggered/total progress (R3.6.3).
             if (tags.HasTag(TagIds.Voiceline))
             {
                 var rule = TagRuleRegistry.Instance != null ? TagRuleRegistry.Instance.Find(TagIds.Voiceline) as VoicelineTagRule : null;
@@ -352,13 +351,6 @@ namespace HSRTimer
                     string line = loc.Get("VOICELINE_COUNT") + ":  " + rule.Tracker.TriggeredCount + "/" + rule.Tracker.TotalCount;
                     DrawGradientLine(line, cfg.Layout.ColorA, cfg.Layout.ColorB, x, y + added, _rowStyle);
                     added += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
-
-                    if (rule.Tracker.AllBlocksTriggered && rule.Tracker.EasterSatisfied)
-                    {
-                        string done = loc.Get("VOICELINE_ALL_DONE");
-                        DrawGradientLine(done, new Color(0.3f, 1f, 0.4f, 1f), new Color(0.5f, 1f, 0.6f, 1f), x, y + added, _rowStyle);
-                        added += _rowStyle.CalcSize(new GUIContent(done)).y + 2f;
-                    }
                 }
             }
 

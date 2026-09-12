@@ -31,14 +31,16 @@ that plays a particular story clip.
      pending). Idempotent (deduped by instance id).
    - `SubtitleManager.PlayNarrative(AudioClip)` postfix → if the clip is the
      Easter clip, mark Easter as **played** and flip the run back to satisfied.
+   - The tracker also polls the Easter `AudioSource.isPlaying` each tick, so
+     hidden easter-egg triggers that call `AudioSource.Play()` directly (not
+     through `SubtitleManager.PlayNarrative`) are still counted as played.
 
 3. **On level exit** — the run is **invalid** (reason `Voiceline`) if:
    - the Easter source was present but never played, **or**
    - any `NarrativeBlock` was never triggered.
 
 When the Voiceline tag is active, the HUD shows a live progress line in the
-same style as the Checkpoint tag — `Voice: triggered/total` — and a green
-"all voicelines triggered" hint when complete (R3.6.3).
+same style as the Checkpoint tag — `Voice: triggered/total` (R3.6.3).
 
 ## Why two signals
 
