@@ -22,7 +22,11 @@ namespace HSRTimer
 
         public void OnTick(ValidationContext ctx)
         {
-            // Nothing to do per tick; completion is checked on exit.
+            // Some hidden easter-egg voicelines play through a direct
+            // AudioSource.Play() instead of NarrativeBlock.Play/PlayNarrative.
+            // Poll the tracked Easter source so those count as triggered.
+            if (_tracker != null)
+                _tracker.PollEaster();
         }
 
         public void OnLevelExit(ValidationContext ctx)

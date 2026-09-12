@@ -2,6 +2,18 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
+## 1.3.1
+
+- **Release Date:** _12 Sep 2026_
+- **Highlights:**
+  - Fixed subsegment and marker persistence.
+  - Fixed the Voiceline tag.
+- **Details:**
+  - Subsegment and marker PBs are no longer recorded when a run has any invalid flag (e.g. cheat codes, skipped checkpoints, missed voicelines), including invalid flags that are only detected at level exit.
+  - The Voiceline tag now shows a live `Voice: triggered/total` progress line in the HUD, similar to the Checkpoint tag display.
+  - The Voiceline tag's old "all voicelines triggered" green hint was removed; the progress line is now the only Voiceline display.
+  - Fixed hidden easter-egg voicelines being included in the Voiceline total but not incrementing the triggered count when played.
+
 ## 1.3.0
 
 - **Release Date:** _11 Sep 2026_

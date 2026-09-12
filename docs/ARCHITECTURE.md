@@ -428,7 +428,10 @@ Markers follow the same **poll, don't patch** principle as everything else:
   level's marker records and feed (R10.1.6).
 - **PB timing matches R8**: written at level end in `TimerCore.EndSegment`
   before `State.EndSegment` (so the run's reset does not destroy the segment
-  start), gated on passed + not-retrying + valid.
+  start), gated on passed + not-retrying + valid. The tag `OnLevelExit`
+  completion checks (final checkpoint / voiceline) run **before** the
+  subsegment and marker PB writes, so a run that is only discovered invalid at
+  level exit is never recorded as a PB.
 - **The leaderboard is shared.** `LeaderboardHud` (renamed from `SubsegmentHud`)
   renders either the subsegment references or the marker feed based on
   `SubsegmentLeaderboardMode`; the mode-cycle key moved from `SubsegmentManager`

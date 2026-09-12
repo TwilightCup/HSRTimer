@@ -342,14 +342,14 @@ namespace HSRTimer
                 added += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
             }
 
-            // Voiceline tag: green hint when all triggered (R3.6.3).
+            // Voiceline tag: show triggered/total progress (R3.6.3).
             if (tags.HasTag(TagIds.Voiceline))
             {
                 var rule = TagRuleRegistry.Instance != null ? TagRuleRegistry.Instance.Find(TagIds.Voiceline) as VoicelineTagRule : null;
-                if (rule != null && rule.Tracker != null && rule.Tracker.AllBlocksTriggered && rule.Tracker.EasterSatisfied)
+                if (rule != null && rule.Tracker != null)
                 {
-                    string line = loc.Get("VOICELINE_ALL_DONE");
-                    DrawGradientLine(line, new Color(0.3f, 1f, 0.4f, 1f), new Color(0.5f, 1f, 0.6f, 1f), x, y + added, _rowStyle);
+                    string line = loc.Get("VOICELINE_COUNT") + ":  " + rule.Tracker.TriggeredCount + "/" + rule.Tracker.TotalCount;
+                    DrawGradientLine(line, cfg.Layout.ColorA, cfg.Layout.ColorB, x, y + added, _rowStyle);
                     added += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
                 }
             }
