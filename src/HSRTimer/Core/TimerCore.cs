@@ -277,6 +277,14 @@ namespace HSRTimer
 
         private void EndSegment(Game game, bool completed)
         {
+            // A manual reset clears the active segment (R1.7.1). If the level
+            // later leaves PlayingLevel without a new segment having started,
+            // there is no attempt to finalize: tag OnLevelExit / PB recording
+            // must not run, otherwise stale per-level tag state can re-raise
+            // forgivable invalid flags on the way out.
+            if (!State.InSegment)
+                return;
+
             double end = State.GameTime;
             bool retrying = State.Retrying;
 
@@ -400,6 +408,13 @@ namespace HSRTimer
         // ── Per-tick tag rules (skip/jump/nocheckpoint/voiceline-tick) ──────
         private void RunRules(Game game, GameState gState)
         {
+            // Tag rules only apply to an active segment. After a manual reset
+            // clears the segment while the level is still PlayingLevel, running
+            // OnTick with stale per-level tag state would immediately re-raise
+            // forgivable invalid flags (e.g. NoCheckpointHit / Jumpless).
+            if (!State.InSegment)
+                return;
+
             // Track max checkpoint seen for EditorPick final validation.
             int cp = game.currentCheckpointNumber;
             if (cp > State.MaxCheckpointThisLevel) State.MaxCheckpointThisLevel = cp;
@@ -465,6 +480,21 @@ namespace HSRTimer
             if (InputUtil.GetKeyDown(s.ResetKey))
             {
                 DoFullReset(keepLastValues: false);
+
+                // R1.7.1: a manual reset must clear AND stop the timer.
+                // RunState.Reset zeroes the transition caches, which would make
+                // the still-active PlayingLevel look like a fresh
+                // LoadingLevel/Inactive -> PlayingLevel segment start on the next
+                // FixedUpdate, immediately restarting the timer and re-arming the
+                // Wake Up Time display. Restore the caches to the actual game
+                // state so the timer stays stopped until a real level entry.
+                var game = Game.instance;
+                if (game != null && game.state == GameState.PlayingLevel)
+                {
+                    State.PrevGameState = game.state;
+                    State.PrevAppState = App.state;
+                }
+
                 _cfg.SaveSettings();
                 Notify("NOTIFY_RUN_RESET");
             }
