@@ -26,6 +26,7 @@ namespace HSRTimer
         public float QuietSettleSeconds;
         public float PlaneDebounceSeconds;
         public float RespawnJumpMeters;
+        public int MaxSamplesPerLevel;
         public int MaxLeaderboardEntries;
         public bool DebugLogging;
         public int HudFontSize;
@@ -61,6 +62,7 @@ namespace HSRTimer
                 QuietSettleSeconds = s.SubsegmentQuietSettleSeconds,
                 PlaneDebounceSeconds = s.SubsegmentPlaneDebounceSeconds,
                 RespawnJumpMeters = s.SubsegmentRespawnJumpMeters,
+                MaxSamplesPerLevel = Mathf.Max(1, s.SubsegmentMaxSamplesPerLevel),
                 MaxLeaderboardEntries = Mathf.Max(1, s.SubsegmentMaxLeaderboardEntries),
                 DebugLogging = s.SubsegmentDebugLogging,
                 HudFontSize = Mathf.Max(8, s.SubsegmentHudFontSize),
@@ -98,6 +100,10 @@ namespace HSRTimer
         private double _lastSampleGameTime = -1d;
         private int _nextSeq;
         private bool _firstAwake;
+        // True after this level's cumulative sample count hit the configured
+        // cap; sampling is stopped for the rest of the level and the buffered
+        // samples are discarded so the level cannot contribute a PB.
+        private bool _samplingCapped;
 
         // Loader/comparator state. During a level transition we keep the
         // previous level's visible leaderboard in _displayReferences until the
@@ -441,6 +447,15 @@ namespace HSRTimer
             if (!_firstAwake)
                 return;
 
+            // Once the per-level sample cap has been hit, sampling is stopped
+            // for the rest of this level; only real-time crossing detection
+            // continues.
+            if (_samplingCapped)
+            {
+                RunCrossingDetection(pos.Value, time);
+                return;
+            }
+
             if (time - _lastSampleGameTime >= _options.SampleInterval)
                 AddRegularSample(time, pos.Value);
 
@@ -506,6 +521,7 @@ namespace HSRTimer
             _lastSampleGameTime = -1d;
             _nextSeq = 0;
             _firstAwake = false;
+            _samplingCapped = false;
             foreach (var reference in _references)
             {
                 reference.DiffMs = null;
@@ -649,9 +665,35 @@ namespace HSRTimer
                 Plugin.Logger.LogInfo($"HSRTimer: subsegment leaderboard switched to {_activeMultiProject}.");
         }
 
+        /// <summary>
+        /// Per-level sample cap (R8.1.6). Once the cumulative sample count for
+        /// this level reaches <c>MaxSamplesPerLevel</c>, the next sample would
+        /// exceed it: stop sampling for the rest of the level and discard the
+        /// samples buffered in memory, so this level never contributes a PB.
+        /// The real-time comparison (R8.4) keeps running on the current frame
+        /// position. State resets with <see cref="ClearRecorder"/> on the next
+        /// level / retry.
+        /// </summary>
+        private void TryStopSamplingAtCap()
+        {
+            if (_samplingCapped) return;
+            if (_options.MaxSamplesPerLevel <= 0 || _currentSamples.Count < _options.MaxSamplesPerLevel)
+                return;
+
+            _samplingCapped = true;
+            _currentSamples.Clear();
+            _lastSamplePosition = null;
+            _lastSampleGameTime = -1d;
+            _nextSeq = 0;
+            if (_options.DebugLogging)
+                Plugin.Logger.LogInfo($"HSRTimer: subsegment sample cap ({_options.MaxSamplesPerLevel}) exceeded; stopped sampling for this level and discarded its buffered samples.");
+        }
+
         private void EnsureAwakeSample(double gameTime, Vector3 pos)
         {
             if (_firstAwake) return;
+            TryStopSamplingAtCap();
+            if (_samplingCapped) return;
             var human = Human.Localplayer;
             if (human == null) return;
             if (human.state == HumanState.Spawning || human.state == HumanState.Unconscious || human.state == HumanState.Dead)
@@ -677,6 +719,8 @@ namespace HSRTimer
 
         private void AddRegularSample(double gameTime, Vector3 pos)
         {
+            TryStopSamplingAtCap();
+            if (_samplingCapped) return;
             float dx = 0f, dy = 0f, dz = 0f;
             if (_lastSamplePosition.HasValue)
             {
@@ -707,6 +751,8 @@ namespace HSRTimer
 
         private void AddFinalSample(double endTime)
         {
+            TryStopSamplingAtCap();
+            if (_samplingCapped) return;
             var pos = GetCurrentPosition();
             if (pos == null) return;
             float dx = 0f, dy = 0f, dz = 0f;

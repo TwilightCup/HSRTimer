@@ -117,6 +117,7 @@ SampleInterval = 1.0
 QuietSettleSeconds = 0.5
 PlaneDebounceSeconds = 0.2
 RespawnJumpMeters = 100.0
+MaxSamplesPerLevel = 480
 MaxLeaderboardEntries = 8
 DebugLogging = false
 HudFontSize = 16
@@ -142,6 +143,7 @@ LeaderboardMode = Subsegment
 | `QuietSettleSeconds` | `0.5` | 穿越候选的静默结算窗（秒）。 |
 | `PlaneDebounceSeconds` | `0.2` | 同一平面的穿越防抖窗口（秒）。 |
 | `RespawnJumpMeters` | `100.0` | 轨迹连续性阈值；超过视为失败折返，不做陈旧回路抑制。 |
+| `MaxSamplesPerLevel` | `480` | 单关内累计采样条数上限。当下一条采样将超过上限时，本关立即停止采样并清空当前内存中的采样缓冲，该关不计入 PB。 |
 | `MaxLeaderboardEntries` | `8` | 排行榜最多显示项数。 |
 | `DebugLogging` | false | 详细 subsegment 日志（采样/加载/平面/结算/PB 写入）。 |
 | `HudFontSize` | 16 | 排行榜字号，独立于主计时面板。 |

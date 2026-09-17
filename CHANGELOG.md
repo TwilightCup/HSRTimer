@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - Added a configurable cap (`MaxSamplesPerLevel`, default 480) on the number of subsegment samples recorded in one level; once a level exceeds the cap, sampling stops for that level and its buffered samples are discarded so the level does not count toward a PB.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.3.1
