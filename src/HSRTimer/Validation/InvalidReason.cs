@@ -26,6 +26,13 @@ namespace HSRTimer
 
         /// <summary>A voiceline was skipped under a Voiceline category (R3.6).</summary>
         Voiceline,
+
+        /// <summary>
+        /// The SSG (half-body) glitch under Glitchless: a hand kept a phantom
+        /// grab (<c>grabObject != null</c>) after the reverse-wall-climb branch
+        /// returned without creating <c>grabJoint</c>.
+        /// </summary>
+        Ssg,
     }
 
     /// <summary>Whether a reason can be cleared on retry.</summary>
@@ -57,6 +64,7 @@ namespace HSRTimer
                 case InvalidReason.NoCheckpointHit: return "INVALID_NO_CHECKPOINT";
                 case InvalidReason.Jumpless: return "INVALID_JUMPLESS";
                 case InvalidReason.Voiceline: return "INVALID_VOICELINE";
+                case InvalidReason.Ssg: return "INVALID_SSG";
                 default: return r.ToString();
             }
         }

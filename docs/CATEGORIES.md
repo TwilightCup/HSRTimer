@@ -17,7 +17,7 @@ Tags **stack**: enable any combination, and all their rules apply simultaneously
 | `NoCheckpoint` (R3.4) | Trigger **no** checkpoint | Invalid if `currentCheckpointNumber > 0` |
 | `Jumpless` (R3.5) | Never jump | Invalid on `Human.Localplayer.jump` false→true — and enforced: while the tag is on, the jump key is physically disabled at the game's input layer (see [ARCHITECTURE.md](ARCHITECTURE.md)) |
 | `Voiceline` (R3.6) | Trigger every voiceline | Invalid if any `NarrativeBlock` is missed or the Easter voiceline is skipped (see [VOICELINE.md](VOICELINE.md)) |
-| `Glitchless` | Perform no glitches | Judgment rules are being defined; currently a registered tag shell with no checks yet |
+| `Glitchless` | Perform no glitches | SSG (half-body): invalid when a hand keeps a phantom grab (`grabObject != null` with no `grabJoint`) after the game's reverse-wall-climb branch returns early |
 
 With no tags enabled (plain Any%), the run is constrained only by the generic
 validity checks (R5.1: cheats, speed change, drift) — the HUD shows a red

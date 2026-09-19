@@ -1,20 +1,38 @@
+using System.Collections.Generic;
+
 namespace HSRTimer
 {
     /// <summary>
-    /// Glitchless tag: the player must not perform any glitches. The concrete
-    /// judgment rules are still being specified; this is the registered shell so
-    /// the tag appears in the settings panel and can be enabled before its rules
-    /// are implemented incrementally.
+    /// Glitchless tag: the player must not perform any glitch. Individual
+    /// glitches are implemented as independent <see cref="IGlitchCheck"/>
+    /// detectors so each one raises its own invalid reason.
     /// </summary>
     public sealed class GlitchlessTagRule : ITagRule
     {
         public string Id => TagIds.Glitchless;
         public string DisplayNameKey => "TAG_GLITCHLESS";
 
-        public void OnLevelEnter(ValidationContext ctx) { }
+        private readonly List<IGlitchCheck> _checks = new List<IGlitchCheck>
+        {
+            new SsgGlitchCheck(),
+        };
 
-        public void OnTick(ValidationContext ctx) { }
+        public void OnLevelEnter(ValidationContext ctx)
+        {
+            for (int i = 0; i < _checks.Count; i++)
+                _checks[i].OnLevelEnter(ctx);
+        }
 
-        public void OnLevelExit(ValidationContext ctx) { }
+        public void OnTick(ValidationContext ctx)
+        {
+            for (int i = 0; i < _checks.Count; i++)
+                _checks[i].OnTick(ctx);
+        }
+
+        public void OnLevelExit(ValidationContext ctx)
+        {
+            for (int i = 0; i < _checks.Count; i++)
+                _checks[i].OnLevelExit(ctx);
+        }
     }
 }
