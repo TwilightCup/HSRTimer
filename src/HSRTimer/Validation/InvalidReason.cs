@@ -36,6 +36,9 @@ namespace HSRTimer
 
         /// <summary>The Prop Fly glitch under Glitchless: jumping while standing on a grabbed movable object.</summary>
         PropFly,
+
+        /// <summary>The Footsie glitch under Glitchless: touching the Water (River) pass point inside the Footsie Spot range.</summary>
+        Footsie,
     }
 
     /// <summary>Whether a reason can be cleared on retry.</summary>
@@ -69,6 +72,7 @@ namespace HSRTimer
                 case InvalidReason.Voiceline: return "INVALID_VOICELINE";
                 case InvalidReason.Ssg: return "INVALID_SSG";
                 case InvalidReason.PropFly: return "INVALID_PROP_FLY";
+                case InvalidReason.Footsie: return "INVALID_FOOTSIE";
                 default: return r.ToString();
             }
         }

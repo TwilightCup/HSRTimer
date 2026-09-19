@@ -16,6 +16,7 @@ namespace HSRTimer
         {
             new SsgGlitchCheck(),
             new PropFlyGlitchCheck(),
+            new FootsieGlitchCheck(),
         };
 
         public void OnLevelEnter(ValidationContext ctx)
