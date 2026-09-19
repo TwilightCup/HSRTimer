@@ -50,6 +50,7 @@ namespace HSRTimer
             registry.Register(new NoCheckpointTagRule());
             registry.Register(new JumplessTagRule());
             registry.Register(new VoicelineTagRule());
+            registry.Register(new GlitchlessTagRule());
 
             // 3. Harmony patches (voiceline hooks only).
             PatchModule.Apply();

@@ -69,12 +69,13 @@ PANEL_SAVE:Save
 PANEL_CLOSE:Close
 PANEL_FOOTER:Changes apply live. Saved on Close or game exit.
 
-# ===== Tags (R3.3 - R3.6) =====
+# ===== Tags (R3.3 - R3.6 + Glitchless) =====
 HUD_TAGS_LABEL:Tags
 TAG_CHECKPOINT:Checkpoint
 TAG_NO_CHECKPOINT:No Checkpoint
 TAG_JUMPLESS:Jumpless
 TAG_VOICELINE:Voiceline
+TAG_GLITCHLESS:Glitchless
 
 # ===== Validity reasons (R5) =====
 INVALID_RUN:RUN IS INVALID

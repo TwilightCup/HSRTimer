@@ -42,7 +42,7 @@ Tags/
   TagRuleRegistry.cs      扩展注册表(R3.7)
   CheckpointRules.cs      R4 跳关例外 + 终点检查点表
   VoicelineTracker.cs     场景扫描 + Easter 检测
-  Rules/                  Checkpoint / NoCheckpoint / Jumpless / Voiceline
+  Rules/                  Checkpoint / NoCheckpoint / Jumpless / Voiceline / Glitchless
 Patches/
   PatchModule.cs          Harmony.CreateAndPatchAll
   NarrativeBlockPatches.cs    NarrativeBlock.Play 后缀

@@ -22,7 +22,7 @@
 
 ## 类别
 
-- **规则标签** —— 所有已注册规则标签的多选(四个内置标签:`Checkpoint`、`NoCheckpoint`、`Jumpless`、`Voiceline`,以及其他插件注册的自定义标签 —— 见 [EXTENDING.md](EXTENDING.md))。勾选即启用该标签,取消即禁用。没有类别预设 —— 这个标签集合就是当前的规则集。改动即时生效,并在关闭 / 退出时写入 `tags.ini`。
+- **规则标签** —— 所有已注册规则标签的多选(五个内置标签:`Checkpoint`、`NoCheckpoint`、`Jumpless`、`Voiceline`、`Glitchless`,以及其他插件注册的自定义标签 —— 见 [EXTENDING.md](EXTENDING.md))。勾选即启用该标签,取消即禁用。没有类别预设 —— 这个标签集合就是当前的规则集。改动即时生效,并在关闭 / 退出时写入 `tags.ini`。
 
 ## 分段对比(Subsegment)
 

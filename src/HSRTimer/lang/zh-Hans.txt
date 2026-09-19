@@ -69,12 +69,13 @@ PANEL_SAVE:保存
 PANEL_CLOSE:关闭
 PANEL_FOOTER:改动实时生效。关闭面板或退出游戏时写入磁盘。
 
-# ===== 标签 (R3.3 - R3.6) =====
+# ===== 标签 (R3.3 - R3.6 + Glitchless) =====
 HUD_TAGS_LABEL:规则标签
 TAG_CHECKPOINT:检查点
 TAG_NO_CHECKPOINT:无检查点
 TAG_JUMPLESS:禁跳
 TAG_VOICELINE:旁白
+TAG_GLITCHLESS:无Glitch
 
 # ===== 无效原因 (R5) =====
 INVALID_RUN:成绩无效

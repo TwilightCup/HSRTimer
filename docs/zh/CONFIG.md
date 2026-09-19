@@ -62,7 +62,7 @@ HSRTimer **没有类别预设**。当前的规则集就是用户启用的标签�
 enabled = Checkpoint, Jumpless
 ```
 
-- `enabled` —— 逗号分隔的标签 id。内置 id:`Checkpoint`、`NoCheckpoint`、`Jumpless`、`Voiceline`。第三方插件的自定义标签用其自身的 id(见 [EXTENDING.md](EXTENDING.md))。留空即为纯任意%(仅受通用有效性约束)。
+- `enabled` —— 逗号分隔的标签 id。内置 id:`Checkpoint`、`NoCheckpoint`、`Jumpless`、`Voiceline`、`Glitchless`。第三方插件的自定义标签用其自身的 id(见 [EXTENDING.md](EXTENDING.md))。留空即为纯任意%(仅受通用有效性约束)。
 
 见 [CATEGORIES.md](CATEGORIES.md)。
 
