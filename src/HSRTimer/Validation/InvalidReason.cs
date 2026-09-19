@@ -26,6 +26,19 @@ namespace HSRTimer
 
         /// <summary>A voiceline was skipped under a Voiceline category (R3.6).</summary>
         Voiceline,
+
+        /// <summary>
+        /// The SSG (half-body) glitch under Glitchless: a hand kept a phantom
+        /// grab (<c>grabObject != null</c>) after the reverse-wall-climb branch
+        /// returned without creating <c>grabJoint</c>.
+        /// </summary>
+        Ssg,
+
+        /// <summary>The Prop Fly glitch under Glitchless: jumping while standing on a grabbed movable object.</summary>
+        PropFly,
+
+        /// <summary>The Footsie glitch under Glitchless: touching the Water (River) pass point inside the Footsie Spot range.</summary>
+        Footsie,
     }
 
     /// <summary>Whether a reason can be cleared on retry.</summary>
@@ -57,6 +70,9 @@ namespace HSRTimer
                 case InvalidReason.NoCheckpointHit: return "INVALID_NO_CHECKPOINT";
                 case InvalidReason.Jumpless: return "INVALID_JUMPLESS";
                 case InvalidReason.Voiceline: return "INVALID_VOICELINE";
+                case InvalidReason.Ssg: return "INVALID_SSG";
+                case InvalidReason.PropFly: return "INVALID_PROP_FLY";
+                case InvalidReason.Footsie: return "INVALID_FOOTSIE";
                 default: return r.ToString();
             }
         }

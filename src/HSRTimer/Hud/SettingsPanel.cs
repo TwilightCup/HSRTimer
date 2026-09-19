@@ -317,6 +317,7 @@ namespace HSRTimer
             s.SubsegmentQuietSettleSeconds = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_QUIET_SETTLE_SECONDS"), s.SubsegmentQuietSettleSeconds, "0.###"));
             s.SubsegmentPlaneDebounceSeconds = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_PLANE_DEBOUNCE_SECONDS"), s.SubsegmentPlaneDebounceSeconds, "0.###"));
             s.SubsegmentRespawnJumpMeters = Mathf.Max(0f, FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_RESPAWN_JUMP_METERS"), s.SubsegmentRespawnJumpMeters, "0.###"));
+            s.SubsegmentMaxSamplesPerLevel = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_SAMPLES_PER_LEVEL"), s.SubsegmentMaxSamplesPerLevel, "F0")));
             s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
         }
 

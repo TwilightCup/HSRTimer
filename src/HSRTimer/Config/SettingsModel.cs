@@ -75,6 +75,7 @@ namespace HSRTimer
         public float SubsegmentQuietSettleSeconds = 0.5f;
         public float SubsegmentPlaneDebounceSeconds = 0.2f;
         public float SubsegmentRespawnJumpMeters = 100f;
+        public int SubsegmentMaxSamplesPerLevel = 480;
         public int SubsegmentMaxLeaderboardEntries = 8;
         public bool SubsegmentDebugLogging = false;
 
@@ -186,6 +187,7 @@ namespace HSRTimer
                     case "QuietSettleSeconds": SubsegmentQuietSettleSeconds = ParseFloat(value, SubsegmentQuietSettleSeconds); break;
                     case "PlaneDebounceSeconds": SubsegmentPlaneDebounceSeconds = ParseFloat(value, SubsegmentPlaneDebounceSeconds); break;
                     case "RespawnJumpMeters": SubsegmentRespawnJumpMeters = ParseFloat(value, SubsegmentRespawnJumpMeters); break;
+                    case "MaxSamplesPerLevel": SubsegmentMaxSamplesPerLevel = ParseInt(value, SubsegmentMaxSamplesPerLevel); break;
                     case "MaxLeaderboardEntries": SubsegmentMaxLeaderboardEntries = ParseInt(value, SubsegmentMaxLeaderboardEntries); break;
                     case "DebugLogging": SubsegmentDebugLogging = ParseBool(value, SubsegmentDebugLogging); break;
                     case "HudFontSize": SubsegmentHudFontSize = ParseInt(value, SubsegmentHudFontSize); break;
@@ -263,6 +265,7 @@ namespace HSRTimer
                 ["QuietSettleSeconds"] = SubsegmentQuietSettleSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                 ["PlaneDebounceSeconds"] = SubsegmentPlaneDebounceSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                 ["RespawnJumpMeters"] = SubsegmentRespawnJumpMeters.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
+                ["MaxSamplesPerLevel"] = SubsegmentMaxSamplesPerLevel.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["MaxLeaderboardEntries"] = SubsegmentMaxLeaderboardEntries.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["DebugLogging"] = SubsegmentDebugLogging ? "true" : "false",
                 ["HudFontSize"] = SubsegmentHudFontSize.ToString(System.Globalization.CultureInfo.InvariantCulture),

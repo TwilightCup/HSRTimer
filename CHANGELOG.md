@@ -2,6 +2,16 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
+## 1.4.0
+
+- **Release Date:** _19 Sep 2026_
+- **Highlights:**
+  - Added the `Glitchless` category tag, including SSG, Prop Fly, and Footsie detection.
+- **Details:**
+  - Pressing the manual reset key while a level is already playing now clears and stops the timer instead of immediately starting a new segment; the Wake Up Time display is also cleared, forgivable invalid flags stay cleared, and leaving the level no longer re-triggers those invalid checks.
+  - Added a configurable cap (`MaxSamplesPerLevel`, default 480) on the number of subsegment samples recorded in one level; once a level exceeds the cap, sampling stops for that level and its buffered samples are discarded so the level does not count toward a PB.
+  - Added the `Glitchless` tag to the Category page, with SSG, Prop Fly, and Footsie detection.
+
 ## 1.3.1
 
 - **Release Date:** _12 Sep 2026_

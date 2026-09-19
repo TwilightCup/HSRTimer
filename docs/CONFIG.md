@@ -78,9 +78,9 @@ enabled = Checkpoint, Jumpless
 ```
 
 - `enabled` — comma-separated tag ids. Built-in ids: `Checkpoint`,
-  `NoCheckpoint`, `Jumpless`, `Voiceline`. Custom tags from third-party plugins
-  use their own ids (see [EXTENDING.md](EXTENDING.md)). Leave empty for a plain
-  run (generic validity checks only).
+  `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`. Custom tags from
+  third-party plugins use their own ids (see [EXTENDING.md](EXTENDING.md)).
+  Leave empty for a plain run (generic validity checks only).
 
 See [CATEGORIES.md](CATEGORIES.md).
 
@@ -147,6 +147,7 @@ SampleInterval = 1.0
 QuietSettleSeconds = 0.5
 PlaneDebounceSeconds = 0.2
 RespawnJumpMeters = 100.0
+MaxSamplesPerLevel = 480
 MaxLeaderboardEntries = 8
 DebugLogging = false
 HudFontSize = 16
@@ -172,6 +173,7 @@ LeaderboardMode = Subsegment
 | `QuietSettleSeconds` | `0.5` | Quiet settle window for crossing candidates. |
 | `PlaneDebounceSeconds` | `0.2` | Same-plane candidate debounce window. |
 | `RespawnJumpMeters` | `100.0` | Continuity threshold; larger frame-to-frame sample jumps mean a failed/rewound segment is not treated as a stale loop. |
+| `MaxSamplesPerLevel` | `480` | Cap on the cumulative number of samples recorded in one level. When the next sample would exceed it, sampling stops for the rest of the level and the buffered samples are discarded, so that level never contributes a PB. |
 | `MaxLeaderboardEntries` | `8` | Maximum displayed leaderboard rows. |
 | `DebugLogging` | false | Detailed subsegment logging (sample/load/plane/settle/PB writes). |
 | `HudFontSize` | 16 | Subsegment leaderboard font size, independent of the main timer HUD. |
