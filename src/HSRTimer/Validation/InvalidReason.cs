@@ -33,6 +33,9 @@ namespace HSRTimer
         /// returned without creating <c>grabJoint</c>.
         /// </summary>
         Ssg,
+
+        /// <summary>The Prop Fly glitch under Glitchless: jumping while standing on a grabbed movable object.</summary>
+        PropFly,
     }
 
     /// <summary>Whether a reason can be cleared on retry.</summary>
@@ -65,6 +68,7 @@ namespace HSRTimer
                 case InvalidReason.Jumpless: return "INVALID_JUMPLESS";
                 case InvalidReason.Voiceline: return "INVALID_VOICELINE";
                 case InvalidReason.Ssg: return "INVALID_SSG";
+                case InvalidReason.PropFly: return "INVALID_PROP_FLY";
                 default: return r.ToString();
             }
         }

@@ -15,6 +15,7 @@ namespace HSRTimer
         private readonly List<IGlitchCheck> _checks = new List<IGlitchCheck>
         {
             new SsgGlitchCheck(),
+            new PropFlyGlitchCheck(),
         };
 
         public void OnLevelEnter(ValidationContext ctx)
