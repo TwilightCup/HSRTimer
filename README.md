@@ -63,9 +63,10 @@ Requires the .NET SDK (`dotnet`) and the game installed via Steam.
 dotnet build src/HSRTimer/HSRTimer.csproj
 ```
 
-The build resolves game/BepInEx DLL references from the default Steam install
-path (see `Directory.Build.props`). On a non-default Steam library or another
-platform, override the paths via environment variables:
+The build resolves game/BepInEx DLL references from `GAME_MANAGED` /
+`BEPINEX_CORE`. On this machine those paths live in the gitignored
+`Directory.Build.user.props`; on another machine or a non-default Steam library,
+set them via environment variables:
 
 ```bash
 GAME_MANAGED="/path/to/Human_Data/Managed" \

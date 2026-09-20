@@ -2,8 +2,9 @@
 
 > **中文版**: [zh/CONFIG.md](zh/CONFIG.md)
 
-All config lives under `<BepInEx config dir>/HSRTimer/` (on a typical install,
-`~/Library/Application Support/Steam/steamapps/common/Human Fall Flat/BepInEx/config/HSRTimer/`).
+All config lives under `<BepInEx config dir>/HSRTimer/` (on a typical Linux
+Steam install,
+`~/.local/share/Steam/steamapps/common/Human Fall Flat/BepInEx/config/HSRTimer/`).
 Files are human-readable, sectioned `key = value` text. `#` lines are comments.
 
 Every file is parsed **line by line, tolerantly**: a malformed line is skipped

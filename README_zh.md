@@ -52,8 +52,9 @@ HSRTimer 维护一个精确的 **游戏时间** 时钟（以游戏物理帧为�
 dotnet build src/HSRTimer/HSRTimer.csproj
 ```
 
-构建会从默认的 Steam 安装路径解析游戏 / BepInEx 的 DLL 引用(见 `Directory.Build.props`)。
-若 Steam 库不在默认路径或使用其他平台，请通过环境变量覆盖路径:
+构建会从 `GAME_MANAGED` / `BEPINEX_CORE` 解析游戏 / BepInEx 的 DLL 引用。
+本机的这两个路径写在被 git 忽略的 `Directory.Build.user.props` 中；在其他机器上或
+Steam 库不在默认路径时，请通过环境变量设置:
 
 ```bash
 GAME_MANAGED="/路径/Human_Data/Managed" \

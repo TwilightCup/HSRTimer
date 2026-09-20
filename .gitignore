@@ -9,6 +9,9 @@ obj/
 .idea/
 *.swp
 
+# Machine-local build references
+Directory.Build.user.props
+
 # OS
 .DS_Store
 

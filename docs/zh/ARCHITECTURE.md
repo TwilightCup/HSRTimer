@@ -198,7 +198,7 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 dotnet build src/HSRTimer/HSRTimer.csproj
 ```
 
-`Directory.Build.props` 指向默认 Steam 安装目录下的托管 DLL 与 BepInEx core。其他平台用 `GAME_MANAGED` / `BEPINEX_CORE` 覆盖。
+`Directory.Build.props` 会导入一个可选的、被 git 忽略的 `Directory.Build.user.props`，其中存放本机开发所用的托管 DLL 与 BepInEx core 引用路径。其他机器用 `GAME_MANAGED` / `BEPINEX_CORE` 覆盖。
 
 ## 标记模块(R10)
 

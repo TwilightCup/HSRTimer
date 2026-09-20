@@ -408,8 +408,10 @@ method plus one entry in the `ConfigRepair.Rules` array.
 dotnet build src/HSRTimer/HSRTimer.csproj
 ```
 
-`Directory.Build.props` points at the default Steam install's managed DLLs and
-BepInEx core. Override `GAME_MANAGED` / `BEPINEX_CORE` for other platforms.
+`Directory.Build.props` imports an optional, gitignored
+`Directory.Build.user.props` that holds machine-local reference paths for the
+managed DLLs and BepInEx core. Override `GAME_MANAGED` / `BEPINEX_CORE` for
+other machines.
 
 ## The Markers module (R10)
 
