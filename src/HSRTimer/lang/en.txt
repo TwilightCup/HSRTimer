@@ -46,6 +46,21 @@ SETTINGS_SHOW_REAL_TIME:Show Real Time
 SETTINGS_SHOW_WAKE_UP_TIME:Show Wake Up Time
 SETTINGS_ONLY_RECORD_FIRST_WAKE_UP_TIME:Only record first wake-up time
 SETTINGS_CENTER_LOADING_SAVING:Center Loading/Saving prompts
+SETTINGS_PRESET:Presets
+SETTINGS_PRESET_SELECT_HINT:[Click to select]
+SETTINGS_PRESET_NEW:New preset
+SETTINGS_PRESET_NEW_NAME:Preset name
+SETTINGS_PRESET_CONFIRM:OK
+SETTINGS_PRESET_CANCEL:Cancel
+SETTINGS_PRESET_LOAD:Load preset
+SETTINGS_PRESET_SAVE:Save preset
+SETTINGS_PRESET_DELETE:Delete preset
+SETTINGS_PRESET_EMPTY:Preset name cannot be empty.
+SETTINGS_PRESET_DUPLICATE:A preset with this name already exists.
+SETTINGS_PRESET_LOAD_FAILED:Failed to load the selected preset.
+SETTINGS_PRESET_SAVE_FAILED:Failed to save the selected preset.
+SETTINGS_PRESET_DELETE_FAILED:Failed to delete the selected preset.
+SETTINGS_PRESET_FAILED:Preset operation failed.
 
 # ===== Settings panel (GUI) =====
 PANEL_TAB_GENERAL:General

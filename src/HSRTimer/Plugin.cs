@@ -43,6 +43,11 @@ namespace HSRTimer
             // an existing layout.ini). Idempotent; writes only on change.
             ConfigRepair.Run(config);
 
+            // 1.6 Presets (R11): create the default preset on first load / upgrade
+            //     and repair the selected preset to a valid one. Runs after config
+            //     load/repair so the default snapshot reflects the effective config.
+            PresetStore.EnsureInitialized(config);
+
             // 2. Register built-in tag rules (R3.7 extension point).
             var registry = new TagRuleRegistry();
             TagRuleRegistry.Init(registry);

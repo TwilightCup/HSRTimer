@@ -226,6 +226,41 @@ name for BuiltIn/EditorPick levels, the numeric Workshop id, or the local level
 folder name when it has no id; the category key follows R8.2.4). There is no
 load/import directory — markers only store your own PB.
 
+## settings.ini — [Presets]
+
+Starting with R11, the currently selected preset is stored as a normal config
+item in `settings.ini`:
+
+```ini
+[Presets]
+Current = default
+```
+
+| Key | Default | Notes |
+|-----|---------|-------|
+| `Current` | `default` | The currently selected preset name. Saved/loaded with the rest of the config. |
+
+## presets/
+
+Starting with R11, layout + markers presets live under
+`<config>/HSRTimer/presets/`:
+
+```
+presets/
+  default/
+    layout.ini
+    markers/
+  <name>/
+    layout.ini
+    markers/
+```
+
+A preset is a snapshot of `layout.ini` plus the whole `markers/` directory
+(marker definitions and PB records). On first load or when upgrading from an
+older version, the plugin creates the `default` preset from the current config
+and selects it; `default` cannot be deleted. Manage presets from the
+**General** tab of the settings panel (see [PANEL.md](PANEL.md)).
+
 ## lang/*.txt
 
 See [LOCALIZATION.md](LOCALIZATION.md).

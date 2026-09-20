@@ -147,6 +147,14 @@ In Markers mode:
   level has no markers, in which case it clears immediately.
 - Switching the mode does not affect subsegment recording or PB writes.
 
+## Presets (R11)
+
+Starting with R11, marker data can be saved as part of a layout + markers
+preset. A preset snapshot includes the whole active `markers/` directory —
+marker definitions **and** PB records — together with `layout.ini`. Use the
+**Presets** section in the settings panel's General tab to create, select,
+load, or save presets; see [CONFIG.md](CONFIG.md) for the storage layout.
+
 ## Troubleshooting
 
 - **Marker never triggers** — check: enabled? edit mode irrelevant here; Range

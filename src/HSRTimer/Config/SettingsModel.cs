@@ -95,9 +95,17 @@ namespace HSRTimer
         public Color MarkersOverlayFillColor = GradientText.ParseColor("3F7FFF66", new Color(0.25f, 0.5f, 1f, 0.4f));
         public Color MarkersOverlayLabelColor = Color.white;
 
+        // ── Presets (R11) ───────────────────────────────────────────────
+        // The currently selected preset. The selection itself is a normal config
+        // item so it survives restarts; there is intentionally NO separate
+        // "presets initialized" flag (first-load/upgrade is detected by the
+        // presence of the presets directory / default preset).
+        public string CurrentPreset = PresetStore.DefaultPresetName;
+
         private const string Section = "settings";
         private const string SubsegmentSection = "Subsegment";
         private const string MarkersSection = "Markers";
+        private const string PresetsSection = "Presets";
 
         public void Load()
         {
@@ -114,6 +122,10 @@ namespace HSRTimer
                 else if (p.Section == MarkersSection)
                 {
                     ApplyMarkers(p.Key, p.Value);
+                }
+                else if (p.Section == PresetsSection)
+                {
+                    ApplyPresets(p.Key, p.Value);
                 }
             }
         }
@@ -216,6 +228,24 @@ namespace HSRTimer
             }
         }
 
+        private void ApplyPresets(string key, string value)
+        {
+            try
+            {
+                switch (key)
+                {
+                    case "Current": CurrentPreset = string.IsNullOrEmpty(value) ? PresetStore.DefaultPresetName : value; break;
+                    default:
+                        Plugin.Logger.LogWarning($"HSRTimer: settings.ini: unknown Presets key '{key}', ignored.");
+                        break;
+                }
+            }
+            catch
+            {
+                Plugin.Logger.LogWarning($"HSRTimer: settings.ini: bad Presets value for '{key}' = '{value}', kept default.");
+            }
+        }
+
         public void Save()
         {
             var kv = new Dictionary<string, string>
@@ -262,6 +292,10 @@ namespace HSRTimer
                 ["OverlayFillColor"] = GradientText.ToHex(MarkersOverlayFillColor),
                 ["OverlayLabelColor"] = GradientText.ToHex(MarkersOverlayLabelColor),
             };
+            var presets = new Dictionary<string, string>
+            {
+                ["Current"] = string.IsNullOrEmpty(CurrentPreset) ? PresetStore.DefaultPresetName : CurrentPreset,
+            };
             PersistenceService.Write(
                 PersistenceService.PathFor("settings.ini"),
                 new[]
@@ -269,6 +303,7 @@ namespace HSRTimer
                     new KeyValuePair<string, IDictionary<string, string>>(Section, kv),
                     new KeyValuePair<string, IDictionary<string, string>>(SubsegmentSection, sub),
                     new KeyValuePair<string, IDictionary<string, string>>(MarkersSection, markers),
+                    new KeyValuePair<string, IDictionary<string, string>>(PresetsSection, presets),
                 },
                 "HSRTimer settings. Lines of the form 'key = value'. Bad lines are ignored.");
         }

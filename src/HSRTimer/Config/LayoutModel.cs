@@ -156,7 +156,10 @@ namespace HSRTimer
             }
         }
 
-        public void Save()
+        public void Save() => SaveTo(PersistenceService.PathFor("layout.ini"));
+
+        /// <summary>Serialize this layout to a specific file (live layout.ini or a preset snapshot).</summary>
+        public void SaveTo(string path)
         {
             var sections = new List<KeyValuePair<string, IDictionary<string, string>>>();
 
@@ -202,7 +205,7 @@ namespace HSRTimer
             }
 
             PersistenceService.Write(
-                PersistenceService.PathFor("layout.ini"),
+                path,
                 sections,
                 "HSRTimer HUD layout. Text is drawn directly on screen (no window).\n# [text] offset_x/offset_y (top-left px), font_size, color_a/color_b;\n# [rows] ordered row types; [leaderboard] shared leaderboard HUD appearance;\n# [custom.<n>] arbitrary on-screen texts (template vars).");
         }

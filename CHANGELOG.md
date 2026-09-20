@@ -8,6 +8,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
   - Moved the shared leaderboard HUD appearance and display-mode settings from `settings.ini` into `layout.ini` under a new `[leaderboard]` section; existing settings are migrated automatically.
+  - Added **Presets**: save and switch whole HUD layout + marker snapshots from the General tab. The built-in `default` preset is created automatically on first load or when upgrading from an older version; a preset can be created, selected, loaded, saved, and (except `default`) deleted. The current selection is stored in `settings.ini` under `[Presets] Current`.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.4.0

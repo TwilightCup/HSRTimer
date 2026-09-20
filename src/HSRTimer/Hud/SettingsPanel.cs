@@ -52,6 +52,14 @@ namespace HSRTimer
         private string[] _langDisplays;
         private bool _langDropdownOpen;
 
+        // Transient preset state (R11). The selected preset itself lives in
+        // SettingsModel.CurrentPreset; these fields only back the IMGUI controls.
+        private string[] _presetNames;
+        private bool _presetDropdownOpen;
+        private bool _presetCreating;
+        private string _presetNewName = "";
+        private string _presetErrorKey;
+
         private void Awake()
         {
             Instance = this;
@@ -103,7 +111,12 @@ namespace HSRTimer
             if (_visible)
             {
                 _langDropdownOpen = false;
+                _presetDropdownOpen = false;
+                _presetCreating = false;
+                _presetNewName = "";
+                _presetErrorKey = null;
                 RefreshLanguageList();
+                RefreshPresetList();
                 RefreshTabDisplays();
             }
         }
@@ -259,6 +272,9 @@ namespace HSRTimer
                 RefreshLanguageList();
                 RefreshTabDisplays();
             }
+
+            Section(loc.Get("SETTINGS_PRESET"));
+            DrawPresetSelector(cfg, loc);
 
             Section(loc.Get("PANEL_KEYBINDS"));
             KeybindRow(loc, "SETTINGS_RESET_KEY", () => s.ResetKey, k => s.ResetKey = k);
@@ -601,6 +617,138 @@ namespace HSRTimer
                     }
                 }
             }
+        }
+
+        // Single-select preset picker (R11). Mirrors the language dropdown:
+        // a button + collapsible list, with "New preset" at the bottom. The
+        // selection is a real config item (SettingsModel.CurrentPreset) and is
+        // persisted via the normal SaveSettings path.
+        private void DrawPresetSelector(ConfigService cfg, LocalizationService loc)
+        {
+            if (_presetNames == null) RefreshPresetList();
+            var s = cfg.Settings;
+            if (_presetNames == null) return;
+
+            string current = s.CurrentPreset;
+            if (!PresetStore.Exists(current))
+                current = PresetStore.DefaultPresetName;
+
+            string selected = (_presetDropdownOpen ? "▾ " : "▸ ") + current + "  " + loc.Get("SETTINGS_PRESET_SELECT_HINT");
+            if (GUILayout.Button(selected, _button))
+                _presetDropdownOpen = !_presetDropdownOpen;
+
+            if (_presetDropdownOpen)
+            {
+                foreach (var name in _presetNames)
+                {
+                    if (string.IsNullOrEmpty(name)) continue;
+                    string item = string.Equals(name, s.CurrentPreset, System.StringComparison.Ordinal) ? "✓  " + name : name;
+                    if (GUILayout.Button(item, _button))
+                    {
+                        if (!string.Equals(name, s.CurrentPreset, System.StringComparison.Ordinal))
+                        {
+                            s.CurrentPreset = name;
+                            cfg.SaveSettings();
+                            _presetErrorKey = null;
+                            _presetCreating = false;
+                        }
+                        _presetDropdownOpen = false;
+                    }
+                }
+
+                // New-preset input row appears directly above the New preset button,
+                // below all existing preset options.
+                if (_presetCreating)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(loc.Get("SETTINGS_PRESET_NEW_NAME"), _label);
+                    _presetNewName = GUILayout.TextField(_presetNewName, _textField, GUILayout.Width(160));
+                    if (GUILayout.Button(loc.Get("SETTINGS_PRESET_CONFIRM"), _button, GUILayout.Width(80)))
+                        ConfirmNewPreset(cfg);
+                    if (GUILayout.Button(loc.Get("SETTINGS_PRESET_CANCEL"), _button, GUILayout.Width(80)))
+                    {
+                        _presetCreating = false;
+                        _presetNewName = "";
+                        _presetErrorKey = null;
+                    }
+                    GUILayout.EndHorizontal();
+                    if (_presetErrorKey != null)
+                        GUILayout.Label(loc.Get(_presetErrorKey), _small);
+                }
+
+                if (GUILayout.Button(loc.Get("SETTINGS_PRESET_NEW"), _button))
+                {
+                    _presetCreating = !_presetCreating;
+                    _presetNewName = "";
+                    _presetErrorKey = null;
+                }
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(loc.Get("SETTINGS_PRESET_LOAD"), _button))
+            {
+                if (PresetStore.LoadCurrent(cfg))
+                    _presetErrorKey = null;
+                else
+                    _presetErrorKey = "SETTINGS_PRESET_LOAD_FAILED";
+            }
+            if (GUILayout.Button(loc.Get("SETTINGS_PRESET_SAVE"), _button))
+            {
+                if (PresetStore.SaveToCurrent(cfg))
+                    _presetErrorKey = null;
+                else
+                    _presetErrorKey = "SETTINGS_PRESET_SAVE_FAILED";
+            }
+            GUILayout.EndHorizontal();
+
+            bool isDefault = string.Equals(s.CurrentPreset, PresetStore.DefaultPresetName, System.StringComparison.OrdinalIgnoreCase);
+            if (!isDefault)
+            {
+                if (GUILayout.Button(loc.Get("SETTINGS_PRESET_DELETE"), _button))
+                {
+                    if (PresetStore.DeleteCurrent(cfg))
+                    {
+                        RefreshPresetList();
+                        _presetDropdownOpen = false;
+                        _presetCreating = false;
+                        _presetErrorKey = null;
+                    }
+                    else
+                    {
+                        _presetErrorKey = "SETTINGS_PRESET_DELETE_FAILED";
+                    }
+                }
+            }
+
+            if (_presetErrorKey != null)
+                GUILayout.Label(loc.Get(_presetErrorKey), _small);
+        }
+
+        private void ConfirmNewPreset(ConfigService cfg)
+        {
+            string errorKey;
+            if (PresetStore.TryCreate(_presetNewName, cfg, out errorKey))
+            {
+                RefreshPresetList();
+                _presetCreating = false;
+                _presetNewName = "";
+                _presetErrorKey = null;
+                // Keep the dropdown open so the new option is visible immediately.
+                _presetDropdownOpen = true;
+            }
+            else
+            {
+                _presetErrorKey = errorKey;
+            }
+        }
+
+        private void RefreshPresetList()
+        {
+            var cfg = ConfigService.Instance;
+            if (cfg == null) return;
+            _presetNames = PresetStore.ListPresets();
+            if (System.Array.IndexOf(_presetNames, cfg.Settings.CurrentPreset) < 0)
+                cfg.Settings.CurrentPreset = PresetStore.DefaultPresetName;
         }
 
         private void RefreshLanguageList()

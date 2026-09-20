@@ -423,6 +423,35 @@ namespace HSRTimer
         private static string CacheKey(string levelKey, string categoryKey)
             => levelKey + "|" + (categoryKey ?? "Any");
 
+        /// <summary>
+        /// Drop every cached/edited marker set and re-read the current level's set
+        /// from disk. Called by <see cref="PresetStore.LoadCurrent"/> so the runtime
+        /// engine and settings panel immediately see the markers a preset just
+        /// restored (R11). Also clears per-level trigger/feed state to avoid stale
+        /// marker ids.
+        /// </summary>
+        public void InvalidateAll()
+        {
+            _setCache.Clear();
+            _dirtySets.Clear();
+            ClearEvaluation();
+            _feed.Clear();
+            _feedTitle = null;
+            _feedLevelKey = null;
+            _feedSet = null;
+
+            if (_currentLevelKey != null && _currentSet != null)
+            {
+                string source = _currentSet.level_source;
+                int number = _currentSet.level_number;
+                _currentSet = GetOrCreateSet(_currentLevelKey, source, number, _currentCategory);
+            }
+            else
+            {
+                _currentSet = null;
+            }
+        }
+
         public static string NextMarkerId(MarkerSet set)
         {
             int max = 0;

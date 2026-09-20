@@ -181,6 +181,35 @@ OverlayLabelColor = FFFFFFFF
 
 标记数据文件位于 `<config>/HSRTimer/markers/{关卡}/{类别}.json`（关卡 key 与 subsegment IL 目录同规则：BuiltIn/EditorPick 用英文本地化关卡名，工坊用数字 id，本地工坊无 id 时用关卡文件夹名；类别键规则见 R8.2.4）。**没有加载/导入目录——标记只保存你自己的 PB。**
 
+## settings.ini — [Presets]
+
+自 R11 起，当前选中的预设作为普通配置项保存在 `settings.ini`：
+
+```ini
+[Presets]
+Current = default
+```
+
+| 键 | 默认 | 说明 |
+|----|------|------|
+| `Current` | `default` | 当前选中的预设名。随其它配置一起保存 / 加载。 |
+
+## presets/
+
+自 R11 起，布局 + 标记预设位于 `<config>/HSRTimer/presets/`：
+
+```
+presets/
+  default/
+    layout.ini
+    markers/
+  <name>/
+    layout.ini
+    markers/
+```
+
+一个预设是 `layout.ini` 与整个 `markers/` 目录（标记定义 **和** PB 记录）的快照。首次加载或从旧版本升级时，插件会用当前配置创建 `default` 预设并选中它；`default` 不可删除。预设管理入口在设置面板的 **常规** 标签页（见 [PANEL.md](PANEL.md)）。
+
 ## lang/*.txt
 
 见 [LOCALIZATION.md](LOCALIZATION.md)。
