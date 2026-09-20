@@ -69,6 +69,18 @@ namespace HSRTimer
 
         public Color ColorB = GradientText.ParseColor("FF9A72FF", Color.white);
 
+        // ── Leaderboard HUD (shared by Subsegment and Markers modes) ──
+        // These live in layout.ini [leaderboard]; settings.ini no longer stores
+        // them. OffsetY is relative to the fixed top anchor at the screen center.
+        public int LeaderboardFontSize = 16;
+        public float LeaderboardOffsetX = 16f;
+        public float LeaderboardOffsetY = 0f;
+        public Color LeaderboardColorFaster = GradientText.ParseColor("59FF66FF", new Color(0.35f, 1f, 0.4f, 1f));
+        public Color LeaderboardColorSlower = GradientText.ParseColor("FF5959FF", new Color(1f, 0.35f, 0.35f, 1f));
+        public Color LeaderboardColorTie = Color.white;
+        public string LeaderboardMode = "Subsegment";
+        public string LeaderboardMarkersTimeMode = "Relative";
+
         public void Load()
         {
             CustomTexts.Clear();
@@ -92,6 +104,20 @@ namespace HSRTimer
                     int idx;
                     if (int.TryParse(p.Key, out idx) && System.Enum.TryParse(p.Value, true, out RowType rt))
                         rowsByKey[idx] = rt;
+                }
+                else if (p.Section == "leaderboard")
+                {
+                    switch (p.Key)
+                    {
+                        case "font_size": LeaderboardFontSize = ParseInt(p.Value, LeaderboardFontSize); break;
+                        case "offset_x": LeaderboardOffsetX = ParseFloat(p.Value, LeaderboardOffsetX); break;
+                        case "offset_y": LeaderboardOffsetY = ParseFloat(p.Value, LeaderboardOffsetY); break;
+                        case "color_faster": LeaderboardColorFaster = GradientText.ParseColor(p.Value, LeaderboardColorFaster); break;
+                        case "color_slower": LeaderboardColorSlower = GradientText.ParseColor(p.Value, LeaderboardColorSlower); break;
+                        case "color_tie": LeaderboardColorTie = GradientText.ParseColor(p.Value, LeaderboardColorTie); break;
+                        case "mode": LeaderboardMode = p.Value; break;
+                        case "markers_time_mode": LeaderboardMarkersTimeMode = p.Value; break;
+                    }
                 }
                 else if (p.Section.StartsWith("custom."))
                 {
@@ -149,6 +175,19 @@ namespace HSRTimer
                 rows[i.ToString()] = Rows[i].ToString();
             sections.Add(new KeyValuePair<string, IDictionary<string, string>>("rows", rows));
 
+            var leaderboard = new Dictionary<string, string>
+            {
+                ["font_size"] = LeaderboardFontSize.ToString(CultureInfo.InvariantCulture),
+                ["offset_x"] = LeaderboardOffsetX.ToString("0.###", CultureInfo.InvariantCulture),
+                ["offset_y"] = LeaderboardOffsetY.ToString("0.###", CultureInfo.InvariantCulture),
+                ["color_faster"] = GradientText.ToHex(LeaderboardColorFaster),
+                ["color_slower"] = GradientText.ToHex(LeaderboardColorSlower),
+                ["color_tie"] = GradientText.ToHex(LeaderboardColorTie),
+                ["mode"] = LeaderboardMode,
+                ["markers_time_mode"] = LeaderboardMarkersTimeMode,
+            };
+            sections.Add(new KeyValuePair<string, IDictionary<string, string>>("leaderboard", leaderboard));
+
             for (int i = 0; i < CustomTexts.Count; i++)
             {
                 var ct = CustomTexts[i];
@@ -165,7 +204,7 @@ namespace HSRTimer
             PersistenceService.Write(
                 PersistenceService.PathFor("layout.ini"),
                 sections,
-                "HSRTimer HUD layout. Text is drawn directly on screen (no window).\n# [text] offset_x/offset_y (top-left px), font_size, color_a/color_b;\n# [rows] ordered row types; [custom.<n>] arbitrary on-screen texts (template vars).");
+                "HSRTimer HUD layout. Text is drawn directly on screen (no window).\n# [text] offset_x/offset_y (top-left px), font_size, color_a/color_b;\n# [rows] ordered row types; [leaderboard] shared leaderboard HUD appearance;\n# [custom.<n>] arbitrary on-screen texts (template vars).");
         }
 
         // ── helpers ──

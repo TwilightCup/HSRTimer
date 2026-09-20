@@ -81,6 +81,16 @@ color_b = FF9A72FF
 1 = CurrentSegment
 2 = LastSegment
 
+[leaderboard]
+font_size = 16
+offset_x = 16
+offset_y = 0
+color_faster = 59FF66FF
+color_slower = FF5959FF
+color_tie = FFFFFFFF
+mode = Subsegment
+markers_time_mode = Relative
+
 [custom.0]
 x = 400
 y = 50
@@ -96,6 +106,7 @@ text = Collection: {collection}
 
 - `[text]` —— 主文本块直接绘制在屏幕上(无窗口、不可拖动)。`offset_x`/`offset_y` 为距屏幕左上角的像素偏移;`font_size` 为字号;`color_a`/`color_b` 为默认双色渐变(十六进制,见 [HUD.md](HUD.md))。
 - `[rows]` —— 有序行;键为从 0 开始的索引。行类型:`GameTime`、`RealTime`、`CurrentSegment`、`LastSegment`、`LastRun`、`CurrentState`。`RealTime` 还受 `show_real_time` 设置控制(默认开启)。起身时间不是行类型 —— 它显示在“上一局游戏时间”旁边的右侧列,由 `show_wake_up_time` 控制。
+- `[leaderboard]` —— 共享排行榜 HUD（分段对比 / 标记模式）。`font_size`、`offset_x`、`offset_y`、`color_faster`、`color_slower`、`color_tie`、`mode`、`markers_time_mode` 控制其外观与显示模式。`offset_y` 相对屏幕垂直中心的固定顶部锚点；内容向下延伸。
 - `[custom.<n>]` —— 位于 `(x, y)` 的任意屏上文本,各自带渐变。模板变量:`{date}`、`{time}`、`{version}`、`{collection}`、`{category}`、`{gametime}`、`{realtime}`。
 
 整个计时器的显示/隐藏由 `settings.ini` 中的 `show_hud`(及切换面板键)控制,不在 `layout.ini` 中。
@@ -120,14 +131,7 @@ RespawnJumpMeters = 100.0
 MaxSamplesPerLevel = 480
 MaxLeaderboardEntries = 8
 DebugLogging = false
-HudFontSize = 16
-HudOffsetX = 16
-HudOffsetY = 0
-HudColorFaster = 59FF66FF
-HudColorSlower = FF5959FF
-HudColorTie = FFFFFFFF
 DisabledLeaderboardSources =
-LeaderboardMode = Subsegment
 ```
 
 | 键 | 默认 | 说明 |
@@ -146,14 +150,9 @@ LeaderboardMode = Subsegment
 | `MaxSamplesPerLevel` | `480` | 单关内累计采样条数上限。当下一条采样将超过上限时，本关立即停止采样并清空当前内存中的采样缓冲，该关不计入 PB。 |
 | `MaxLeaderboardEntries` | `8` | 排行榜最多显示项数。 |
 | `DebugLogging` | false | 详细 subsegment 日志（采样/加载/平面/结算/PB 写入）。 |
-| `HudFontSize` | 16 | 排行榜字号，独立于主计时面板。 |
-| `HudOffsetX` | 16 | 排行榜左边缘偏移。 |
-| `HudOffsetY` | 0 | 相对固定顶部锚点（屏幕垂直中心）的纵向偏移；排行榜行从该位置向下延伸。 |
-| `HudColorFaster` | `59FF66FF` | 当前比参考更快的条目颜色（绿色）。 |
-| `HudColorSlower` | `FF5959FF` | 当前比参考更慢的条目颜色（红色）。 |
-| `HudColorTie` | `FFFFFFFF` | 持平及无数据条目颜色（显示为 `--`，白色）。 |
 | `DisabledLeaderboardSources` | *(空)* | 从排行榜隐藏的资料 display id（逗号分隔；`PB` 表示 PB 项，其余为 `LoadPath` 下各顶层文件夹名）。空表示全部显示。 |
-| `LeaderboardMode` | `Subsegment` | 共享排行榜 HUD 的内容：`Subsegment`（参考对比，R8）或 `Markers`（当前关卡的标记 feed，R10.7）。两种模式共用同一个模式循环键与外观设置。 |
+
+共享排行榜 HUD 的外观与显示模式（`font_size`、`offset_x`、`offset_y`、颜色、`mode`、`markers_time_mode`）位于 `layout.ini` 的 `[leaderboard]`，不在这里。`settings.ini` 中旧的 `Hud*`、`LeaderboardMode`、`LeaderboardTimeMode` 键会在下次写入时自动迁移到 `layout.ini` 并从 `settings.ini` 删除。
 
 ## settings.ini — [Markers]
 
@@ -165,7 +164,6 @@ Enable = true
 EditMode = false
 Path = markers
 DebugLogging = false
-LeaderboardTimeMode = Relative
 OverlayFillColor = 3F7FFF66
 OverlayLabelColor = FFFFFFFF
 ```
@@ -176,9 +174,10 @@ OverlayLabelColor = FFFFFFFF
 | `EditMode` | false | 标记编辑模式：开启游戏内可视化（R10.6）、计时器 HUD 底部的醒目提示及其下方的 XYZ 轴向指示器，并解锁面板编辑控件。持久化，重启后保留。 |
 | `Path` | `markers` | 标记定义与 PB 文件目录（`<config>/HSRTimer/markers`）。相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。 |
 | `DebugLogging` | false | 详细标记日志（关卡 key、标记数、触发、物体解析、PB 写入）。 |
-| `LeaderboardTimeMode` | `Relative` | 排行榜中标记 feed 的时间显示（R10.7.3）：`Relative`（与标记 PB 的带符号差值）或 `Absolute`（标记自身的分段时间）。无论哪种模式，条目颜色都始终体现领先/落后。 |
 | `OverlayFillColor` | `3F7FFF66` | 范围立方体与抓取物体高亮的填充色（含透明度）。 |
 | `OverlayLabelColor` | `FFFFFFFF` | 编辑模式叠加层中标记名称文字的颜色。 |
+
+排行榜的时间显示设置（`markers_time_mode`）属于共享排行榜 HUD 配置，位于 `layout.ini` 的 `[leaderboard]`，不在这里。
 
 标记数据文件位于 `<config>/HSRTimer/markers/{关卡}/{类别}.json`（关卡 key 与 subsegment IL 目录同规则：BuiltIn/EditorPick 用英文本地化关卡名，工坊用数字 id，本地工坊无 id 时用关卡文件夹名；类别键规则见 R8.2.4）。**没有加载/导入目录——标记只保存你自己的 PB。**
 

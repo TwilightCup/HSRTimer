@@ -18,7 +18,6 @@ namespace HSRTimer
         public bool Enable;
         public string PBPath;
         public string LoadPath;
-        public KeyCode ToggleKey;
         public string MultiProject;
         public float PlaneRadius;
         public float MinMove;
@@ -29,12 +28,6 @@ namespace HSRTimer
         public int MaxSamplesPerLevel;
         public int MaxLeaderboardEntries;
         public bool DebugLogging;
-        public int HudFontSize;
-        public float HudOffsetX;
-        public float HudOffsetY;
-        public Color HudColorFaster;
-        public Color HudColorSlower;
-        public Color HudColorTie;
 
         /// <summary>
         /// Display ids hidden from the leaderboard (denylist). Empty = show all
@@ -54,7 +47,6 @@ namespace HSRTimer
                 Enable = s.SubsegmentEnable,
                 PBPath = SubsegmentFileStore.ResolvePath(string.IsNullOrEmpty(s.SubsegmentPBPath) ? "subsegment/pb" : s.SubsegmentPBPath),
                 LoadPath = SubsegmentFileStore.ResolvePath(string.IsNullOrEmpty(s.SubsegmentLoadPath) ? "subsegment/load" : s.SubsegmentLoadPath),
-                ToggleKey = s.SubsegmentToggleKey,
                 MultiProject = IsValidMultiProject(s.SubsegmentMultiProject) ? s.SubsegmentMultiProject : "Any%",
                 PlaneRadius = s.SubsegmentPlaneRadius,
                 MinMove = s.SubsegmentMinMove,
@@ -65,12 +57,6 @@ namespace HSRTimer
                 MaxSamplesPerLevel = Mathf.Max(1, s.SubsegmentMaxSamplesPerLevel),
                 MaxLeaderboardEntries = Mathf.Max(1, s.SubsegmentMaxLeaderboardEntries),
                 DebugLogging = s.SubsegmentDebugLogging,
-                HudFontSize = Mathf.Max(8, s.SubsegmentHudFontSize),
-                HudOffsetX = s.SubsegmentHudOffsetX,
-                HudOffsetY = s.SubsegmentHudOffsetY,
-                HudColorFaster = s.SubsegmentHudColorFaster,
-                HudColorSlower = s.SubsegmentHudColorSlower,
-                HudColorTie = s.SubsegmentHudColorTie,
                 DisabledLeaderboardSources = new HashSet<string>(
                     s.GetDisabledSubsegmentSources(), System.StringComparer.OrdinalIgnoreCase),
             };

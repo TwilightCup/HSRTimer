@@ -324,27 +324,28 @@ namespace HSRTimer
         // ── Page: Leaderboard (R8.5 HUD appearance + entry state colors + content mode) ──
         private void DrawLeaderboard(ConfigService cfg, SettingsModel s, LocalizationService loc)
         {
+            var layout = cfg.Layout;
             Section(loc.Get("PANEL_LEADERBOARD"));
 
             // R10.7.1: the shared leaderboard shows either the subsegment
             // references or the current level's marker feed.
             Section(loc.Get("SETTINGS_LEADERBOARD_MODE"));
             string[] modes = { loc.Get("SETTINGS_LEADERBOARD_MODE_SUBSEGMENT"), loc.Get("SETTINGS_LEADERBOARD_MODE_MARKERS") };
-            int mi = string.Equals(s.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+            int mi = string.Equals(layout.LeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
             int nextMode = GUILayout.SelectionGrid(mi, modes, 2, _button);
             if (nextMode != mi)
-                s.SubsegmentLeaderboardMode = nextMode == 1 ? "Markers" : "Subsegment";
-            bool markersMode = string.Equals(s.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
+                layout.LeaderboardMode = nextMode == 1 ? "Markers" : "Subsegment";
+            bool markersMode = string.Equals(layout.LeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
 
             Section(loc.Get("PANEL_HUD"));
-            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
-            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
-            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
+            layout.LeaderboardFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), layout.LeaderboardFontSize, 8, 72)), 8, 72);
+            layout.LeaderboardOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), layout.LeaderboardOffsetX, "0.##");
+            layout.LeaderboardOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), layout.LeaderboardOffsetY, "0.##");
 
             Section(loc.Get("SETTINGS_LEADERBOARD_COLORS"));
-            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_FASTER", s.SubsegmentHudColorFaster, c => s.SubsegmentHudColorFaster = c);
-            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_SLOWER", s.SubsegmentHudColorSlower, c => s.SubsegmentHudColorSlower = c);
-            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_TIE", s.SubsegmentHudColorTie, c => s.SubsegmentHudColorTie = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_FASTER", layout.LeaderboardColorFaster, c => layout.LeaderboardColorFaster = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_SLOWER", layout.LeaderboardColorSlower, c => layout.LeaderboardColorSlower = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_TIE", layout.LeaderboardColorTie, c => layout.LeaderboardColorTie = c);
 
             if (markersMode)
             {
@@ -352,10 +353,10 @@ namespace HSRTimer
                 // signed diff vs PB); the entry colors above apply to both.
                 Section(loc.Get("SETTINGS_MARKERS_TIME_MODE"));
                 string[] timeModes = { loc.Get("SETTINGS_MARKERS_TIME_MODE_RELATIVE"), loc.Get("SETTINGS_MARKERS_TIME_MODE_ABSOLUTE") };
-                int ti = string.Equals(s.MarkersLeaderboardTimeMode, "Absolute", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                int ti = string.Equals(layout.LeaderboardMarkersTimeMode, "Absolute", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
                 int nextTime = GUILayout.SelectionGrid(ti, timeModes, 2, _button);
                 if (nextTime != ti)
-                    s.MarkersLeaderboardTimeMode = nextTime == 1 ? "Absolute" : "Relative";
+                    layout.LeaderboardMarkersTimeMode = nextTime == 1 ? "Absolute" : "Relative";
                 GUILayout.Label(loc.Get("SETTINGS_LEADERBOARD_MARKERS_NOTE"), _small);
             }
             else

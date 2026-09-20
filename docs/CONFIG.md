@@ -100,6 +100,16 @@ color_b = FF9A72FF
 1 = CurrentSegment
 2 = LastSegment
 
+[leaderboard]
+font_size = 16
+offset_x = 16
+offset_y = 0
+color_faster = 59FF66FF
+color_slower = FF5959FF
+color_tie = FFFFFFFF
+mode = Subsegment
+markers_time_mode = Relative
+
 [custom.0]
 x = 400
 y = 50
@@ -122,6 +132,11 @@ text = Collection: {collection}
   `RealTime` is also gated by the `show_real_time` setting (default on).
   Wake Up Time is not a row type — it renders in the right-hand column next to
   Last Run and is gated by `show_wake_up_time`.
+- `[leaderboard]` — the shared leaderboard HUD (Subsegment / Markers modes).
+  `font_size`, `offset_x`, `offset_y`, `color_faster`, `color_slower`,
+  `color_tie`, `mode`, and `markers_time_mode` control its appearance and
+  display mode. `offset_y` is relative to the fixed top anchor at the screen
+  center; content extends downward.
 - `[custom.<n>]` — arbitrary on-screen texts at `(x, y)` with their own gradient.
   Template variables: `{date}`, `{time}`, `{version}`, `{collection}`,
   `{category}`, `{gametime}`, `{realtime}`.
@@ -151,14 +166,7 @@ RespawnJumpMeters = 100.0
 MaxSamplesPerLevel = 480
 MaxLeaderboardEntries = 8
 DebugLogging = false
-HudFontSize = 16
-HudOffsetX = 16
-HudOffsetY = 0
-HudColorFaster = 59FF66FF
-HudColorSlower = FF5959FF
-HudColorTie = FFFFFFFF
 DisabledLeaderboardSources =
-LeaderboardMode = Subsegment
 ```
 
 | Key | Default | Notes |
@@ -177,14 +185,13 @@ LeaderboardMode = Subsegment
 | `MaxSamplesPerLevel` | `480` | Cap on the cumulative number of samples recorded in one level. When the next sample would exceed it, sampling stops for the rest of the level and the buffered samples are discarded, so that level never contributes a PB. |
 | `MaxLeaderboardEntries` | `8` | Maximum displayed leaderboard rows. |
 | `DebugLogging` | false | Detailed subsegment logging (sample/load/plane/settle/PB writes). |
-| `HudFontSize` | 16 | Subsegment leaderboard font size, independent of the main timer HUD. |
-| `HudOffsetX` | 16 | Left edge of the subsegment leaderboard. |
-| `HudOffsetY` | 0 | Vertical offset from the fixed top anchor (the screen center); leaderboard rows extend downward from there. |
-| `HudColorFaster` | `59FF66FF` | Color of entries where the current run is faster than the reference (green). |
-| `HudColorSlower` | `FF5959FF` | Color of entries where the current run is slower than the reference (red). |
-| `HudColorTie` | `FFFFFFFF` | Color of tie and no-data entries (shown as `--`, white). |
 | `DisabledLeaderboardSources` | *(empty)* | Comma-separated display ids hidden from the leaderboard (`PB` = the PB entry; otherwise each top-level folder name under `LoadPath`). Empty shows everything. |
-| `LeaderboardMode` | `Subsegment` | Content of the shared leaderboard HUD: `Subsegment` (reference comparison, R8) or `Markers` (current level's marker feed, R10.7). The same mode-cycle key and appearance settings apply to both. |
+
+The shared leaderboard HUD's appearance and display mode (`font_size`,
+`offset_x`, `offset_y`, colors, `mode`, `markers_time_mode`) live in
+`layout.ini` `[leaderboard]`, not here. Old `Hud*`, `LeaderboardMode`, and
+`LeaderboardTimeMode` keys in `settings.ini` are migrated to `layout.ini`
+automatically and removed from `settings.ini` on the next write.
 
 ## settings.ini — [Markers]
 
@@ -197,7 +204,6 @@ Enable = true
 EditMode = false
 Path = markers
 DebugLogging = false
-LeaderboardTimeMode = Relative
 OverlayFillColor = 3F7FFF66
 OverlayLabelColor = FFFFFFFF
 ```
@@ -208,9 +214,11 @@ OverlayLabelColor = FFFFFFFF
 | `EditMode` | false | Marker edit mode: shows the in-game overlay (R10.6), the conspicuous HUD hint at the bottom of the timer HUD, and the XYZ axis indicator below it; it also unlocks the panel's edit controls. Persisted, so it survives restarts. |
 | `Path` | `markers` | Directory for marker definition + PB files (`<config>/HSRTimer/markers`). Relative paths resolve under `<config>/HSRTimer/`; absolute paths are accepted. |
 | `DebugLogging` | false | Detailed marker logging (level key, marker count, triggers, object resolution, PB writes). |
-| `LeaderboardTimeMode` | `Relative` | Marker feed time display in the leaderboard (R10.7.3): `Relative` (signed diff vs the marker's PB) or `Absolute` (the marker's own segment time). Entry colors always reflect ahead/behind regardless. |
 | `OverlayFillColor` | `3F7FFF66` | Fill color (with alpha) of the translucent range cubes and grab-object highlights. |
 | `OverlayLabelColor` | `FFFFFFFF` | Color of the marker name labels in the edit-mode overlay. |
+
+The leaderboard time-display setting (`markers_time_mode`) is part of the
+shared leaderboard HUD config in `layout.ini` `[leaderboard]`, not here.
 
 Marker data files live under `<config>/HSRTimer/markers/{level}/{category}.json`
 (the level key uses the same scheme as subsegment IL ids: English localized
