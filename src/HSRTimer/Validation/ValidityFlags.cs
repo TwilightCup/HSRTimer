@@ -10,7 +10,8 @@ namespace HSRTimer
     ///   - unforgivable (permanent until game restart),
     ///   - forgivable (clearable on retry),
     ///   - soft (counted, shown in normal HUD text, only flashing red on the
-    ///     triggering frame; cleared only by a full timer reset).
+    ///     triggering frame; cleared on one-key retry, but not by pause-menu
+    ///     restart; removed by a full timer reset).
     /// Reasons only accumulate; they never auto-clear except via
     /// <see cref="ClearForgivable"/> / <see cref="ClearAll"/>.
     /// </summary>
@@ -82,8 +83,11 @@ namespace HSRTimer
                 _forgivable.Add(reason);
         }
 
-        /// <summary>R5.4.2: clear only forgivable flags (manual retry / pause-menu restart). Soft flags are deliberately kept.</summary>
+        /// <summary>R5.4.2: clear only forgivable flags (pause-menu restart / one-key retry). Soft flags are kept for pause-menu restart, but one-key retry clears them explicitly.</summary>
         public void ClearForgivable() => _forgivable.Clear();
+
+        /// <summary>Clear only soft flags (one-key retry). Hard flags and unforgivable flags are kept.</summary>
+        public void ClearSoftFlags() => _soft.Clear();
 
         /// <summary>Clear everything (full-run reset / game restart), including soft flags.</summary>
         public void ClearAll()
