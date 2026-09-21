@@ -84,7 +84,7 @@ PANEL_SAVE:Save
 PANEL_CLOSE:Close
 PANEL_FOOTER:Changes apply live. Saved on Close or game exit.
 
-# ===== Tags (R3.3 - R3.6 + Glitchless + NoEC) =====
+# ===== Tags =====
 HUD_TAGS_LABEL:Tags
 TAG_CHECKPOINT:Checkpoint
 TAG_NO_CHECKPOINT:No Checkpoint

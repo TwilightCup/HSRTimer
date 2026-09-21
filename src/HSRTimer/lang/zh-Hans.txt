@@ -84,7 +84,7 @@ PANEL_SAVE:保存
 PANEL_CLOSE:关闭
 PANEL_FOOTER:改动实时生效。关闭面板或退出游戏时写入磁盘。
 
-# ===== 标签 (R3.3 - R3.6 + Glitchless + NoEC) =====
+# ===== 标签 =====
 HUD_TAGS_LABEL:规则标签
 TAG_CHECKPOINT:检查点
 TAG_NO_CHECKPOINT:无检查点
