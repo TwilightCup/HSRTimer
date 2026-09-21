@@ -27,11 +27,15 @@ namespace HSRTimer
         private readonly HashSet<InvalidReason> _forgivable = new HashSet<InvalidReason>();
         private readonly Dictionary<InvalidReason, SoftFlagState> _soft = new Dictionary<InvalidReason, SoftFlagState>();
 
-        /// <summary>Any invalid flag at all, including soft flags (used to gate PB recording).</summary>
-        public bool IsInvalid => _unforgivable.Count + _forgivable.Count + _soft.Count > 0;
+        /// <summary>
+        /// True when a hard invalid flag is active (unforgivable or forgivable).
+        /// Soft flags do NOT make the run invalid for subsegment/marker PB
+        /// recording; they are informational and shown separately on the HUD.
+        /// </summary>
+        public bool IsInvalid => _unforgivable.Count + _forgivable.Count > 0;
 
-        /// <summary>True when a normal (persistent red-banner) invalid flag is active. Soft flags are excluded.</summary>
-        public bool HasHardInvalid => _unforgivable.Count + _forgivable.Count > 0;
+        /// <summary>Alias for the HUD banner condition: hard flags only, soft flags excluded.</summary>
+        public bool HasHardInvalid => IsInvalid;
 
         public bool HasUnforgivable => _unforgivable.Count > 0;
 
