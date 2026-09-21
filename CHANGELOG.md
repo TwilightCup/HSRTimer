@@ -2,16 +2,17 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
-## 0.0.0
+## 1.5.0
 
-- **Release Date:** Unreleased
-- **Highlights:** _To be filled during version branch preparation._
+- **Release Date:** _21 Sep 2026_
+- **Highlights:**
+  - Added **Presets** for HUD layout and marker snapshots.
+  - Added the `NoEC` tag with extended climbing detection. Note that EC is `soft invalid flag`, which means that it wont mark the run as invalid since it might misjudge, final judgement should be made by human.
 - **Details:**
   - Moved the shared leaderboard HUD appearance and display-mode settings from `settings.ini` into `layout.ini` under a new `[leaderboard]` section; existing settings are migrated automatically.
   - Added **Presets**: save and switch whole HUD layout + marker snapshots from the General tab. The built-in `default` preset is created automatically on first load or when upgrading from an older version; a preset can be created, selected, loaded, saved, and (except `default`) deleted. The current selection is stored in `settings.ini` under `[Presets] Current`.
   - Added **soft invalid flags**: soft flags render on their own HUD line in normal text color with a trigger count (e.g. `EC x3`), flash red on each new trigger, are cleared by one-key retry and a full timer reset, and are not cleared by pause-menu restart.
   - Added the `NoEC` tag to the Category page with extended climbing detection: when the player leaves the ground, the first grab height of that airborne period is the baseline; any new grab more than 0.2 m above it is EC (debounced to at most once per 0.2 s). The `Ec` violation is a soft flag.
-- **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.4.0
 
