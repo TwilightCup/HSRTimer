@@ -28,6 +28,21 @@ namespace HSRTimer
 
         private static readonly string[] SourceKeys = { "MARKER_SOURCE_MAIN_DREAMS", "MARKER_SOURCE_EXTRA_DREAMS", "MARKER_SOURCE_WORKSHOP" };
 
+        /// <summary>
+        /// Drop the cached level page + marker set so the next visit re-reads from
+        /// disk. Called after a preset load, which replaces the live marker files.
+        /// </summary>
+        public static void InvalidateCache()
+        {
+            _levelPage = null;
+            _currentSet = null;
+            _currentCategory = null;
+            _expandedMarkerId = null;
+            _confirmDeleteId = null;
+            _hint = null;
+            _sourceExpanded = _levelPageSource;
+        }
+
         public static void Draw(ConfigService cfg, LocalizationService loc,
             GUIStyle section, GUIStyle label, GUIStyle value, GUIStyle small,
             GUIStyle toggle, GUIStyle button, GUIStyle textField)

@@ -46,6 +46,21 @@ SETTINGS_SHOW_REAL_TIME:Show Real Time
 SETTINGS_SHOW_WAKE_UP_TIME:Show Wake Up Time
 SETTINGS_ONLY_RECORD_FIRST_WAKE_UP_TIME:Only record first wake-up time
 SETTINGS_CENTER_LOADING_SAVING:Center Loading/Saving prompts
+SETTINGS_PRESET:Presets
+SETTINGS_PRESET_SELECT_HINT:[Click to select]
+SETTINGS_PRESET_NEW:New preset
+SETTINGS_PRESET_NEW_NAME:Preset name
+SETTINGS_PRESET_CONFIRM:OK
+SETTINGS_PRESET_CANCEL:Cancel
+SETTINGS_PRESET_LOAD:Load preset
+SETTINGS_PRESET_SAVE:Save preset
+SETTINGS_PRESET_DELETE:Delete preset
+SETTINGS_PRESET_EMPTY:Preset name cannot be empty.
+SETTINGS_PRESET_DUPLICATE:A preset with this name already exists.
+SETTINGS_PRESET_LOAD_FAILED:Failed to load the selected preset.
+SETTINGS_PRESET_SAVE_FAILED:Failed to save the selected preset.
+SETTINGS_PRESET_DELETE_FAILED:Failed to delete the selected preset.
+SETTINGS_PRESET_FAILED:Preset operation failed.
 
 # ===== Settings panel (GUI) =====
 PANEL_TAB_GENERAL:General
@@ -69,13 +84,14 @@ PANEL_SAVE:Save
 PANEL_CLOSE:Close
 PANEL_FOOTER:Changes apply live. Saved on Close or game exit.
 
-# ===== Tags (R3.3 - R3.6 + Glitchless) =====
+# ===== Tags =====
 HUD_TAGS_LABEL:Tags
 TAG_CHECKPOINT:Checkpoint
 TAG_NO_CHECKPOINT:No Checkpoint
 TAG_JUMPLESS:Jumpless
 TAG_VOICELINE:Voiceline
 TAG_GLITCHLESS:Glitchless
+TAG_NO_EC:NoEC
 
 # ===== Validity reasons (R5) =====
 INVALID_RUN:RUN IS INVALID
@@ -88,6 +104,7 @@ INVALID_VOICELINE:VOICELINE SKIPPED
 INVALID_SSG:SSG
 INVALID_PROP_FLY:Prop Fly
 INVALID_FOOTSIE:Footsie
+INVALID_EC:EC
 HUD_INVALID_RETRY_TARGET:Specified retry level is invalid
 SEVERITY_UNFORGIVABLE:unforgivable
 SEVERITY_FORGIVABLE:forgivable

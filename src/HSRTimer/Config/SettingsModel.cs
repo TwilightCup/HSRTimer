@@ -79,19 +79,6 @@ namespace HSRTimer
         public int SubsegmentMaxLeaderboardEntries = 8;
         public bool SubsegmentDebugLogging = false;
 
-        // Subsegment leaderboard HUD appearance (R8.5); independent of the main
-        // timer panel's layout. OffsetY is an offset from the fixed top anchor
-        // at the screen center; rows extend downward from there.
-        public int SubsegmentHudFontSize = 16;
-        public float SubsegmentHudOffsetX = 16f;
-        public float SubsegmentHudOffsetY = 0f;
-
-        // Leaderboard entry state colors (R8.5.2.2): faster, slower, and
-        // tie/no-data. Persisted in the [Subsegment] section as hex.
-        public Color SubsegmentHudColorFaster = GradientText.ParseColor("59FF66FF", new Color(0.35f, 1f, 0.4f, 1f));
-        public Color SubsegmentHudColorSlower = GradientText.ParseColor("FF5959FF", new Color(1f, 0.35f, 0.35f, 1f));
-        public Color SubsegmentHudColorTie = Color.white;
-
         // Subsegment sources that are hidden from the leaderboard (denylist).
         // The PB entry has the id "PB"; each top-level folder under LoadPath is
         // identified by its folder name. Empty string means everything is shown.
@@ -103,22 +90,22 @@ namespace HSRTimer
         public string MarkersPath = "markers";
         public bool MarkersDebugLogging = false;
 
-        // Leaderboard content mode (R10.7.1): the shared leaderboard HUD shows
-        // either the subsegment references or the current level's marker feed.
-        public string SubsegmentLeaderboardMode = "Subsegment";
-
-        // Marker feed time display (R10.7.3): "Absolute" shows the marker's own
-        // segment time, "Relative" shows the signed diff vs the marker's PB.
-        public string MarkersLeaderboardTimeMode = "Relative";
-
         // Marker overlay appearance (R10.6.1/2): range-cube fill color (with
         // alpha) and the marker-name label color.
         public Color MarkersOverlayFillColor = GradientText.ParseColor("3F7FFF66", new Color(0.25f, 0.5f, 1f, 0.4f));
         public Color MarkersOverlayLabelColor = Color.white;
 
+        // ── Presets (R11) ───────────────────────────────────────────────
+        // The currently selected preset. The selection itself is a normal config
+        // item so it survives restarts; there is intentionally NO separate
+        // "presets initialized" flag (first-load/upgrade is detected by the
+        // presence of the presets directory / default preset).
+        public string CurrentPreset = PresetStore.DefaultPresetName;
+
         private const string Section = "settings";
         private const string SubsegmentSection = "Subsegment";
         private const string MarkersSection = "Markers";
+        private const string PresetsSection = "Presets";
 
         public void Load()
         {
@@ -135,6 +122,10 @@ namespace HSRTimer
                 else if (p.Section == MarkersSection)
                 {
                     ApplyMarkers(p.Key, p.Value);
+                }
+                else if (p.Section == PresetsSection)
+                {
+                    ApplyPresets(p.Key, p.Value);
                 }
             }
         }
@@ -190,14 +181,16 @@ namespace HSRTimer
                     case "MaxSamplesPerLevel": SubsegmentMaxSamplesPerLevel = ParseInt(value, SubsegmentMaxSamplesPerLevel); break;
                     case "MaxLeaderboardEntries": SubsegmentMaxLeaderboardEntries = ParseInt(value, SubsegmentMaxLeaderboardEntries); break;
                     case "DebugLogging": SubsegmentDebugLogging = ParseBool(value, SubsegmentDebugLogging); break;
-                    case "HudFontSize": SubsegmentHudFontSize = ParseInt(value, SubsegmentHudFontSize); break;
-                    case "HudOffsetX": SubsegmentHudOffsetX = ParseFloat(value, SubsegmentHudOffsetX); break;
-                    case "HudOffsetY": SubsegmentHudOffsetY = ParseFloat(value, SubsegmentHudOffsetY); break;
-                    case "HudColorFaster": SubsegmentHudColorFaster = GradientText.ParseColor(value, SubsegmentHudColorFaster); break;
-                    case "HudColorSlower": SubsegmentHudColorSlower = GradientText.ParseColor(value, SubsegmentHudColorSlower); break;
-                    case "HudColorTie": SubsegmentHudColorTie = GradientText.ParseColor(value, SubsegmentHudColorTie); break;
                     case "DisabledLeaderboardSources": SubsegmentDisabledSources = value; break;
-                    case "LeaderboardMode": SubsegmentLeaderboardMode = value; break;
+                    case "HudFontSize":
+                    case "HudOffsetX":
+                    case "HudOffsetY":
+                    case "HudColorFaster":
+                    case "HudColorSlower":
+                    case "HudColorTie":
+                    case "LeaderboardMode":
+                        // Legacy keys: migrated to layout.ini [leaderboard] by ConfigRepair; ignored here.
+                        break;
                     default:
                         Plugin.Logger.LogWarning($"HSRTimer: settings.ini: unknown Subsegment key '{key}', ignored.");
                         break;
@@ -219,7 +212,9 @@ namespace HSRTimer
                     case "EditMode": MarkersEditMode = ParseBool(value, MarkersEditMode); break;
                     case "Path": MarkersPath = value; break;
                     case "DebugLogging": MarkersDebugLogging = ParseBool(value, MarkersDebugLogging); break;
-                    case "LeaderboardTimeMode": MarkersLeaderboardTimeMode = value; break;
+                    case "LeaderboardTimeMode":
+                        // Legacy key: migrated to layout.ini [leaderboard] by ConfigRepair; ignored here.
+                        break;
                     case "OverlayFillColor": MarkersOverlayFillColor = GradientText.ParseColor(value, MarkersOverlayFillColor); break;
                     case "OverlayLabelColor": MarkersOverlayLabelColor = GradientText.ParseColor(value, MarkersOverlayLabelColor); break;
                     default:
@@ -230,6 +225,24 @@ namespace HSRTimer
             catch
             {
                 Plugin.Logger.LogWarning($"HSRTimer: settings.ini: bad Markers value for '{key}' = '{value}', kept default.");
+            }
+        }
+
+        private void ApplyPresets(string key, string value)
+        {
+            try
+            {
+                switch (key)
+                {
+                    case "Current": CurrentPreset = string.IsNullOrEmpty(value) ? PresetStore.DefaultPresetName : value; break;
+                    default:
+                        Plugin.Logger.LogWarning($"HSRTimer: settings.ini: unknown Presets key '{key}', ignored.");
+                        break;
+                }
+            }
+            catch
+            {
+                Plugin.Logger.LogWarning($"HSRTimer: settings.ini: bad Presets value for '{key}' = '{value}', kept default.");
             }
         }
 
@@ -268,14 +281,7 @@ namespace HSRTimer
                 ["MaxSamplesPerLevel"] = SubsegmentMaxSamplesPerLevel.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["MaxLeaderboardEntries"] = SubsegmentMaxLeaderboardEntries.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["DebugLogging"] = SubsegmentDebugLogging ? "true" : "false",
-                ["HudFontSize"] = SubsegmentHudFontSize.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["HudOffsetX"] = SubsegmentHudOffsetX.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
-                ["HudOffsetY"] = SubsegmentHudOffsetY.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
-                ["HudColorFaster"] = GradientText.ToHex(SubsegmentHudColorFaster),
-                ["HudColorSlower"] = GradientText.ToHex(SubsegmentHudColorSlower),
-                ["HudColorTie"] = GradientText.ToHex(SubsegmentHudColorTie),
                 ["DisabledLeaderboardSources"] = SubsegmentDisabledSources,
-                ["LeaderboardMode"] = SubsegmentLeaderboardMode,
             };
             var markers = new Dictionary<string, string>
             {
@@ -283,9 +289,12 @@ namespace HSRTimer
                 ["EditMode"] = MarkersEditMode ? "true" : "false",
                 ["Path"] = MarkersPath,
                 ["DebugLogging"] = MarkersDebugLogging ? "true" : "false",
-                ["LeaderboardTimeMode"] = MarkersLeaderboardTimeMode,
                 ["OverlayFillColor"] = GradientText.ToHex(MarkersOverlayFillColor),
                 ["OverlayLabelColor"] = GradientText.ToHex(MarkersOverlayLabelColor),
+            };
+            var presets = new Dictionary<string, string>
+            {
+                ["Current"] = string.IsNullOrEmpty(CurrentPreset) ? PresetStore.DefaultPresetName : CurrentPreset,
             };
             PersistenceService.Write(
                 PersistenceService.PathFor("settings.ini"),
@@ -294,6 +303,7 @@ namespace HSRTimer
                     new KeyValuePair<string, IDictionary<string, string>>(Section, kv),
                     new KeyValuePair<string, IDictionary<string, string>>(SubsegmentSection, sub),
                     new KeyValuePair<string, IDictionary<string, string>>(MarkersSection, markers),
+                    new KeyValuePair<string, IDictionary<string, string>>(PresetsSection, presets),
                 },
                 "HSRTimer settings. Lines of the form 'key = value'. Bad lines are ignored.");
         }

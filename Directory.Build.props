@@ -1,18 +1,16 @@
 <Project>
 
   <!--
-    Default game install locations for the macOS Steam build of Human: Fall Flat.
-    These are used as <HintPath> roots for the game/BepInEx DLL references in
-    HSRTimer.csproj. Override either property from the environment (CI, another
-    platform, a non-default Steam library) by setting the env var of the same
-    name before invoking `dotnet build`.
+    Machine-local reference locations are kept out of the repository.
+    Create Directory.Build.user.props (gitignored) to set GAME_MANAGED and
+    BEPINEX_CORE for this machine, or export those variables in the environment
+    before invoking `dotnet build` (CI / other machines).
   -->
-  <PropertyGroup Condition=" '$(GAME_MANAGED)' == '' ">
-    <GAME_MANAGED>$(HOME)/Library/Application Support/Steam/steamapps/common/Human Fall Flat/Human.app/Contents/Resources/Data/Managed</GAME_MANAGED>
-  </PropertyGroup>
+  <Import Project="Directory.Build.user.props" Condition="Exists('Directory.Build.user.props')" />
 
-  <PropertyGroup Condition=" '$(BEPINEX_CORE)' == '' ">
-    <BEPINEX_CORE>$(HOME)/Library/Application Support/Steam/steamapps/common/Human Fall Flat/BepInEx/core</BEPINEX_CORE>
-  </PropertyGroup>
+  <Target Name="CheckReferencePaths" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition=" '$(GAME_MANAGED)' == '' or '$(BEPINEX_CORE)' == '' "
+           Text="GAME_MANAGED and BEPINEX_CORE must be set. Create Directory.Build.user.props (see .gitignore) or export them before building." />
+  </Target>
 
 </Project>

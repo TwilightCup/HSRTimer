@@ -15,6 +15,9 @@ namespace HSRTimer
     {
         private const float MarkerAxisIndicatorHeight = 38f;
 
+        /// <summary>How long a soft-flag line stays red after a new trigger.</summary>
+        private const float SoftFlagFlashSeconds = 0.6f;
+
         private GUIStyle _rowStyle;
         private GUIStyle _bannerStyle;
         private GUIStyle _customStyle;
@@ -209,8 +212,9 @@ namespace HSRTimer
             // Voiceline / checkpoint extras (R3.3.3, R3.6.3) for the active category.
             y += DrawTagExtras(cfg, state, loc, x, y);
 
-            // Invalid banner (R5.3.2).
-            if (state.Flags.IsInvalid)
+            // Invalid banner (R5.3.2). Soft flags are NOT part of this banner;
+            // they render on their own lines in normal HUD text color below.
+            if (state.Flags.HasHardInvalid)
             {
                 string reasons = state.Flags.FormatReasons(loc);
                 string banner = loc.Get("INVALID_RUN") + ": " + reasons;
@@ -219,6 +223,10 @@ namespace HSRTimer
                 DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, y, _bannerStyle);
                 y += _bannerStyle.CalcSize(content).y + 2f;
             }
+
+            // Soft flags: normal HUD text with a trigger count, each on its own
+            // line. A newly triggered flag flashes red for a short moment.
+            y += DrawSoftFlags(cfg, state, loc, x, y);
 
             // R6.5: show the retry-target-resolution failure in the same red
             // banner style as a run invalid hint. It stays visible until the
@@ -326,6 +334,28 @@ namespace HSRTimer
             }
 
             GUI.color = prevColor;
+        }
+
+        /// <summary>
+        /// Draw one line per active soft flag in the normal HUD text colors,
+        /// appending its trigger count ("name x3"). When a flag was triggered
+        /// within <see cref="SoftFlagFlashSeconds"/>, the whole line flashes red.
+        /// Returns the vertical space consumed.
+        /// </summary>
+        private float DrawSoftFlags(ConfigService cfg, RunState state, LocalizationService loc, float x, float y)
+        {
+            float added = 0f;
+            foreach (var soft in state.Flags.SoftFlags)
+            {
+                string line = loc.Get(InvalidReasons.LocalKey(soft.Reason)) + " x" + soft.Count;
+                bool flashing = Time.realtimeSinceStartup - soft.LastTriggerTime <= SoftFlagFlashSeconds;
+                if (flashing)
+                    DrawGradientLine(line, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, y + added, _rowStyle);
+                else
+                    DrawGradientLine(line, cfg.Layout.ColorA, cfg.Layout.ColorB, x, y + added, _rowStyle);
+                added += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+            }
+            return added;
         }
 
         private float DrawTagExtras(ConfigService cfg, RunState state, LocalizationService loc, float x, float y)

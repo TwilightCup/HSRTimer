@@ -29,6 +29,15 @@ HSRTimer saves.
 - **Language** — pick the active language from the loaded set (single-select).
   "Reload language files" re-scans `lang/*.txt`. External tabs that implement
   `ILocalizableSettingsPanelTab` follow this selection automatically.
+- **Presets** — save and switch whole `layout.ini` + markers snapshots. The
+  dropdown below **Language** lists all presets (`default` is always pinned to
+  the top); the **Load preset** button
+  applies the selected snapshot to the live layout/markers, and **Save preset**
+  writes the current layout/markers into the selected preset. **New preset**
+  saves the current config under a new name and selects it. The current
+  selection is persisted in `settings.ini` (`[Presets] Current`). The built-in
+  `default` preset is created automatically on first load/upgrade and cannot be
+  deleted. See [CONFIG.md](CONFIG.md).
 - **Keybinds** — reset / retry / settings / leaderboard mode-cycle keys. The
   leaderboard mode-cycle key cycles the shared leaderboard HUD through hidden →
   Subsegment → Markers → hidden. To rebind: click the field, then press the
@@ -49,8 +58,8 @@ HSRTimer saves.
 
 ## Category
 
-- **Rule tags** — a multi-select of every registered rule tag (the five built-in
-  tags: `Checkpoint`, `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, plus
+- **Rule tags** — a multi-select of every registered rule tag (the six built-in
+  tags: `Checkpoint`, `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, `NoEC`, plus
   any custom tags registered by other plugins — see [EXTENDING.md](EXTENDING.md)).
   Checking a tag enables it; unchecking disables it. There are no category
   presets — this tag set *is* the active rule set. Changes are live and

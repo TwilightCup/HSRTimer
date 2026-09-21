@@ -33,7 +33,7 @@ namespace HSRTimer
 
     /// <summary>
     /// Extension point for category tag rules (R3.7). Built-in tags
-    /// (Checkpoint/NoCheckpoint/Jumpless/Voiceline/Glitchless) and any third-party rule
+    /// (Checkpoint/NoCheckpoint/Jumpless/Voiceline/Glitchless/NoEC) and any third-party rule
     /// implement this interface and are driven identically by the engine.
     /// Lifecycle: <see cref="OnLevelEnter"/> once when a segment starts,
     /// <see cref="OnTick"/> every physics frame while playing, <see cref="OnLevelExit"/>

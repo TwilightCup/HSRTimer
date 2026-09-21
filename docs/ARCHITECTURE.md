@@ -57,7 +57,7 @@ Tags/
   TagRuleRegistry.cs      extension registry (R3.7)
   CheckpointRules.cs      R4 skip-exception + final-checkpoint tables
   VoicelineTracker.cs     scene scan + Easter detection
-  Rules/                  Checkpoint / NoCheckpoint / Jumpless / Voiceline / Glitchless
+  Rules/                  Checkpoint / NoCheckpoint / Jumpless / Voiceline / Glitchless / NoEC
 Patches/
   PatchModule.cs          Harmony.CreateAndPatchAll
   NarrativeBlockPatches.cs    postfix on NarrativeBlock.Play
@@ -408,8 +408,10 @@ method plus one entry in the `ConfigRepair.Rules` array.
 dotnet build src/HSRTimer/HSRTimer.csproj
 ```
 
-`Directory.Build.props` points at the default Steam install's managed DLLs and
-BepInEx core. Override `GAME_MANAGED` / `BEPINEX_CORE` for other platforms.
+`Directory.Build.props` imports an optional, gitignored
+`Directory.Build.user.props` that holds machine-local reference paths for the
+managed DLLs and BepInEx core. Override `GAME_MANAGED` / `BEPINEX_CORE` for
+other machines.
 
 ## The Markers module (R10)
 
@@ -434,13 +436,14 @@ Markers follow the same **poll, don't patch** principle as everything else:
   level exit is never recorded as a PB.
 - **The leaderboard is shared.** `LeaderboardHud` (renamed from `SubsegmentHud`)
   renders either the subsegment references or the marker feed based on
-  `SubsegmentLeaderboardMode`; the mode-cycle key moved from `SubsegmentManager`
-  to the HUD, so the same key and appearance settings work for both modes. It
-  cycles hidden → Subsegment → Markers → hidden. Its top edge is fixed at the
-  screen center (plus `HudOffsetY`), so content extends downward instead of
-  re-centering as the number of rows changes. The marker feed is newest-first,
-  format `{name}: {time}` (absolute segment time or signed diff vs the marker's
-  PB), with the faster/slower/tie colors applied in both time modes (R10.7).
+  `LayoutModel.LeaderboardMode`; the mode-cycle key moved from
+  `SubsegmentManager` to the HUD, so the same key and appearance settings work
+  for both modes. It cycles hidden → Subsegment → Markers → hidden. Its top
+  edge is fixed at the screen center (plus `layout.ini [leaderboard] offset_y`),
+  so content extends downward instead of re-centering as the number of rows
+  changes. The marker feed is newest-first, format `{name}: {time}` (absolute
+  segment time or signed diff vs the marker's PB), with the faster/slower/tie
+  colors applied in both time modes (R10.7).
 - **Object identity has no GUID in the game.** A captured grab-object reference
   stores the serialized `NetIdentity.sceneId` (unique per scene object within a
   level build) when present, else the hierarchy path from the scene root, plus

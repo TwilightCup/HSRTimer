@@ -136,8 +136,8 @@ In Markers mode:
 - Row format: `{marker name}: {time}`. The time is either the marker's
   **absolute segment time** (`MM:SS.mmm`) or the **relative** signed difference
   to that marker's PB (`+MM:SS.mmm` / `-MM:SS.mmm`), chosen by
-  `Markers.LeaderboardTimeMode` (default `Relative`). Without a PB entry, the
-  relative row shows `--`.
+  `markers_time_mode` in `layout.ini` `[leaderboard]` (default `Relative`).
+  Without a PB entry, the relative row shows `--`.
 - **Newest trigger is inserted directly under the title row**; older rows shift
   down (no re-sorting, no truncation).
 - The faster/slower/tie colors always apply: faster than PB = green, slower =
@@ -146,6 +146,14 @@ In Markers mode:
   on screen until the next level's first trigger replaces it) unless the next
   level has no markers, in which case it clears immediately.
 - Switching the mode does not affect subsegment recording or PB writes.
+
+## Presets (R11)
+
+Starting with R11, marker data can be saved as part of a layout + markers
+preset. A preset snapshot includes the whole active `markers/` directory —
+marker definitions **and** PB records — together with `layout.ini`. Use the
+**Presets** section in the settings panel's General tab to create, select,
+load, or save presets; see [CONFIG.md](CONFIG.md) for the storage layout.
 
 ## Troubleshooting
 

@@ -18,7 +18,7 @@ Both are covered below.
 The tag system is extensible (R3.7). Any BepInEx plugin can register a
 **custom tag rule** — new validity logic that users opt into by enabling the
 tag id in the settings panel (persisted to `tags.ini`). The built-in tags
-(`Checkpoint`, `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`) are
+(`Checkpoint`, `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, `NoEC`) are
 themselves rules registered this way, so your custom rule runs through the
 exact same engine path.
 

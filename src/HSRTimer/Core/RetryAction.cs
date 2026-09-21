@@ -165,7 +165,10 @@ namespace HSRTimer
 
             // R5.4.2: always clear forgivable flags to give a clean retry
             // (fixed behavior — R5.4.3 moved the option's job elsewhere).
+            // One-key retry also clears soft flags (a retry is a fresh attempt);
+            // pause-menu restart deliberately does NOT clear them.
             state.Flags.ClearForgivable();
+            state.Flags.ClearSoftFlags();
 
             // R6.3: if a Level Collections (LC) collection run is active, delegate
             // the retry to LC's own "lc restart" command instead of reloading the

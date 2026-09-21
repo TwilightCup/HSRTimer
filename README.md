@@ -24,7 +24,7 @@ and is fully localizable.
 - **Standard-style HUD** — configurable ordered rows, per-character two-color
   gradient with alpha, arbitrary custom texts at any position, draggable panel.
 - **Categories & tags** — define rule sets via tags. Built-in: `Checkpoint`,
-  `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`. Extensible via an
+  `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, `NoEC`. Extensible via an
   `ITagRule` API.
 - **Checkpoint compliance** — skip detection (with built-in exception tables)
   and final-checkpoint validation.
@@ -63,9 +63,10 @@ Requires the .NET SDK (`dotnet`) and the game installed via Steam.
 dotnet build src/HSRTimer/HSRTimer.csproj
 ```
 
-The build resolves game/BepInEx DLL references from the default Steam install
-path (see `Directory.Build.props`). On a non-default Steam library or another
-platform, override the paths via environment variables:
+The build resolves game/BepInEx DLL references from `GAME_MANAGED` /
+`BEPINEX_CORE`. On this machine those paths live in the gitignored
+`Directory.Build.user.props`; on another machine or a non-default Steam library,
+set them via environment variables:
 
 ```bash
 GAME_MANAGED="/path/to/Human_Data/Managed" \

@@ -11,7 +11,7 @@ HSRTimer 为其它 BepInEx 插件提供两个扩展点:
 
 ## 自定义标签规则
 
-标签系统可扩展(R3.7)。任何 BepInEx 插件都可注册一个**自定义标签规则** —— 新的有效性逻辑,用户在设置面板中勾选该标签 id 即可启用(持久化到 `tags.ini`)。内置标签(`Checkpoint`、`NoCheckpoint`、`Jumpless`、`Voiceline`、`Glitchless`)本身就是以这种方式注册的规则,因此自定义规则与内置规则走完全相同的引擎路径。
+标签系统可扩展(R3.7)。任何 BepInEx 插件都可注册一个**自定义标签规则** —— 新的有效性逻辑,用户在设置面板中勾选该标签 id 即可启用(持久化到 `tags.ini`)。内置标签(`Checkpoint`、`NoCheckpoint`、`Jumpless`、`Voiceline`、`Glitchless`、`NoEC`)本身就是以这种方式注册的规则,因此自定义规则与内置规则走完全相同的引擎路径。
 
 ### `ITagRule` 接口
 

@@ -6,10 +6,10 @@ namespace HSRTimer
     /// <summary>
     /// The shared IMGUI leaderboard HUD (left side of the screen). It shows
     /// either the subsegment reference leaderboard (R8.5) or the markers
-    /// trigger feed (R10.7), chosen by <c>Settings.SubsegmentLeaderboardMode</c>.
+    /// trigger feed (R10.7), chosen by <c>LayoutModel.LeaderboardMode</c>.
     /// The top edge is fixed at the screen center (plus the configured Y
     /// offset) and rows extend downward as content grows. Appearance (font
-    /// size, offsets, entry colors) comes from the settings model and applies
+    /// size, offsets, entry colors) comes from the layout model and applies
     /// to both modes; the mode-cycle key (<c>SubsegmentToggleKey</c>) lives
     /// here and cycles: hidden → Subsegment → Markers → hidden.
     /// </summary>
@@ -55,12 +55,12 @@ namespace HSRTimer
             if (!_visible)
             {
                 _visible = true;
-                cfg.Settings.SubsegmentLeaderboardMode = "Subsegment";
+                cfg.Layout.LeaderboardMode = "Subsegment";
                 Plugin.Logger.LogInfo("HSRTimer: leaderboard shown in Subsegment mode.");
                 return;
             }
 
-            bool markersMode = string.Equals(cfg.Settings.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
+            bool markersMode = string.Equals(cfg.Layout.LeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
             if (markersMode)
             {
                 _visible = false;
@@ -68,7 +68,7 @@ namespace HSRTimer
             }
             else
             {
-                cfg.Settings.SubsegmentLeaderboardMode = "Markers";
+                cfg.Layout.LeaderboardMode = "Markers";
                 Plugin.Logger.LogInfo("HSRTimer: leaderboard switched to Markers mode.");
             }
         }
@@ -99,7 +99,7 @@ namespace HSRTimer
             var cfg = ConfigService.Instance;
             if (cfg == null) return;
 
-            bool markersMode = string.Equals(cfg.Settings.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
+            bool markersMode = string.Equals(cfg.Layout.LeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
             if (markersMode)
                 DrawMarkers(cfg);
             else
@@ -125,17 +125,17 @@ namespace HSRTimer
             var entries = mgr.Entries;
             if (entries.Count == 0) return;
 
-            var settings = cfg.Settings;
-            int hudSize = settings.SubsegmentHudFontSize;
+            var layout = cfg.Layout;
+            int hudSize = layout.LeaderboardFontSize;
             EnsureFont(hudSize);
             ApplyFont();
             _rowStyle.fontSize = hudSize;
 
             float lineHeight = _rowStyle.CalcSize(new GUIContent("Wg")).y + 2f;
-            float x = settings.SubsegmentHudOffsetX;
+            float x = layout.LeaderboardOffsetX;
             // Fixed top anchor: the title/rows always start here and extend
             // downward, so the top edge does not move as entries change.
-            float y = Screen.height * 0.5f + settings.SubsegmentHudOffsetY;
+            float y = Screen.height * 0.5f + layout.LeaderboardOffsetY;
 
             string title = mgr.LeaderboardTitle;
             if (!string.IsNullOrEmpty(title))
@@ -149,11 +149,11 @@ namespace HSRTimer
                 string line = entry.DisplayId + "  " + TimeFormatter.FormatSignedDiff(entry.DiffMs);
                 Color color;
                 if (!entry.DiffMs.HasValue || entry.DiffMs.Value == 0)
-                    color = settings.SubsegmentHudColorTie;
+                    color = layout.LeaderboardColorTie;
                 else if (entry.DiffMs.Value < 0)
-                    color = settings.SubsegmentHudColorFaster;
+                    color = layout.LeaderboardColorFaster;
                 else
-                    color = settings.SubsegmentHudColorSlower;
+                    color = layout.LeaderboardColorSlower;
                 DrawLine(line, color, x, y);
                 y += lineHeight;
             }
@@ -167,6 +167,7 @@ namespace HSRTimer
             if (mgr == null || !mgr.HasFeedData) return;
             var settings = cfg.Settings;
             if (settings == null || !settings.MarkersEnable) return;
+            var layout = cfg.Layout;
             var state = TimerCore.State;
             if (state == null) return;
 
@@ -177,9 +178,9 @@ namespace HSRTimer
             var feed = mgr.Feed;
             if (feed == null || feed.Count == 0) return;
 
-            bool relative = string.Equals(settings.MarkersLeaderboardTimeMode, "Relative", System.StringComparison.OrdinalIgnoreCase);
+            bool relative = string.Equals(layout.LeaderboardMarkersTimeMode, "Relative", System.StringComparison.OrdinalIgnoreCase);
 
-            int hudSize = settings.SubsegmentHudFontSize;
+            int hudSize = layout.LeaderboardFontSize;
             EnsureFont(hudSize);
             ApplyFont();
             _rowStyle.fontSize = hudSize;
@@ -187,10 +188,10 @@ namespace HSRTimer
             string title = mgr.LeaderboardTitle;
             bool hasTitle = !string.IsNullOrEmpty(title);
             float lineHeight = _rowStyle.CalcSize(new GUIContent("Wg")).y + 2f;
-            float x = settings.SubsegmentHudOffsetX;
+            float x = layout.LeaderboardOffsetX;
             // Fixed top anchor: the title/rows always start here and extend
             // downward, so adding a new feed row does not move the top edge.
-            float y = Screen.height * 0.5f + settings.SubsegmentHudOffsetY;
+            float y = Screen.height * 0.5f + layout.LeaderboardOffsetY;
 
             if (hasTitle)
             {
@@ -213,12 +214,12 @@ namespace HSRTimer
                     if (pb.HasValue)
                     {
                         value = TimeFormatter.FormatSignedDiff(diff);
-                        color = ToneColor(settings, diff);
+                        color = ToneColor(layout, diff);
                     }
                     else
                     {
                         value = "--";
-                        color = settings.SubsegmentHudColorTie;
+                        color = layout.LeaderboardColorTie;
                     }
                 }
                 else
@@ -226,7 +227,7 @@ namespace HSRTimer
                     // Absolute segment time (R10.7.3); the color still reflects
                     // ahead/behind vs PB (R10.7.5).
                     value = TimeFormatter.Format(row.TMs / 1000.0);
-                    color = pb.HasValue ? ToneColor(settings, diff) : settings.SubsegmentHudColorTie;
+                    color = pb.HasValue ? ToneColor(layout, diff) : layout.LeaderboardColorTie;
                 }
 
                 DrawLine(row.Name + ": " + value, color, x, y);
@@ -234,11 +235,11 @@ namespace HSRTimer
             }
         }
 
-        private static Color ToneColor(SettingsModel s, long diff)
+        private static Color ToneColor(LayoutModel layout, long diff)
         {
-            if (diff < 0) return s.SubsegmentHudColorFaster;
-            if (diff > 0) return s.SubsegmentHudColorSlower;
-            return s.SubsegmentHudColorTie;
+            if (diff < 0) return layout.LeaderboardColorFaster;
+            if (diff > 0) return layout.LeaderboardColorSlower;
+            return layout.LeaderboardColorTie;
         }
 
         private void ApplyFont()

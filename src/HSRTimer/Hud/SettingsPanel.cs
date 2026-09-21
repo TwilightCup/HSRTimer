@@ -52,6 +52,14 @@ namespace HSRTimer
         private string[] _langDisplays;
         private bool _langDropdownOpen;
 
+        // Transient preset state (R11). The selected preset itself lives in
+        // SettingsModel.CurrentPreset; these fields only back the IMGUI controls.
+        private string[] _presetNames;
+        private bool _presetDropdownOpen;
+        private bool _presetCreating;
+        private string _presetNewName = "";
+        private string _presetErrorKey;
+
         private void Awake()
         {
             Instance = this;
@@ -103,7 +111,12 @@ namespace HSRTimer
             if (_visible)
             {
                 _langDropdownOpen = false;
+                _presetDropdownOpen = false;
+                _presetCreating = false;
+                _presetNewName = "";
+                _presetErrorKey = null;
                 RefreshLanguageList();
+                RefreshPresetList();
                 RefreshTabDisplays();
             }
         }
@@ -260,6 +273,9 @@ namespace HSRTimer
                 RefreshTabDisplays();
             }
 
+            Section(loc.Get("SETTINGS_PRESET"));
+            DrawPresetSelector(cfg, loc);
+
             Section(loc.Get("PANEL_KEYBINDS"));
             KeybindRow(loc, "SETTINGS_RESET_KEY", () => s.ResetKey, k => s.ResetKey = k);
             KeybindRow(loc, "SETTINGS_RETRY_KEY", () => s.RetryKey, k => s.RetryKey = k);
@@ -324,27 +340,28 @@ namespace HSRTimer
         // ── Page: Leaderboard (R8.5 HUD appearance + entry state colors + content mode) ──
         private void DrawLeaderboard(ConfigService cfg, SettingsModel s, LocalizationService loc)
         {
+            var layout = cfg.Layout;
             Section(loc.Get("PANEL_LEADERBOARD"));
 
             // R10.7.1: the shared leaderboard shows either the subsegment
             // references or the current level's marker feed.
             Section(loc.Get("SETTINGS_LEADERBOARD_MODE"));
             string[] modes = { loc.Get("SETTINGS_LEADERBOARD_MODE_SUBSEGMENT"), loc.Get("SETTINGS_LEADERBOARD_MODE_MARKERS") };
-            int mi = string.Equals(s.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+            int mi = string.Equals(layout.LeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
             int nextMode = GUILayout.SelectionGrid(mi, modes, 2, _button);
             if (nextMode != mi)
-                s.SubsegmentLeaderboardMode = nextMode == 1 ? "Markers" : "Subsegment";
-            bool markersMode = string.Equals(s.SubsegmentLeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
+                layout.LeaderboardMode = nextMode == 1 ? "Markers" : "Subsegment";
+            bool markersMode = string.Equals(layout.LeaderboardMode, "Markers", System.StringComparison.OrdinalIgnoreCase);
 
             Section(loc.Get("PANEL_HUD"));
-            s.SubsegmentHudFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), s.SubsegmentHudFontSize, 8, 72)), 8, 72);
-            s.SubsegmentHudOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), s.SubsegmentHudOffsetX, "0.##");
-            s.SubsegmentHudOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), s.SubsegmentHudOffsetY, "0.##");
+            layout.LeaderboardFontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_FONT_SIZE"), layout.LeaderboardFontSize, 8, 72)), 8, 72);
+            layout.LeaderboardOffsetX = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_X"), layout.LeaderboardOffsetX, "0.##");
+            layout.LeaderboardOffsetY = FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_HUD_OFFSET_Y"), layout.LeaderboardOffsetY, "0.##");
 
             Section(loc.Get("SETTINGS_LEADERBOARD_COLORS"));
-            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_FASTER", s.SubsegmentHudColorFaster, c => s.SubsegmentHudColorFaster = c);
-            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_SLOWER", s.SubsegmentHudColorSlower, c => s.SubsegmentHudColorSlower = c);
-            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_TIE", s.SubsegmentHudColorTie, c => s.SubsegmentHudColorTie = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_FASTER", layout.LeaderboardColorFaster, c => layout.LeaderboardColorFaster = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_SLOWER", layout.LeaderboardColorSlower, c => layout.LeaderboardColorSlower = c);
+            ColorRow(loc, "SETTINGS_LEADERBOARD_COLOR_TIE", layout.LeaderboardColorTie, c => layout.LeaderboardColorTie = c);
 
             if (markersMode)
             {
@@ -352,10 +369,10 @@ namespace HSRTimer
                 // signed diff vs PB); the entry colors above apply to both.
                 Section(loc.Get("SETTINGS_MARKERS_TIME_MODE"));
                 string[] timeModes = { loc.Get("SETTINGS_MARKERS_TIME_MODE_RELATIVE"), loc.Get("SETTINGS_MARKERS_TIME_MODE_ABSOLUTE") };
-                int ti = string.Equals(s.MarkersLeaderboardTimeMode, "Absolute", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                int ti = string.Equals(layout.LeaderboardMarkersTimeMode, "Absolute", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
                 int nextTime = GUILayout.SelectionGrid(ti, timeModes, 2, _button);
                 if (nextTime != ti)
-                    s.MarkersLeaderboardTimeMode = nextTime == 1 ? "Absolute" : "Relative";
+                    layout.LeaderboardMarkersTimeMode = nextTime == 1 ? "Absolute" : "Relative";
                 GUILayout.Label(loc.Get("SETTINGS_LEADERBOARD_MARKERS_NOTE"), _small);
             }
             else
@@ -600,6 +617,138 @@ namespace HSRTimer
                     }
                 }
             }
+        }
+
+        // Single-select preset picker (R11). Mirrors the language dropdown:
+        // a button + collapsible list, with "New preset" at the bottom. The
+        // selection is a real config item (SettingsModel.CurrentPreset) and is
+        // persisted via the normal SaveSettings path.
+        private void DrawPresetSelector(ConfigService cfg, LocalizationService loc)
+        {
+            if (_presetNames == null) RefreshPresetList();
+            var s = cfg.Settings;
+            if (_presetNames == null) return;
+
+            string current = s.CurrentPreset;
+            if (!PresetStore.Exists(current))
+                current = PresetStore.DefaultPresetName;
+
+            string selected = (_presetDropdownOpen ? "▾ " : "▸ ") + current + "  " + loc.Get("SETTINGS_PRESET_SELECT_HINT");
+            if (GUILayout.Button(selected, _button))
+                _presetDropdownOpen = !_presetDropdownOpen;
+
+            if (_presetDropdownOpen)
+            {
+                foreach (var name in _presetNames)
+                {
+                    if (string.IsNullOrEmpty(name)) continue;
+                    string item = string.Equals(name, s.CurrentPreset, System.StringComparison.Ordinal) ? "✓  " + name : name;
+                    if (GUILayout.Button(item, _button))
+                    {
+                        if (!string.Equals(name, s.CurrentPreset, System.StringComparison.Ordinal))
+                        {
+                            s.CurrentPreset = name;
+                            cfg.SaveSettings();
+                            _presetErrorKey = null;
+                            _presetCreating = false;
+                        }
+                        _presetDropdownOpen = false;
+                    }
+                }
+
+                // New-preset input row appears directly above the New preset button,
+                // below all existing preset options.
+                if (_presetCreating)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(loc.Get("SETTINGS_PRESET_NEW_NAME"), _label);
+                    _presetNewName = GUILayout.TextField(_presetNewName, _textField, GUILayout.Width(160));
+                    if (GUILayout.Button(loc.Get("SETTINGS_PRESET_CONFIRM"), _button, GUILayout.Width(80)))
+                        ConfirmNewPreset(cfg);
+                    if (GUILayout.Button(loc.Get("SETTINGS_PRESET_CANCEL"), _button, GUILayout.Width(80)))
+                    {
+                        _presetCreating = false;
+                        _presetNewName = "";
+                        _presetErrorKey = null;
+                    }
+                    GUILayout.EndHorizontal();
+                    if (_presetErrorKey != null)
+                        GUILayout.Label(loc.Get(_presetErrorKey), _small);
+                }
+
+                if (GUILayout.Button(loc.Get("SETTINGS_PRESET_NEW"), _button))
+                {
+                    _presetCreating = !_presetCreating;
+                    _presetNewName = "";
+                    _presetErrorKey = null;
+                }
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(loc.Get("SETTINGS_PRESET_LOAD"), _button))
+            {
+                if (PresetStore.LoadCurrent(cfg))
+                    _presetErrorKey = null;
+                else
+                    _presetErrorKey = "SETTINGS_PRESET_LOAD_FAILED";
+            }
+            if (GUILayout.Button(loc.Get("SETTINGS_PRESET_SAVE"), _button))
+            {
+                if (PresetStore.SaveToCurrent(cfg))
+                    _presetErrorKey = null;
+                else
+                    _presetErrorKey = "SETTINGS_PRESET_SAVE_FAILED";
+            }
+            GUILayout.EndHorizontal();
+
+            bool isDefault = string.Equals(s.CurrentPreset, PresetStore.DefaultPresetName, System.StringComparison.OrdinalIgnoreCase);
+            if (!isDefault)
+            {
+                if (GUILayout.Button(loc.Get("SETTINGS_PRESET_DELETE"), _button))
+                {
+                    if (PresetStore.DeleteCurrent(cfg))
+                    {
+                        RefreshPresetList();
+                        _presetDropdownOpen = false;
+                        _presetCreating = false;
+                        _presetErrorKey = null;
+                    }
+                    else
+                    {
+                        _presetErrorKey = "SETTINGS_PRESET_DELETE_FAILED";
+                    }
+                }
+            }
+
+            if (_presetErrorKey != null)
+                GUILayout.Label(loc.Get(_presetErrorKey), _small);
+        }
+
+        private void ConfirmNewPreset(ConfigService cfg)
+        {
+            string errorKey;
+            if (PresetStore.TryCreate(_presetNewName, cfg, out errorKey))
+            {
+                RefreshPresetList();
+                _presetCreating = false;
+                _presetNewName = "";
+                _presetErrorKey = null;
+                // Keep the dropdown open so the new option is visible immediately.
+                _presetDropdownOpen = true;
+            }
+            else
+            {
+                _presetErrorKey = errorKey;
+            }
+        }
+
+        private void RefreshPresetList()
+        {
+            var cfg = ConfigService.Instance;
+            if (cfg == null) return;
+            _presetNames = PresetStore.ListPresets();
+            if (System.Array.IndexOf(_presetNames, cfg.Settings.CurrentPreset) < 0)
+                cfg.Settings.CurrentPreset = PresetStore.DefaultPresetName;
         }
 
         private void RefreshLanguageList()
