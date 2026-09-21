@@ -57,7 +57,7 @@ Tags/
   TagRuleRegistry.cs      extension registry (R3.7)
   CheckpointRules.cs      R4 skip-exception + final-checkpoint tables
   VoicelineTracker.cs     scene scan + Easter detection
-  Rules/                  Checkpoint / NoCheckpoint / Jumpless / Voiceline / Glitchless
+  Rules/                  Checkpoint / NoCheckpoint / Jumpless / Voiceline / Glitchless / NoEC
 Patches/
   PatchModule.cs          Harmony.CreateAndPatchAll
   NarrativeBlockPatches.cs    postfix on NarrativeBlock.Play

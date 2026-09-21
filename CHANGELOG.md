@@ -9,6 +9,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Details:**
   - Moved the shared leaderboard HUD appearance and display-mode settings from `settings.ini` into `layout.ini` under a new `[leaderboard]` section; existing settings are migrated automatically.
   - Added **Presets**: save and switch whole HUD layout + marker snapshots from the General tab. The built-in `default` preset is created automatically on first load or when upgrading from an older version; a preset can be created, selected, loaded, saved, and (except `default`) deleted. The current selection is stored in `settings.ini` under `[Presets] Current`.
+  - Added the `NoEC` tag to the Category page with extended climbing detection: when the player leaves the ground, the first grab height of that airborne period is the baseline; any new grab more than 0.2 m above it is EC (debounced to at most once per 0.2 s). The `Ec` violation is a soft flag shown with a trigger count in normal HUD text (flashing red on each new trigger) and is cleared by one-key retry and a full timer reset, but not by pause-menu restart.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.4.0

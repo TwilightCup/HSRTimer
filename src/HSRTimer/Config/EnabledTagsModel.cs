@@ -5,7 +5,7 @@ namespace HSRTimer
     /// <summary>
     /// The currently enabled rule tags. HSRTimer has no concept of named category
     /// presets — the active rule set is simply the set of tags the user has turned
-    /// on (the five built-in tags plus any custom tags registered by other
+    /// on (the six built-in tags plus any custom tags registered by other
     /// plugins). Persisted as a flat list in tags.ini; loaded/owned by
     /// <see cref="ConfigService"/> and iterated by the engine each tick.
     /// </summary>
@@ -53,7 +53,7 @@ namespace HSRTimer
             PersistenceService.Write(
                 PersistenceService.PathFor("tags.ini"),
                 new[] { new KeyValuePair<string, IDictionary<string, string>>("tags", kv) },
-                "HSRTimer enabled rule tags. No category presets — just the tag set.\n# enabled = comma-separated tag ids (built-in: Checkpoint, NoCheckpoint, Jumpless, Voiceline, Glitchless).");
+                "HSRTimer enabled rule tags. No category presets — just the tag set.\n# enabled = comma-separated tag ids (built-in: Checkpoint, NoCheckpoint, Jumpless, Voiceline, Glitchless, NoEC).");
         }
     }
 }

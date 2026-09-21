@@ -58,8 +58,8 @@ HSRTimer saves.
 
 ## Category
 
-- **Rule tags** — a multi-select of every registered rule tag (the five built-in
-  tags: `Checkpoint`, `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, plus
+- **Rule tags** — a multi-select of every registered rule tag (the six built-in
+  tags: `Checkpoint`, `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, `NoEC`, plus
   any custom tags registered by other plugins — see [EXTENDING.md](EXTENDING.md)).
   Checking a tag enables it; unchecking disables it. There are no category
   presets — this tag set *is* the active rule set. Changes are live and

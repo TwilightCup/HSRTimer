@@ -84,13 +84,14 @@ PANEL_SAVE:Save
 PANEL_CLOSE:Close
 PANEL_FOOTER:Changes apply live. Saved on Close or game exit.
 
-# ===== Tags (R3.3 - R3.6 + Glitchless) =====
+# ===== Tags (R3.3 - R3.6 + Glitchless + NoEC) =====
 HUD_TAGS_LABEL:Tags
 TAG_CHECKPOINT:Checkpoint
 TAG_NO_CHECKPOINT:No Checkpoint
 TAG_JUMPLESS:Jumpless
 TAG_VOICELINE:Voiceline
 TAG_GLITCHLESS:Glitchless
+TAG_NO_EC:NoEC
 
 # ===== Validity reasons (R5) =====
 INVALID_RUN:RUN IS INVALID
@@ -103,6 +104,7 @@ INVALID_VOICELINE:VOICELINE SKIPPED
 INVALID_SSG:SSG
 INVALID_PROP_FLY:Prop Fly
 INVALID_FOOTSIE:Footsie
+INVALID_EC:EC
 HUD_INVALID_RETRY_TARGET:Specified retry level is invalid
 SEVERITY_UNFORGIVABLE:unforgivable
 SEVERITY_FORGIVABLE:forgivable

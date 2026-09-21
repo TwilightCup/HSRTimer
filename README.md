@@ -24,7 +24,7 @@ and is fully localizable.
 - **Standard-style HUD** — configurable ordered rows, per-character two-color
   gradient with alpha, arbitrary custom texts at any position, draggable panel.
 - **Categories & tags** — define rule sets via tags. Built-in: `Checkpoint`,
-  `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`. Extensible via an
+  `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, `NoEC`. Extensible via an
   `ITagRule` API.
 - **Checkpoint compliance** — skip detection (with built-in exception tables)
   and final-checkpoint validation.

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 namespace HSRTimer
 {
     /// <summary>
-    /// Built-in tag ids (R3.3-R3.6, plus Glitchless). Custom third-party tags
-    /// use arbitrary string ids via <see cref="TagRuleRegistry.Register(ITagRule)"/>.
+    /// Built-in tag ids (R3.3-R3.6, plus Glitchless/NoEC). Custom third-party
+    /// tags use arbitrary string ids via <see cref="TagRuleRegistry.Register(ITagRule)"/>.
     /// </summary>
     public static class TagIds
     {
@@ -13,6 +13,7 @@ namespace HSRTimer
         public const string Jumpless = "Jumpless";
         public const string Voiceline = "Voiceline";
         public const string Glitchless = "Glitchless";
+        public const string NoEC = "NoEC";
     }
 
     /// <summary>

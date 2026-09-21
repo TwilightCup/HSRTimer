@@ -79,7 +79,7 @@ enabled = Checkpoint, Jumpless
 ```
 
 - `enabled` — comma-separated tag ids. Built-in ids: `Checkpoint`,
-  `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`. Custom tags from
+  `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, `NoEC`. Custom tags from
   third-party plugins use their own ids (see [EXTENDING.md](EXTENDING.md)).
   Leave empty for a plain run (generic validity checks only).
 

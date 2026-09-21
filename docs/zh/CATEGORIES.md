@@ -16,6 +16,7 @@ HSRTimer **没有类别预设**。当前的规则集就是你启用的**标签**
 | `Jumpless`(R3.5) | 全程不跳跃 | `Human.Localplayer.jump` 由假变真即判无效;标签启用期间同时在游戏输入层强制禁用跳跃键(见 [ARCHITECTURE.md](ARCHITECTURE.md)) |
 | `Voiceline`(R3.6) | 触发全部旁白 | 遗漏任何 `NarrativeBlock` 或跳过 Easter 旁白即判无效(见 [VOICELINE.md](VOICELINE.md)) |
 | `Glitchless` | 全程不使用任何 glitch | SSG(半身不遂):当反爬墙分支提前返回后,某只手残留 `grabObject != null` 但没有 `grabJoint` 时判无效。Prop Fly(御物飞行):踩在手上抓着的可移动物体上跳跃即判无效。Footsie(水踩点):在 Water (River) 关卡的 Footsie Spot 范围内碰到通关点即判无效 |
+| `NoEC` | 全程不爬墙 | 当玩家离开地面(`onGround` 变为 false)后,以本次离地期间第一次抓取的高度为基准;若离地时已经抓着物体,则取双手抓取点中较高的一个。离地期间任何高于基准 +0.2m 的新抓取即判 EC,并带 0.2 秒防抖(每 0.2 秒最多触发一次)。`Ec` 违规为 **soft flag**:以普通文本颜色独立成行显示并附带触发次数(如 `EC x3`),每次新触发时整行闪红,一键重试和计时器重置时清除,但暂停菜单重开不清除 |
 
 不启用任何标签(纯任意%)时,仅受通用有效性检测(R5.1:作弊、变速、漂移)约束 —— 成绩被标记时面板显示红色提示。
 

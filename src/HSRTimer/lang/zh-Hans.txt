@@ -84,13 +84,14 @@ PANEL_SAVE:保存
 PANEL_CLOSE:关闭
 PANEL_FOOTER:改动实时生效。关闭面板或退出游戏时写入磁盘。
 
-# ===== 标签 (R3.3 - R3.6 + Glitchless) =====
+# ===== 标签 (R3.3 - R3.6 + Glitchless + NoEC) =====
 HUD_TAGS_LABEL:规则标签
 TAG_CHECKPOINT:检查点
 TAG_NO_CHECKPOINT:无检查点
 TAG_JUMPLESS:禁跳
 TAG_VOICELINE:旁白
 TAG_GLITCHLESS:无Glitch
+TAG_NO_EC:无爬墙
 
 # ===== 无效原因 (R5) =====
 INVALID_RUN:成绩无效
@@ -103,6 +104,7 @@ INVALID_VOICELINE:跳过了旁白
 INVALID_SSG:半身不遂
 INVALID_PROP_FLY:御物飞行
 INVALID_FOOTSIE:水踩点
+INVALID_EC:爬墙
 HUD_INVALID_RETRY_TARGET:指定的重试关卡无效
 SEVERITY_UNFORGIVABLE:不可原谅
 SEVERITY_FORGIVABLE:可原谅
