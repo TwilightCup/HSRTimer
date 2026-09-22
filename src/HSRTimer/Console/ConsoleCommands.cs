@@ -80,6 +80,10 @@ namespace HSRTimer
         {
             try
             {
+                // Mirror the incoming command to the BepInEx log so a headless /
+                // CI pass can see exactly what was invoked, not just its result.
+                Plugin.Logger.LogInfo("HSRTimer[console]: > hsr" + (args.Length > 0 ? " " + args : ""));
+
                 var parts = SplitArgs(args);
                 if (parts.Count == 0)
                 {
@@ -1538,10 +1542,12 @@ namespace HSRTimer
                 return;
             try
             {
+                // Always mirror command output to the BepInEx log; the in-game
+                // Shell may be absent or not visible, and headless/CI runs read
+                // LogOutput.log instead of the game console.
+                Plugin.Logger.LogInfo("HSRTimer[console]: " + message);
                 if (Shell.instance != null)
                     Shell.Print(message);
-                else
-                    Plugin.Logger.LogInfo("HSRTimer[console]: " + message);
             }
             catch (Exception ex)
             {
