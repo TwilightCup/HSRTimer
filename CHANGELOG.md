@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - Added an in-game dev console command set (`hsr ...`, opened with `~` / `F1`) so every feature — timer, reset/retry, settings, tags, HUD/layout, localization, presets, subsegments, markers, validity flags, and LevelCollections integration — can be inspected and tested from inside the game. See `TESTS.md`.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.5.0

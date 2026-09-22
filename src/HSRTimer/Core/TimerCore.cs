@@ -507,6 +507,36 @@ namespace HSRTimer
         }
 
         /// <summary>
+        /// Public entry point used by the in-game dev console to perform the
+        /// same full-run reset as the reset key.
+        /// </summary>
+        public static void ResetRun()
+        {
+            var core = Instance;
+            if (core == null || State == null)
+                return;
+
+            core.DoFullReset(keepLastValues: false);
+
+            // A manual reset must clear AND stop the timer; restore the
+            // transition caches to the actual game state so the still-active
+            // PlayingLevel does not look like a fresh segment start (mirrors the
+            // reset-key path in HandleKeybinds).
+            var game = Game.instance;
+            if (game != null && game.state == GameState.PlayingLevel)
+            {
+                State.PrevGameState = game.state;
+                State.PrevAppState = App.state;
+            }
+
+            core._cfg?.SaveSettings();
+            core.Notify("NOTIFY_RUN_RESET");
+        }
+
+        /// <summary>Re-read timing options from the live settings model.</summary>
+        public void RefreshTimingOptions() => UpdateOptions();
+
+        /// <summary>
         /// Public entry point used by pause-menu patches to clear the current
         /// Wake Up Time and start a fresh measurement from the current game time.
         /// Also records the current human state as already seen so the normal

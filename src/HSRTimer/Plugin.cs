@@ -94,6 +94,11 @@ namespace HSRTimer
             Object.DontDestroyOnLoad(markersGo);
             markersGo.AddComponent<MarkersManager>();
             markersGo.AddComponent<MarkerOverlay>();
+
+            // 8. In-game dev console: register the "hsr ..." commands with the
+            //     game's Shell console (~ / F1) so every feature can be inspected
+            //     and tested from inside the game. Safe before Shell.instance exists.
+            ConsoleCommands.Register();
         }
 
         /// <summary>

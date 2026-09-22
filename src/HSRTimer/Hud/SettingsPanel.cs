@@ -121,6 +121,17 @@ namespace HSRTimer
             }
         }
 
+        /// <summary>
+        /// Show or hide the settings panel without toggling if it is already in
+        /// the requested state. Used by the in-game dev console.
+        /// </summary>
+        public void SetVisible(bool visible)
+        {
+            if (_visible == visible)
+                return;
+            Toggle();
+        }
+
         private void EnsureStyles()
         {
             if (_stylesReady) return;

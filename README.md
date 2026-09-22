@@ -35,6 +35,9 @@ and is fully localizable.
 - **Localization** — community-translatable `key:translation` files; English is
   the shipped base; a Simplified Chinese example is included. Settings-panel
   tabs from other plugins can opt into the same language selection.
+- **In-game test console** — an `hsr ...` command set is registered with the
+  game's dev console (`~` / `F1`) so every feature can be inspected and tested
+  from inside the game. See [TESTS.md](TESTS.md).
 
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the full specification.
 
@@ -112,6 +115,7 @@ saved when the panel is closed or the game exits. See [docs/CONFIG.md](docs/CONF
 - [Settings panel](docs/PANEL.md)
 - [Localization](docs/LOCALIZATION.md) · [Extending (custom tags & settings tabs)](docs/EXTENDING.md)
 - [Voiceline detection](docs/VOICELINE.md)
+- [Testing (in-game console)](TESTS.md)
 
 ## License
 
