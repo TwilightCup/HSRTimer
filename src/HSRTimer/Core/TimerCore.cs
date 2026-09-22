@@ -474,6 +474,14 @@ namespace HSRTimer
             if (SettingsPanel.Instance != null && SettingsPanel.Instance.IsVisible)
                 return;
 
+            // While any other keyboard-capturing UI is open (chat, text input,
+            // dialog, and the in-game dev console), suppress gameplay keybinds
+            // too. Without this, typing an 'r' inside 'hsr status' can trigger a
+            // retry, and Backspace can silently full-reset a run while fixing a
+            // typo (same guard as RetryAction R6.1.2a).
+            if (MenuSystem.keyboardState != KeyboardState.None)
+                return;
+
             if (LeaderboardHud.Instance != null && InputUtil.GetKeyDown(s.SubsegmentToggleKey))
                 LeaderboardHud.Instance.CycleMode();
 
