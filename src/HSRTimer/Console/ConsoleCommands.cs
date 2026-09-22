@@ -383,7 +383,10 @@ namespace HSRTimer
                 Print("TimerCore is not ready.");
                 return;
             }
-            if (RetryAction.TryExecute(core, TimerCore.State, cfg.Settings, out string notifyKey))
+            // The console is itself a keyboard-capturing UI; opt out of the
+            // R6.1.2a input guard so 'hsr retry' can exercise the retry flow.
+            // Physical keybinds keep the guard (see TimerCore.HandleKeybinds).
+            if (RetryAction.TryExecute(core, TimerCore.State, cfg.Settings, out string notifyKey, allowWhileKeyboardCaptured: true))
                 core.RefreshTimingOptions(); // restart may change timing context
             string msg = notifyKey != null ? cfg.Localization.Get(notifyKey) : "retry blocked";
             Print("HSRTimer retry: " + msg);

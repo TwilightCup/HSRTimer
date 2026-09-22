@@ -66,8 +66,12 @@ namespace HSRTimer
         /// <paramref name="host"/> runs the async reload coroutine (the engine
         /// MonoBehaviour, which is <c>DontDestroyOnLoad</c> so it survives the
         /// empty-scene transition).
+        /// <paramref name="allowWhileKeyboardCaptured"/> is used by the in-game
+        /// dev console: the console is itself a keyboard-capturing UI, so the
+        /// R6.1.2a input guard would otherwise make <c>hsr retry</c> impossible.
+        /// Physical keybinds must keep the guard, so this stays opt-in.
         /// </summary>
-        public static bool TryExecute(MonoBehaviour host, RunState state, SettingsModel settings, out string notifyKey)
+        public static bool TryExecute(MonoBehaviour host, RunState state, SettingsModel settings, out string notifyKey, bool allowWhileKeyboardCaptured = false)
         {
             notifyKey = null;
 
@@ -110,7 +114,9 @@ namespace HSRTimer
             }
 
             // R6.1.2a: no keyboard-capturing UI open (chat, text input, dialog).
-            if (MenuSystem.keyboardState != KeyboardState.None)
+            // The dev console is such a UI, so it must explicitly opt out of
+            // this guard when invoking the retry on the user's behalf.
+            if (!allowWhileKeyboardCaptured && MenuSystem.keyboardState != KeyboardState.None)
             {
                 notifyKey = "NOTIFY_RETRY_BLOCKED_INPUT";
                 return false;
