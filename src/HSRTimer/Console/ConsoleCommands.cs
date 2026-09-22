@@ -82,7 +82,9 @@ namespace HSRTimer
             {
                 // Mirror the incoming command to the BepInEx log so a headless /
                 // CI pass can see exactly what was invoked, not just its result.
-                Plugin.Logger.LogInfo("HSRTimer[console]: > hsr" + (args.Length > 0 ? " " + args : ""));
+                // The game's Shell passes null for a zero-argument invocation
+                // (bare 'hsr'), so args must not be dereferenced directly.
+                Plugin.Logger.LogInfo("HSRTimer[console]: > hsr" + (string.IsNullOrEmpty(args) ? "" : " " + args));
 
                 var parts = SplitArgs(args);
                 if (parts.Count == 0)
