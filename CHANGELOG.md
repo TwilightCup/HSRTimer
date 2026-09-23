@@ -7,13 +7,20 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+- **Contributors:** _To be filled from PRs merged into dev._
+
+## 1.6.0
+
+- **Release Date:** _23 Sep 2026_
+- **Highlights:**
+  - Added an **About** page and a **Check Update** feature to the settings panel.
+- **Details:**
   - Added an in-game dev console command set (`hsr ...`, opened with `~` / `F1`) so every feature — timer, reset/retry, settings, tags, HUD/layout, localization, presets, subsegments, markers, validity flags, and LevelCollections integration — can be inspected and tested from inside the game. See `TESTS.md`.
   - Fixed the manual reset and one-key retry hotkeys still firing while a text input was open (for example the in-game chat), which could silently reset or restart a run while typing.
   - Fixed the settings panel showing a horizontal scrollbar when the "Specify retry level" option is enabled — the input row was wider than the panel's scroll area.
   - Removed the Save and Close buttons and the hint line from the bottom of the settings panel. Edits still apply live and are written to disk when the panel is closed (settings key) or the game exits.
   - Added an **About** tab as the first entry in the settings panel navigation, showing the plugin name, version, the first two lines of the MIT license, and a **GitHub Repository** button that opens the project page. The `hsr about` console command prints the same information.
   - Added a **Check Update** button on the About tab that checks GitHub Releases (via the project's releases feed, so it works without GitHub API rate limits): it shows the latest release's title and a short summary (release date + Highlights), an **Open Release Page** button for the full notes, and can download and install the new plugin DLL (replacing older copies), prompting you to restart the game after a successful update. The `hsr update ...` console commands expose the same flow for testing.
-- **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.5.0
 
