@@ -242,7 +242,8 @@ namespace HSRTimer
             GUI.DragWindow(new Rect(0, 0, _rect.width, 20));
         }
 
-        // ── Page: About (R12: plugin name, version, license notice, repository link) ──
+        // ── Page: About (R12: plugin name, version, license notice, repository link;
+        //    R13: Check Update) ──
         private void DrawAbout(LocalizationService loc)
         {
             GUILayout.Space(6);
@@ -260,18 +261,91 @@ namespace HSRTimer
             GUILayout.Space(10);
             if (GUILayout.Button(loc.Get("PANEL_ABOUT_GITHUB"), _button))
                 OpenRepository();
+
+            // R13: Check Update — query GitHub Releases, show the newest release,
+            // and (on request) download + install it.
+            DrawUpdater(loc);
+        }
+
+        // ── R13: plugin update widget on the About page ──
+        private void DrawUpdater(LocalizationService loc)
+        {
+            var updater = UpdaterService.Instance;
+            if (updater == null) return;
+
+            GUILayout.Space(10);
+            bool busy = updater.IsBusy;
+            GUI.enabled = !busy;
+            if (GUILayout.Button(loc.Get("PANEL_ABOUT_CHECK_UPDATE"), _button))
+                updater.CheckForUpdate();
+            GUI.enabled = true;
+
+            switch (updater.Phase)
+            {
+                case UpdatePhase.Checking:
+                    GUILayout.Label(loc.Get("PANEL_ABOUT_CHECKING"), _small);
+                    break;
+                case UpdatePhase.HasUpdate:
+                    DrawPendingUpdate(loc, updater);
+                    break;
+                case UpdatePhase.Downloading:
+                    GUILayout.Label(loc.Get("PANEL_ABOUT_DOWNLOADING", updater.ProgressPercent), _small);
+                    break;
+                case UpdatePhase.RestartRequired:
+                    GUILayout.Label(loc.Get("PANEL_ABOUT_UPDATE_DONE"), _label);
+                    break;
+                default: // Idle
+                    if (!string.IsNullOrEmpty(updater.ErrorText))
+                        GUILayout.Label(loc.Get(
+                            updater.ErrorFromCheck ? "PANEL_ABOUT_UPDATE_ERROR" : "PANEL_ABOUT_DOWNLOAD_ERROR",
+                            updater.ErrorText), _small);
+                    else if (updater.UpToDate)
+                        GUILayout.Label(loc.Get("PANEL_ABOUT_UP_TO_DATE", updater.CheckedVersion), _small);
+                    break;
+            }
+        }
+
+        private void DrawPendingUpdate(LocalizationService loc, UpdaterService updater)
+        {
+            var release = updater.PendingRelease;
+            if (release == null) return;
+            GUILayout.Label(loc.Get("PANEL_ABOUT_UPDATE_AVAILABLE"), _section);
+            string title = !string.IsNullOrEmpty(release.Title) ? release.Title : release.Tag;
+            GUILayout.Label(title, _label);
+            if (!string.IsNullOrEmpty(release.Body))
+            {
+                GUILayout.Label(loc.Get("PANEL_ABOUT_RELEASE_NOTES"), _small);
+                GUILayout.Label(release.Body, _small);
+            }
+            // R13.4: jump to the full release page (release notes shown here are
+            // trimmed to the date + Highlights summary).
+            if (!string.IsNullOrEmpty(release.Url)
+                && GUILayout.Button(loc.Get("PANEL_ABOUT_OPEN_RELEASE"), _button))
+                OpenUrl(release.Url);
+            GUI.enabled = !updater.IsBusy;
+            if (GUILayout.Button(loc.Get("PANEL_ABOUT_UPDATE"), _button))
+                updater.ApplyUpdate();
+            GUI.enabled = true;
         }
 
         private static void OpenRepository()
         {
+            OpenUrl(PluginInfo.PLUGIN_REPOSITORY_URL);
+        }
+
+        /// <summary>Open a URL in the system browser; failures are logged, never thrown (R12.5/R13.4).</summary>
+        private static void OpenUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url))
+                return;
             try
             {
-                Application.OpenURL(PluginInfo.PLUGIN_REPOSITORY_URL);
+                Application.OpenURL(url);
             }
             catch (System.Exception ex)
             {
                 if (Plugin.Logger != null)
-                    Plugin.Logger.LogWarning($"HSRTimer: failed to open '{PluginInfo.PLUGIN_REPOSITORY_URL}': {ex.Message}");
+                    Plugin.Logger.LogWarning($"HSRTimer: failed to open '{url}': {ex.Message}");
             }
         }
 

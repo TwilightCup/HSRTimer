@@ -59,6 +59,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr lc [status\|restart]` | Inspect LevelCollections integration or dispatch `lc restart` |
 | `hsr config [path\|files]` | Print HSRTimer config paths |
 | `hsr about` | Print plugin name, version, license notice, and repository URL (R12) |
+| `hsr update [status\|check\|apply\|cancel\|base [url]]` | Check for / install plugin updates from GitHub releases (R13) |
 
 ## Keys accepted by `hsr get` / `hsr set`
 
@@ -162,9 +163,12 @@ hsr reload
 
 `hsr panel open` should show the same IMGUI settings panel as the Home key.
 The **About** tab is the first entry in the panel navigation; it shows the
-plugin name, version, the first two lines of the MIT license, and a **GitHub
-Repository** button. `hsr about` prints the same text so it can be checked
-without a screenshot:
+plugin name, version, the first two lines of the MIT license, a **GitHub
+Repository** button, and a **Check Update** button (R13); when a newer release
+is found it shows the release title, its date + Highlights summary, and
+**Open Release Page** / **Update** buttons. `hsr about` prints
+the same identity/license/repository text so it can be checked without a
+screenshot:
 
 ```text
 hsr panel open
@@ -260,6 +264,44 @@ hsr config files
 These print the exact paths used by the plugin so you can verify or edit files
 on disk.
 
+### 13. Update checker (R13)
+
+The About tab's **Check Update** flow can be exercised end to end from the
+console (results are logged to the BepInEx log, which `hsr-cmd.sh` reads):
+
+```text
+hsr update status                        # phase / repo base / feed / last checked tag
+hsr update check                         # reads github.com/{owner}/{repo}/releases.atom
+hsr update status                        # phase should become HasUpdate (or up to date / error)
+hsr update apply                         # download + install the release DLL
+hsr update status                        # phase should become RestartRequired
+```
+
+Without network access you can still exercise both the success and the failure
+paths by pointing the checker at a local HTTP server:
+
+```text
+hsr update base http://127.0.0.1:PORT/repo   # session-only repo-base override
+hsr update check                              # feed URL = <base>/releases.atom
+hsr update apply                              # download URL = <base>/releases/download/<tag>/HSRTimer-v<ver>.dll
+hsr update base clear                         # restore the real repo base
+```
+
+Notes:
+
+- The feed must be GitHub Atom XML (`<feed>` with `<entry>` items; each entry's
+  alternate link ends in `/releases/tag/{tag}`, with `<title>` and optional
+  `<content type="html">`). The newest **non-prerelease** entry is used.
+- For a real apply test, serve a valid `.NET` assembly (e.g. a copy of
+  `HSRTimer-v0.0.0.dll`) at the derived download path — the installer rejects
+  zero-byte / invalid downloads, so a non-assembly file exercises the
+  "invalid plugin DLL" error path; serving no file at all exercises the
+  "release asset not found" (404) path.
+- After a successful `apply`, verify on disk that `BepInEx/plugins/` contains
+  `HSRTimer-v{newVersion}.dll` and no older `HSRTimer-v*.dll` (an undeletable
+  one becomes `HSRTimer-v*.dll.dis`, cleaned up at the next launch).
+- `hsr update cancel` aborts an in-flight check/download.
+
 ## Test checklist
 
 - [ ] `hsr` prints the command summary.
@@ -269,6 +311,7 @@ on disk.
 - [ ] `hsr hud off/on` hides/shows the timer HUD.
 - [ ] `hsr panel open/close` opens/closes the settings panel.
 - [ ] The About tab (first in the navigation) shows name/version/license and the repository button; `hsr about` matches it.
+- [ ] `hsr update check` reports up to date / shows a newer release / shows a one-line error (offline), and `hsr update apply` installs the DLL (R13).
 - [ ] `hsr tag enable/disable` changes the enabled tags and persists them.
 - [ ] `hsr set language zh-Hans` switches UI language.
 - [ ] `hsr layout row add/remove` changes the HUD rows.

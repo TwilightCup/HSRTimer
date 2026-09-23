@@ -48,6 +48,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr lc [status\|restart]` | 查看 LevelCollections 集成或触发 `lc restart` |
 | `hsr config [path\|files]` | 打印 HSRTimer 配置路径 |
 | `hsr about` | 打印插件名称、版本、许可证声明与仓库 URL(R12) |
+| `hsr update [status\|check\|apply\|cancel\|base [url]]` | 从 GitHub releases 检测 / 安装插件更新(R13) |
 
 ## `hsr get` / `hsr set` 可接受的键
 
@@ -142,7 +143,7 @@ hsr reload
 ```
 
 `hsr panel open` 应弹出与 Home 键相同的 IMGUI 设置面板。
-**关于** 标签页是面板导航的第一项;它显示插件名称、版本、MIT 许可证的前两行,以及一个 **GitHub 仓库** 按钮。`hsr about` 打印相同文本,因此无需截图即可核对:
+**关于** 标签页是面板导航的第一项;它显示插件名称、版本、MIT 许可证的前两行、一个 **GitHub 仓库** 按钮,以及一个 **检查更新** 按钮(R13);发现新版本时会显示发布标题、其日期 + Highlights 摘要,以及 **打开 Release 页面** / **更新** 按钮。`hsr about` 打印相同的身份 / 许可证 / 仓库文本,因此无需截图即可核对:
 
 ```text
 hsr panel open
@@ -234,6 +235,34 @@ hsr config files
 
 打印插件使用的确切路径,方便你在磁盘上核对或编辑文件。
 
+### 13. 更新检查(R13)
+
+关于标签页的 **检查更新** 流程可以从控制台端到端测试(结果写入 BepInEx 日志,`hsr-cmd.sh` 可直接读取):
+
+```text
+hsr update status                        # 阶段 / 仓库基地址 / feed / 上次检测的版本 tag
+hsr update check                         # 读取 github.com/{owner}/{repo}/releases.atom
+hsr update status                        # 阶段应变 HasUpdate(或已最新 / 出错)
+hsr update apply                         # 下载并安装发布 DLL
+hsr update status                        # 阶段应变 RestartRequired
+```
+
+无网络时,可把检测指向本地 HTTP 服务器来分别走通成功与失败分支:
+
+```text
+hsr update base http://127.0.0.1:PORT/repo   # 仅本次会话的仓库基地址覆盖
+hsr update check                              # feed 地址 = <base>/releases.atom
+hsr update apply                              # 下载地址 = <base>/releases/download/<tag>/HSRTimer-v<ver>.dll
+hsr update base clear                         # 恢复真实仓库基地址
+```
+
+说明:
+
+- feed 必须是 GitHub Atom XML(`<feed>` 内含 `<entry>`;每个 entry 的 alternate 链接以 `/releases/tag/{tag}` 结尾,含 `<title>` 与可选的 `<content type="html">`)。取最新**非预发布** entry。
+- 真实 apply 测试时,在推导出的下载路径下提供一个有效的 .NET 程序集(例如 `HSRTimer-v0.0.0.dll` 的副本)——安装器会拒绝零字节 / 无效下载,因此非程序集文件可用来走「无效插件 DLL」错误分支;完全不提供文件则可走「发布资产未找到」(404)分支。
+- apply 成功后,在磁盘上核对 `BepInEx/plugins/` 中出现 `HSRTimer-v{新版本}.dll` 且不再有旧 `HSRTimer-v*.dll`(无法删除者变为 `HSRTimer-v*.dll.dis`,下次启动清理)。
+- `hsr update cancel` 中止进行中的检测 / 下载。
+
 ## 测试清单
 
 - [ ] `hsr` 打印命令摘要。
@@ -243,6 +272,7 @@ hsr config files
 - [ ] `hsr hud off/on` 隐藏 / 显示计时 HUD。
 - [ ] `hsr panel open/close` 打开 / 关闭设置面板。
 - [ ] 关于标签页(导航第一项)显示名称 / 版本 / 许可证与仓库按钮;`hsr about` 与之匹配。
+- [ ] `hsr update check` 报告已最新 / 显示更新版本 / 离线时显示一行错误,`hsr update apply` 安装 DLL(R13)。
 - [ ] `hsr tag enable/disable` 改变启用的标签并持久化。
 - [ ] `hsr set language zh-Hans` 切换界面语言。
 - [ ] `hsr layout row add/remove` 改变 HUD 行。

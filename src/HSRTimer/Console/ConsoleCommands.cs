@@ -119,6 +119,7 @@ namespace HSRTimer
                     case "flags": CmdFlags(rest); break;
                     case "lc": CmdLc(rest); break;
                     case "config": CmdConfig(rest); break;
+                    case "update": CmdUpdate(rest); break;
                     case "about": CmdAbout(); break;
                     default:
                         Print($"Unknown HSRTimer command: {cmd}. Type 'hsr help' for usage.");
@@ -1375,6 +1376,65 @@ namespace HSRTimer
             }
         }
 
+        // ── update checker (R13) ─────────────────────────────────────────────
+
+        /// <summary>
+        /// R13.9: exercise the About page's update flow from the console. The
+        /// check/download run asynchronously and log their result to the BepInEx
+        /// log (headless read path); this command only kicks them off / prints state.
+        /// </summary>
+        private static void CmdUpdate(List<string> args)
+        {
+            var updater = UpdaterService.Instance;
+            if (updater == null) { Print("UpdaterService is not ready."); return; }
+            if (args.Count == 0) { Print("Usage: hsr update [status|check|apply|cancel|base [url]]"); return; }
+
+            string action = args[0].ToLowerInvariant();
+            switch (action)
+            {
+                case "status":
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"phase={updater.Phase} busy={updater.IsBusy}");
+                    sb.AppendLine($"base={updater.RepoBase} feed={updater.FeedUrl}");
+                    sb.AppendLine($"upToDate={updater.UpToDate} checked={updater.CheckedVersion ?? "-"} installed={updater.InstalledVersion ?? "-"}");
+                    if (updater.PendingRelease != null)
+                    {
+                        sb.AppendLine($"pending={updater.PendingRelease.Tag} \"{updater.PendingRelease.Title}\"");
+                        sb.AppendLine($"releaseUrl={updater.PendingRelease.Url ?? "-"}");
+                    }
+                    if (!string.IsNullOrEmpty(updater.ErrorText))
+                        sb.AppendLine($"error={updater.ErrorText}");
+                    Print(sb.ToString());
+                    break;
+                case "check":
+                    updater.CheckForUpdate();
+                    Print("Update check started; result is logged to the BepInEx log.");
+                    break;
+                case "apply":
+                    updater.ApplyUpdate();
+                    Print("Update apply started; result is logged to the BepInEx log.");
+                    break;
+                case "cancel":
+                    updater.Cancel();
+                    Print("Update operation cancelled.");
+                    break;
+                case "base":
+                case "endpoint": // legacy alias
+                    if (args.Count >= 2)
+                    {
+                        string url = string.Join(" ", args.GetRange(1, args.Count - 1));
+                        if (string.Equals(url, "clear", StringComparison.OrdinalIgnoreCase))
+                            url = "";
+                        updater.SetRepoBaseOverride(url);
+                    }
+                    Print("update repo base = " + updater.RepoBase + (updater.RepoBaseOverride != null ? " (session override)" : ""));
+                    break;
+                default:
+                    Print("Usage: hsr update [status|check|apply|cancel|base [url]]");
+                    break;
+            }
+        }
+
         // ── reflection helpers ─────────────────────────────────────────────
 
         private static bool TryFindField(string key, out FieldInfo field, out object owner)
@@ -1592,7 +1652,7 @@ namespace HSRTimer
             sb.AppendLine("  hsr marker [list|feed|add ...|remove <id>|toggle <id>|pb <ms>|pbclear|clear|save|reload]");
             sb.AppendLine("  hsr flags [list|raise <Reason>|clear [forgivable|soft|all]]");
             sb.AppendLine("  hsr lc [status|restart] | hsr config [path|files]");
-            sb.AppendLine("  hsr about");
+            sb.AppendLine("  hsr update [status|check|apply|cancel|base [url]] | hsr about");
             Print(sb.ToString());
         }
 
@@ -1644,6 +1704,8 @@ namespace HSRTimer
                     return "hsr lc [status|restart]\r\nInspect LevelCollections integration or dispatch 'lc restart'.";
                 case "config":
                     return "hsr config [path|files]\r\nPrint HSRTimer config paths.";
+                case "update":
+                    return "hsr update [status|check|apply|cancel|base [url]]\r\nCheck the GitHub releases feed for a newer HSRTimer version and optionally download + install it (R13). 'base' sets a session-only repo-base URL override (testing; 'base clear' resets) — the feed and download URLs derive from it. Results are logged to the BepInEx log.";
                 case "about":
                     return "hsr about\r\nPrint plugin name, version, license notice, and repository URL (the About page content).";
                 default:

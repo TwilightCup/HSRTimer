@@ -20,6 +20,7 @@
    - [R10 标记（Markers）](#r10-标记markers)
    - [R11 配置预设（Presets）](#r11-配置预设presets)
    - [R12 关于（About）标签页](#r12-关于about标签页)
+   - [R13 插件更新（Check Update）](#r13-插件更新check-update)
 5. [非功能需求](#5-非功能需求)
 6. [范围之外(非目标)](#6-范围之外非目标)
 7. [附录 A:游戏侧状态参考](#附录-a游戏侧状态参考)
@@ -1009,6 +1010,23 @@
 - **R12.4** 标签页提供一个「GitHub Repository」按钮，点击后通过系统默认浏览器打开项目仓库 `https://github.com/TwilightCup/HSRTimer`。
 - **R12.5** 「关于」标签页的标题与按钮文案纳入现有本地化体系（键名 `PANEL_TAB_ABOUT` / `PANEL_ABOUT_GITHUB`，遵循 R7）；打开 URL 失败须捕获异常并记录警告，不影响面板与计时主流程。
 - **R12.6** 提供 `hsr about` 控制台命令，打印与「关于」页一致的名称、版本、许可证前两行与仓库 URL，便于在游戏内验证。
+
+---
+
+### R13 插件更新（Check Update）
+
+「关于」标签页在「GitHub Repository」按钮下方提供插件自更新：检测 GitHub Releases 上的新版本、展示发布信息，并可下载替换插件 DLL。
+
+- **R13.1** 「关于」标签页在「GitHub Repository」按钮下方新增「Check Update」按钮；点击后读取项目仓库的 GitHub Releases Atom feed（`https://github.com/{owner}/{repo}/releases.atom`，`owner/repo` 从 `PluginInfo.PLUGIN_REPOSITORY_URL` 解析），取最新的非预发布版本与当前版本（`PluginInfo.PLUGIN_VERSION`）比较。检测走 `github.com` 而非 `api.github.com`，不受未认证 API 限流（60 次/小时/IP）影响，且在被屏蔽 api.github.com 的网络中仍可用。
+- **R13.2** 版本号解析须容忍 `v`/`V` 前缀与 `major[.minor[.patch]][-prerelease][+metadata]` 形式，按数字比较（1.10.0 > 1.9.9）；预发布版本低于同号正式版本，feed 解析时跳过含预发布段的 tag；开发分支版本 `0.0.0` 视为低于任何正式发布；任一侧解析失败时保守地以「tag 不同即视为更新」处理。
+- **R13.3** 检测请求失败（网络错误、超时、非 2xx、feed 解析失败）时，在按钮下方显示一行提示信息（本地化键 `PANEL_ABOUT_UPDATE_ERROR`，`{0}` 填入原始原因，HTTP 错误附带响应体摘要以帮助诊断），不影响面板其它功能；HTTP 404（仓库尚无发布）视为「已是最新」而非错误。
+- **R13.4** 检测到新版本时，按钮下方显示新版本的发布标题（feed 的 `title`，缺失时回退 tag）与更新说明摘要（feed 的 `content` 去除 HTML 标签后，仅保留 Release Date 与 Highlights 部分，截断其后的 Details/Contributors 段落），并显示「Open Release Page」按钮（打开该 release 的 GitHub 页面）与「Update」按钮；检测期间与下载期间相关按钮禁用，防止重复触发。
+- **R13.5** 点击「Update」后按固定命名约定推导资产下载地址 `https://github.com/{owner}/{repo}/releases/download/{tag}/HSRTimer-v{版本}.dll`（GitHub 会 302 重定向到实际资产存储）并下载；404（发布未按约定附带 DLL 资产）与下载/写入的各类异常（网络、超时、非 2xx、空响应、零字节、无效程序集、磁盘/权限错误、目标文件被占用）均须捕获并显示错误提示，不崩溃、不影响计时主流程。
+- **R13.6** 替换策略：新 DLL 以 `HSRTimer-v{新版本}.dll` 落盘（落盘前校验：文件非空且可通过 `AssemblyName.GetAssemblyName` 读取，证明是有效 .NET 程序集）；对无法立即删除的旧 `HSRTimer-v*.dll`（当前会话已加载导致被占用）依次尝试删除、重命名为 BepInEx 禁用后缀 `.dis`，仍失败则写入清理标记文件 `HSRTimer.update-cleanup.txt`；插件下次启动时执行幂等清理（标记文件所列路径、残留 `.tmp`、`.dis` 备份），清理只作用于插件目录内的 `HSRTimer-v*.dll` 相关文件，绝不触碰其它插件。
+- **R13.7** 下载替换成功后显示文本提示要求用户重启游戏（本地化键 `PANEL_ABOUT_UPDATE_DONE`）；不提供自动退出/重启按钮，由用户自行重启。
+- **R13.8** 新增文案纳入现有本地化体系（`PANEL_ABOUT_*` 键名，遵循 R7）。
+- **R13.9** 提供 `hsr update [status|check|apply|cancel|base [url]]` 控制台命令，便于在游戏内验证更新流程；`base` 为会话级仓库基地址覆盖（仅本次会话，用于离线/本地测试，feed 与下载地址均由其推导），不持久化。
+- **R13.10** 不新增 Harmony patch；启动清理、网络检测、下载替换的异常全部捕获并记录日志，不干扰计时与其它模块主流程。
 
 ---
 

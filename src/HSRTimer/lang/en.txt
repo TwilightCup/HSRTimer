@@ -83,6 +83,19 @@ PANEL_RELOAD_LANGUAGE:Reload language files
 PANEL_PRESS_KEY:Press a key...
 PANEL_ABOUT_GITHUB:GitHub Repository
 
+# ===== Plugin update checker (R13) =====
+PANEL_ABOUT_CHECK_UPDATE:Check Update
+PANEL_ABOUT_CHECKING:Checking for updates…
+PANEL_ABOUT_UPDATE_ERROR:Failed to check for updates: {0}
+PANEL_ABOUT_UP_TO_DATE:You are up to date (v{0}).
+PANEL_ABOUT_UPDATE_AVAILABLE:New version available
+PANEL_ABOUT_RELEASE_NOTES:Release notes
+PANEL_ABOUT_OPEN_RELEASE:Open Release Page
+PANEL_ABOUT_UPDATE:Update
+PANEL_ABOUT_DOWNLOADING:Downloading… {0}%
+PANEL_ABOUT_DOWNLOAD_ERROR:Update failed: {0}
+PANEL_ABOUT_UPDATE_DONE:Update installed. Please restart the game.
+
 # ===== Tags =====
 HUD_TAGS_LABEL:Tags
 TAG_CHECKPOINT:Checkpoint
