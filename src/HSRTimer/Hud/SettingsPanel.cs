@@ -265,7 +265,11 @@ namespace HSRTimer
             s.RetryLevelOverrideEnable = Toggle(loc.Get("SETTINGS_RETRY_LEVEL_OVERRIDE_ENABLE"), s.RetryLevelOverrideEnable);
             if (s.RetryLevelOverrideEnable)
             {
-                s.RetryLevelOverride = TextFieldRow(loc.Get("SETTINGS_RETRY_LEVEL_OVERRIDE"), s.RetryLevelOverride);
+                // Compact field: the label (a long "level name or Workshop ID"
+                // description) sits beside it, so a 220px field would push the
+                // row past the scroll view's right edge and spawn a horizontal
+                // scrollbar. Keep it short enough that label + field always fit.
+                s.RetryLevelOverride = TextFieldRow(loc.Get("SETTINGS_RETRY_LEVEL_OVERRIDE"), s.RetryLevelOverride, 130f);
             }
             else
             {
@@ -483,10 +487,10 @@ namespace HSRTimer
             return value;
         }
 
-        private string TextFieldRow(string label, string value)
+        private string TextFieldRow(string label, string value, float width = 220f)
         {
             GUILayout.BeginHorizontal();
-            string newText = GUILayout.TextField(value, _textField, GUILayout.Width(220));
+            string newText = GUILayout.TextField(value, _textField, GUILayout.Width(width));
             GUILayout.Label(label, _label);
             GUILayout.EndHorizontal();
             return newText;

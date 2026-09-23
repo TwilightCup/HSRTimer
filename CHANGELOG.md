@@ -9,6 +9,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Details:**
   - Added an in-game dev console command set (`hsr ...`, opened with `~` / `F1`) so every feature — timer, reset/retry, settings, tags, HUD/layout, localization, presets, subsegments, markers, validity flags, and LevelCollections integration — can be inspected and tested from inside the game. See `TESTS.md`.
   - Fixed the manual reset and one-key retry hotkeys still firing while a text input was open (for example the in-game chat), which could silently reset or restart a run while typing.
+  - Fixed the settings panel showing a horizontal scrollbar when the "Specify retry level" option is enabled — the input row was wider than the panel's scroll area.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.5.0
