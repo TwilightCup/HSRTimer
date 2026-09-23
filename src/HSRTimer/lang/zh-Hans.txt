@@ -80,9 +80,6 @@ PANEL_COLOR_HEX:色值
 PANEL_LANG_SELECT_HINT:[点击选择]
 PANEL_RELOAD_LANGUAGE:重新加载语言文件
 PANEL_PRESS_KEY:请按键...
-PANEL_SAVE:保存
-PANEL_CLOSE:关闭
-PANEL_FOOTER:改动实时生效。关闭面板或退出游戏时写入磁盘。
 
 # ===== 标签 =====
 HUD_TAGS_LABEL:规则标签

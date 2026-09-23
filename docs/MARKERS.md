@@ -98,7 +98,7 @@ Settings panel → **Markers** tab:
      stores the object reference (scene id when available, else the hierarchy
      path, plus name and position for fallback resolution).
 4. Changes are saved automatically (dirty flush at most once per frame, plus
-   on panel save/close and game exit).
+   on panel close and game exit).
 
 If the level metadata (`WorkshopRepository`) is not loaded yet (e.g. the level
 select screen was never opened), the level lists show a hint instead of

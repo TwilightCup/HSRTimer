@@ -80,9 +80,6 @@ PANEL_COLOR_HEX:Hex
 PANEL_LANG_SELECT_HINT:[Click to select]
 PANEL_RELOAD_LANGUAGE:Reload language files
 PANEL_PRESS_KEY:Press a key...
-PANEL_SAVE:Save
-PANEL_CLOSE:Close
-PANEL_FOOTER:Changes apply live. Saved on Close or game exit.
 
 # ===== Tags =====
 HUD_TAGS_LABEL:Tags

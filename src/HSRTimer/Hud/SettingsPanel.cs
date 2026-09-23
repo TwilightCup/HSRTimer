@@ -231,17 +231,6 @@ namespace HSRTimer
             }
 
             GUILayout.Space(8);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button(loc.Get("PANEL_SAVE"), _button))
-                cfg.SaveSettings();
-            if (GUILayout.Button(loc.Get("PANEL_CLOSE"), _button))
-            {
-                cfg.SaveSettings();
-                _visible = false;
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.Label(loc.Get("PANEL_FOOTER"), _small);
 
             GUILayout.EndScrollView();
 
