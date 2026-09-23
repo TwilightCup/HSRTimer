@@ -22,6 +22,27 @@ namespace HSRTimer
             Logger = base.Logger;
             Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} v{PluginInfo.PLUGIN_VERSION} is loaded!");
 
+            // 0. Updater housekeeping (R13.6): clear leftovers from a previous
+            //    session's plugin update (deferred deletions, interrupted-download
+            //    temps, retired ".dis" copies) and warn if the loaded copy is not
+            //    the newest one on disk (a stale plugin may have won the load).
+            string pluginDir = System.IO.Path.GetDirectoryName(Info.Location) ?? "";
+            try
+            {
+                UpdateInstaller.CleanupStartup(pluginDir);
+                string newest = UpdateInstaller.FindNewestVersionedDll(pluginDir);
+                string currentName = System.IO.Path.GetFileName(Info.Location);
+                if (newest != null
+                    && !string.Equals(newest, currentName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.LogWarning($"HSRTimer: newest plugin on disk is '{newest}' but the loaded copy is '{currentName}'. An update may not have taken effect — remove the stale HSRTimer-v*.dll file(s) and restart if needed.");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Logger.LogWarning($"HSRTimer: startup plugin cleanup failed: {ex.Message}");
+            }
+
             // 1. Config + localization. Seed the runtime lang dir first (so any
             //    on-disk defaults are picked up by the scan), then load. Note:
             //    the English base + example translation are also embedded in the
@@ -83,6 +104,13 @@ namespace HSRTimer
             Object.DontDestroyOnLoad(panelGo);
             panelGo.AddComponent<SettingsPanel>();
 
+            // 5.5 Updater service (R13): the About page's Check Update button and
+            //     the 'hsr update ...' console commands share this one state machine.
+            var updaterGo = new GameObject("HSRTimer.Updater");
+            Object.DontDestroyOnLoad(updaterGo);
+            var updater = updaterGo.AddComponent<UpdaterService>();
+            updater.Init(pluginDir, PluginInfo.PLUGIN_VERSION);
+
             // 6. Subsegment module (R8): recorder/loader/comparator + leaderboard HUD.
             var subGo = new GameObject("HSRTimer.Subsegment");
             Object.DontDestroyOnLoad(subGo);
@@ -94,6 +122,11 @@ namespace HSRTimer
             Object.DontDestroyOnLoad(markersGo);
             markersGo.AddComponent<MarkersManager>();
             markersGo.AddComponent<MarkerOverlay>();
+
+            // 8. In-game dev console: register the "hsr ..." commands with the
+            //     game's Shell console (~ / F1) so every feature can be inspected
+            //     and tested from inside the game. Safe before Shell.instance exists.
+            ConsoleCommands.Register();
         }
 
         /// <summary>

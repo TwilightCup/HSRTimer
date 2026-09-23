@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -71,6 +72,41 @@ namespace HSRTimer
                 cfg.Layout.LeaderboardMode = "Markers";
                 Plugin.Logger.LogInfo("HSRTimer: leaderboard switched to Markers mode.");
             }
+        }
+
+        /// <summary>
+        /// Show or hide the leaderboard without toggling if it is already in the
+        /// requested state. Used by the in-game dev console.
+        /// </summary>
+        public void SetVisible(bool visible)
+        {
+            if (_visible == visible)
+                return;
+            _visible = visible;
+            if (_visible && ConfigService.Instance != null
+                && string.IsNullOrEmpty(ConfigService.Instance.Layout.LeaderboardMode))
+            {
+                ConfigService.Instance.Layout.LeaderboardMode = "Subsegment";
+            }
+        }
+
+        /// <summary>
+        /// Switch the leaderboard to a content mode ("Subsegment" or "Markers")
+        /// and make sure it is visible. Used by the in-game dev console.
+        /// </summary>
+        public void SetMode(string mode)
+        {
+            if (string.IsNullOrEmpty(mode))
+                return;
+            var cfg = ConfigService.Instance;
+            if (cfg != null)
+            {
+                if (string.Equals(mode, "Markers", StringComparison.OrdinalIgnoreCase))
+                    cfg.Layout.LeaderboardMode = "Markers";
+                else if (string.Equals(mode, "Subsegment", StringComparison.OrdinalIgnoreCase))
+                    cfg.Layout.LeaderboardMode = "Subsegment";
+            }
+            _visible = true;
         }
 
         private void EnsureFont(int size)

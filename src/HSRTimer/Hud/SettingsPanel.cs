@@ -5,9 +5,9 @@ using UnityEngine;
 namespace HSRTimer
 {
     /// <summary>
-    /// An IMGUI settings panel, organized into tabbed pages (General,
-    /// Interface, Category, Subsegment, Leaderboard, plus any tabs registered
-    /// by other plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
+    /// An IMGUI settings panel, organized into tabbed pages (About, General,
+    /// Interface, Category, Subsegment, Leaderboard, Markers, plus any tabs
+    /// registered by other plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
     /// option and applies it live (the HUD/engine read from the shared models
     /// each frame, so changes take effect immediately). Changes are written to
     /// disk when the panel is closed or the game exits. Toggled by the
@@ -33,10 +33,12 @@ namespace HSRTimer
         private bool _stylesReady;
         private Vector2 _scroll;
 
-        // Active tab page.
-        private int _tab;
+        // Active tab page. Defaults to General rather than the informational
+        // About page at index 0, preserving the panel's previous landing tab.
+        private const int GeneralTabIndex = 1;
+        private int _tab = GeneralTabIndex;
         private string[] _tabDisplays;
-        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD", "PANEL_TAB_MARKERS" };
+        private static readonly string[] _tabKeys = { "PANEL_TAB_ABOUT", "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD", "PANEL_TAB_MARKERS" };
 
         // Keybind rebind state: which logical action is awaiting a keypress.
         private string _pendingRebind;
@@ -119,6 +121,17 @@ namespace HSRTimer
                 RefreshPresetList();
                 RefreshTabDisplays();
             }
+        }
+
+        /// <summary>
+        /// Show or hide the settings panel without toggling if it is already in
+        /// the requested state. Used by the in-game dev console.
+        /// </summary>
+        public void SetVisible(bool visible)
+        {
+            if (_visible == visible)
+                return;
+            Toggle();
         }
 
         private void EnsureStyles()
@@ -210,33 +223,130 @@ namespace HSRTimer
 
             switch (_tab)
             {
-                case 0: DrawGeneral(cfg, s, loc); break;
-                case 1: DrawInterface(cfg, loc); break;
-                case 2: DrawCategory(cfg, loc); break;
-                case 3: DrawSubsegment(cfg, s, loc); break;
-                case 4: DrawLeaderboard(cfg, s, loc); break;
-                case 5: DrawMarkers(cfg, loc); break;
+                case 0: DrawAbout(loc); break;
+                case 1: DrawGeneral(cfg, s, loc); break;
+                case 2: DrawInterface(cfg, loc); break;
+                case 3: DrawCategory(cfg, loc); break;
+                case 4: DrawSubsegment(cfg, s, loc); break;
+                case 5: DrawLeaderboard(cfg, s, loc); break;
+                case 6: DrawMarkers(cfg, loc); break;
                 default: DrawExternalTab(_tab - _tabKeys.Length); break;
             }
 
             GUILayout.Space(8);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button(loc.Get("PANEL_SAVE"), _button))
-                cfg.SaveSettings();
-            if (GUILayout.Button(loc.Get("PANEL_CLOSE"), _button))
-            {
-                cfg.SaveSettings();
-                _visible = false;
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.Label(loc.Get("PANEL_FOOTER"), _small);
 
             GUILayout.EndScrollView();
 
             GUILayout.EndHorizontal();
 
             GUI.DragWindow(new Rect(0, 0, _rect.width, 20));
+        }
+
+        // ── Page: About (R12: plugin name, version, license notice, repository link;
+        //    R13: Check Update) ──
+        private void DrawAbout(LocalizationService loc)
+        {
+            GUILayout.Space(6);
+            // R12.2: top two lines = plugin name + version number.
+            GUILayout.Label(PluginInfo.PLUGIN_NAME, _section);
+            GUILayout.Label(PluginInfo.PLUGIN_VERSION, _value);
+
+            // R12.3: next two lines = the first two non-empty lines of LICENSE
+            // (MIT License / Copyright). Legal text, deliberately not localized.
+            GUILayout.Space(6);
+            GUILayout.Label(PluginInfo.LICENSE_LINE1, _label);
+            GUILayout.Label(PluginInfo.LICENSE_LINE2, _label);
+
+            // R12.4: open the project repository in the system browser.
+            GUILayout.Space(10);
+            if (GUILayout.Button(loc.Get("PANEL_ABOUT_GITHUB"), _button))
+                OpenRepository();
+
+            // R13: Check Update — query GitHub Releases, show the newest release,
+            // and (on request) download + install it.
+            DrawUpdater(loc);
+        }
+
+        // ── R13: plugin update widget on the About page ──
+        private void DrawUpdater(LocalizationService loc)
+        {
+            var updater = UpdaterService.Instance;
+            if (updater == null) return;
+
+            GUILayout.Space(10);
+            bool busy = updater.IsBusy;
+            GUI.enabled = !busy;
+            if (GUILayout.Button(loc.Get("PANEL_ABOUT_CHECK_UPDATE"), _button))
+                updater.CheckForUpdate();
+            GUI.enabled = true;
+
+            switch (updater.Phase)
+            {
+                case UpdatePhase.Checking:
+                    GUILayout.Label(loc.Get("PANEL_ABOUT_CHECKING"), _small);
+                    break;
+                case UpdatePhase.HasUpdate:
+                    DrawPendingUpdate(loc, updater);
+                    break;
+                case UpdatePhase.Downloading:
+                    GUILayout.Label(loc.Get("PANEL_ABOUT_DOWNLOADING", updater.ProgressPercent), _small);
+                    break;
+                case UpdatePhase.RestartRequired:
+                    GUILayout.Label(loc.Get("PANEL_ABOUT_UPDATE_DONE"), _label);
+                    break;
+                default: // Idle
+                    if (!string.IsNullOrEmpty(updater.ErrorText))
+                        GUILayout.Label(loc.Get(
+                            updater.ErrorFromCheck ? "PANEL_ABOUT_UPDATE_ERROR" : "PANEL_ABOUT_DOWNLOAD_ERROR",
+                            updater.ErrorText), _small);
+                    else if (updater.UpToDate)
+                        GUILayout.Label(loc.Get("PANEL_ABOUT_UP_TO_DATE", updater.CheckedVersion), _small);
+                    break;
+            }
+        }
+
+        private void DrawPendingUpdate(LocalizationService loc, UpdaterService updater)
+        {
+            var release = updater.PendingRelease;
+            if (release == null) return;
+            GUILayout.Label(loc.Get("PANEL_ABOUT_UPDATE_AVAILABLE"), _section);
+            string title = !string.IsNullOrEmpty(release.Title) ? release.Title : release.Tag;
+            GUILayout.Label(title, _label);
+            if (!string.IsNullOrEmpty(release.Body))
+            {
+                GUILayout.Label(loc.Get("PANEL_ABOUT_RELEASE_NOTES"), _small);
+                GUILayout.Label(release.Body, _small);
+            }
+            // R13.4: jump to the full release page (release notes shown here are
+            // trimmed to the date + Highlights summary).
+            if (!string.IsNullOrEmpty(release.Url)
+                && GUILayout.Button(loc.Get("PANEL_ABOUT_OPEN_RELEASE"), _button))
+                OpenUrl(release.Url);
+            GUI.enabled = !updater.IsBusy;
+            if (GUILayout.Button(loc.Get("PANEL_ABOUT_UPDATE"), _button))
+                updater.ApplyUpdate();
+            GUI.enabled = true;
+        }
+
+        private static void OpenRepository()
+        {
+            OpenUrl(PluginInfo.PLUGIN_REPOSITORY_URL);
+        }
+
+        /// <summary>Open a URL in the system browser; failures are logged, never thrown (R12.5/R13.4).</summary>
+        private static void OpenUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url))
+                return;
+            try
+            {
+                Application.OpenURL(url);
+            }
+            catch (System.Exception ex)
+            {
+                if (Plugin.Logger != null)
+                    Plugin.Logger.LogWarning($"HSRTimer: failed to open '{url}': {ex.Message}");
+            }
         }
 
         // ── Page: General (timing toggles, language, keybinds) ──
@@ -254,7 +364,11 @@ namespace HSRTimer
             s.RetryLevelOverrideEnable = Toggle(loc.Get("SETTINGS_RETRY_LEVEL_OVERRIDE_ENABLE"), s.RetryLevelOverrideEnable);
             if (s.RetryLevelOverrideEnable)
             {
-                s.RetryLevelOverride = TextFieldRow(loc.Get("SETTINGS_RETRY_LEVEL_OVERRIDE"), s.RetryLevelOverride);
+                // Compact field: the label (a long "level name or Workshop ID"
+                // description) sits beside it, so a 220px field would push the
+                // row past the scroll view's right edge and spawn a horizontal
+                // scrollbar. Keep it short enough that label + field always fit.
+                s.RetryLevelOverride = TextFieldRow(loc.Get("SETTINGS_RETRY_LEVEL_OVERRIDE"), s.RetryLevelOverride, 130f);
             }
             else
             {
@@ -472,10 +586,10 @@ namespace HSRTimer
             return value;
         }
 
-        private string TextFieldRow(string label, string value)
+        private string TextFieldRow(string label, string value, float width = 220f)
         {
             GUILayout.BeginHorizontal();
-            string newText = GUILayout.TextField(value, _textField, GUILayout.Width(220));
+            string newText = GUILayout.TextField(value, _textField, GUILayout.Width(width));
             GUILayout.Label(label, _label);
             GUILayout.EndHorizontal();
             return newText;

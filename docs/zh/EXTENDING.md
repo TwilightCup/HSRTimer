@@ -274,7 +274,7 @@ public class MyPlugin : BaseUnityPlugin
 
 约定:
 
-- 事件在 HSRTimer 的 `ConfigService.SaveSettings()` 写完配置后触发,覆盖设置面板的**保存**与**关闭**按钮、用设置键关闭面板、退出游戏,以及 HSRTimer 内部的自动保存(例如重置成绩后)。
+- 事件在 HSRTimer 的 `ConfigService.SaveSettings()` 写完配置后触发,覆盖用设置键关闭面板、退出游戏,以及 HSRTimer 内部的自动保存(例如重置成绩后)。
 - 多个处理器依次执行。若某个处理器抛出异常,HSRTimer 会记录该异常并继续保存/通知其它插件;单个插件的错误不会阻断 HSRTimer 自身的持久化。
 - 该事件仅用于持久化,不要在处理器里绘制 UI,也不要假设某个标签页当前可见。
 - 若插件可能被卸载,请在 `OnDestroy` 中取消订阅,避免残留委托导致对象无法释放。

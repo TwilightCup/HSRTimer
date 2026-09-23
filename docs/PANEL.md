@@ -15,6 +15,34 @@ HSRTimer saves.
 > Cheat/speed/drift detection (R5.1) is always on with hardcoded thresholds and
 > is intentionally **not** exposed anywhere in the panel.
 
+## About
+
+- **Plugin identity** — the plugin name (`HSRTimer`) and the current version
+  number, on the first two lines.
+- **License** — the first two lines of the MIT license (`MIT License`,
+  `Copyright (c) 2026 TwilightCup`). This is legal text and is **not**
+  translated.
+- **GitHub Repository** — opens
+  <https://github.com/TwilightCup/HSRTimer> in the system browser.
+- **Check Update** (R13) — reads the project's GitHub releases feed
+  (`github.com/.../releases.atom`) for the newest stable release of the plugin
+  (this avoids the GitHub API's unauthenticated rate limit and keeps working
+  where `api.github.com` is blocked). A failed check shows a one-line error
+  under the button; being up to date shows one confirmation line; a newer
+  release shows its title, a short notes summary (release date + Highlights
+  only — the Details/Contributors sections are trimmed), an **Open Release
+  Page** button that opens the release's GitHub page, and an **Update** button.
+  Clicking **Update** downloads the release's `HSRTimer-v{version}.dll` asset
+  (the URL is derived from the release tag), verifies it is a valid assembly,
+  places it in the plugins folder next to the running copy, and retires older
+  `HSRTimer-v*.dll` files (deleting them, or renaming them
+  to BepInEx's `.dis` disabled suffix when they are locked; anything still
+  locked is cleaned up at the next launch). After a successful install the
+  panel shows a plain-text prompt to restart the game (no auto-quit button).
+  All download/install failures are caught and shown as an error line; the
+  update flow never touches other plugins' DLLs. The notes summary is rendered
+  as plain text (HTML stripped).
+
 ## General
 
 - **Timing** — `auto_reset`,

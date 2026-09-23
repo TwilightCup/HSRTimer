@@ -474,6 +474,14 @@ namespace HSRTimer
             if (SettingsPanel.Instance != null && SettingsPanel.Instance.IsVisible)
                 return;
 
+            // While any other keyboard-capturing UI is open (chat, text input,
+            // dialog, and the in-game dev console), suppress gameplay keybinds
+            // too. Without this, typing an 'r' inside 'hsr status' can trigger a
+            // retry, and Backspace can silently full-reset a run while fixing a
+            // typo (same guard as RetryAction R6.1.2a).
+            if (MenuSystem.keyboardState != KeyboardState.None)
+                return;
+
             if (LeaderboardHud.Instance != null && InputUtil.GetKeyDown(s.SubsegmentToggleKey))
                 LeaderboardHud.Instance.CycleMode();
 
@@ -505,6 +513,36 @@ namespace HSRTimer
                 Notify(key);
             }
         }
+
+        /// <summary>
+        /// Public entry point used by the in-game dev console to perform the
+        /// same full-run reset as the reset key.
+        /// </summary>
+        public static void ResetRun()
+        {
+            var core = Instance;
+            if (core == null || State == null)
+                return;
+
+            core.DoFullReset(keepLastValues: false);
+
+            // A manual reset must clear AND stop the timer; restore the
+            // transition caches to the actual game state so the still-active
+            // PlayingLevel does not look like a fresh segment start (mirrors the
+            // reset-key path in HandleKeybinds).
+            var game = Game.instance;
+            if (game != null && game.state == GameState.PlayingLevel)
+            {
+                State.PrevGameState = game.state;
+                State.PrevAppState = App.state;
+            }
+
+            core._cfg?.SaveSettings();
+            core.Notify("NOTIFY_RUN_RESET");
+        }
+
+        /// <summary>Re-read timing options from the live settings model.</summary>
+        public void RefreshTimingOptions() => UpdateOptions();
 
         /// <summary>
         /// Public entry point used by pause-menu patches to clear the current
