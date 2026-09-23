@@ -5,9 +5,9 @@ using UnityEngine;
 namespace HSRTimer
 {
     /// <summary>
-    /// An IMGUI settings panel, organized into tabbed pages (General,
-    /// Interface, Category, Subsegment, Leaderboard, plus any tabs registered
-    /// by other plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
+    /// An IMGUI settings panel, organized into tabbed pages (About, General,
+    /// Interface, Category, Subsegment, Leaderboard, Markers, plus any tabs
+    /// registered by other plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
     /// option and applies it live (the HUD/engine read from the shared models
     /// each frame, so changes take effect immediately). Changes are written to
     /// disk when the panel is closed or the game exits. Toggled by the
@@ -33,10 +33,12 @@ namespace HSRTimer
         private bool _stylesReady;
         private Vector2 _scroll;
 
-        // Active tab page.
-        private int _tab;
+        // Active tab page. Defaults to General rather than the informational
+        // About page at index 0, preserving the panel's previous landing tab.
+        private const int GeneralTabIndex = 1;
+        private int _tab = GeneralTabIndex;
         private string[] _tabDisplays;
-        private static readonly string[] _tabKeys = { "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD", "PANEL_TAB_MARKERS" };
+        private static readonly string[] _tabKeys = { "PANEL_TAB_ABOUT", "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD", "PANEL_TAB_MARKERS" };
 
         // Keybind rebind state: which logical action is awaiting a keypress.
         private string _pendingRebind;
@@ -221,12 +223,13 @@ namespace HSRTimer
 
             switch (_tab)
             {
-                case 0: DrawGeneral(cfg, s, loc); break;
-                case 1: DrawInterface(cfg, loc); break;
-                case 2: DrawCategory(cfg, loc); break;
-                case 3: DrawSubsegment(cfg, s, loc); break;
-                case 4: DrawLeaderboard(cfg, s, loc); break;
-                case 5: DrawMarkers(cfg, loc); break;
+                case 0: DrawAbout(loc); break;
+                case 1: DrawGeneral(cfg, s, loc); break;
+                case 2: DrawInterface(cfg, loc); break;
+                case 3: DrawCategory(cfg, loc); break;
+                case 4: DrawSubsegment(cfg, s, loc); break;
+                case 5: DrawLeaderboard(cfg, s, loc); break;
+                case 6: DrawMarkers(cfg, loc); break;
                 default: DrawExternalTab(_tab - _tabKeys.Length); break;
             }
 
@@ -237,6 +240,39 @@ namespace HSRTimer
             GUILayout.EndHorizontal();
 
             GUI.DragWindow(new Rect(0, 0, _rect.width, 20));
+        }
+
+        // ── Page: About (R12: plugin name, version, license notice, repository link) ──
+        private void DrawAbout(LocalizationService loc)
+        {
+            GUILayout.Space(6);
+            // R12.2: top two lines = plugin name + version number.
+            GUILayout.Label(PluginInfo.PLUGIN_NAME, _section);
+            GUILayout.Label(PluginInfo.PLUGIN_VERSION, _value);
+
+            // R12.3: next two lines = the first two non-empty lines of LICENSE
+            // (MIT License / Copyright). Legal text, deliberately not localized.
+            GUILayout.Space(6);
+            GUILayout.Label(PluginInfo.LICENSE_LINE1, _label);
+            GUILayout.Label(PluginInfo.LICENSE_LINE2, _label);
+
+            // R12.4: open the project repository in the system browser.
+            GUILayout.Space(10);
+            if (GUILayout.Button(loc.Get("PANEL_ABOUT_GITHUB"), _button))
+                OpenRepository();
+        }
+
+        private static void OpenRepository()
+        {
+            try
+            {
+                Application.OpenURL(PluginInfo.PLUGIN_REPOSITORY_URL);
+            }
+            catch (System.Exception ex)
+            {
+                if (Plugin.Logger != null)
+                    Plugin.Logger.LogWarning($"HSRTimer: failed to open '{PluginInfo.PLUGIN_REPOSITORY_URL}': {ex.Message}");
+            }
         }
 
         // ── Page: General (timing toggles, language, keybinds) ──

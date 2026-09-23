@@ -58,6 +58,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr flags [list\|raise <Reason>\|clear [forgivable\|soft\|all]]` | Inspect/mutate validity flags (R5) |
 | `hsr lc [status\|restart]` | Inspect LevelCollections integration or dispatch `lc restart` |
 | `hsr config [path\|files]` | Print HSRTimer config paths |
+| `hsr about` | Print plugin name, version, license notice, and repository URL (R12) |
 
 ## Keys accepted by `hsr get` / `hsr set`
 
@@ -160,6 +161,15 @@ hsr reload
 ```
 
 `hsr panel open` should show the same IMGUI settings panel as the Home key.
+The **About** tab is the first entry in the panel navigation; it shows the
+plugin name, version, the first two lines of the MIT license, and a **GitHub
+Repository** button. `hsr about` prints the same text so it can be checked
+without a screenshot:
+
+```text
+hsr panel open
+hsr about
+```
 
 ### 6. Presets (R11)
 
@@ -258,6 +268,7 @@ on disk.
 - [ ] `hsr retry` reloads the current level (or the configured override).
 - [ ] `hsr hud off/on` hides/shows the timer HUD.
 - [ ] `hsr panel open/close` opens/closes the settings panel.
+- [ ] The About tab (first in the navigation) shows name/version/license and the repository button; `hsr about` matches it.
 - [ ] `hsr tag enable/disable` changes the enabled tags and persists them.
 - [ ] `hsr set language zh-Hans` switches UI language.
 - [ ] `hsr layout row add/remove` changes the HUD rows.

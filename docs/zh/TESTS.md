@@ -47,6 +47,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr flags [list\|raise <Reason>\|clear [forgivable\|soft\|all]]` | 查看 / 修改有效性标记(R5) |
 | `hsr lc [status\|restart]` | 查看 LevelCollections 集成或触发 `lc restart` |
 | `hsr config [path\|files]` | 打印 HSRTimer 配置路径 |
+| `hsr about` | 打印插件名称、版本、许可证声明与仓库 URL(R12) |
 
 ## `hsr get` / `hsr set` 可接受的键
 
@@ -141,6 +142,12 @@ hsr reload
 ```
 
 `hsr panel open` 应弹出与 Home 键相同的 IMGUI 设置面板。
+**关于** 标签页是面板导航的第一项;它显示插件名称、版本、MIT 许可证的前两行,以及一个 **GitHub 仓库** 按钮。`hsr about` 打印相同文本,因此无需截图即可核对:
+
+```text
+hsr panel open
+hsr about
+```
 
 ### 6. 预设(R11)
 
@@ -235,6 +242,7 @@ hsr config files
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
 - [ ] `hsr hud off/on` 隐藏 / 显示计时 HUD。
 - [ ] `hsr panel open/close` 打开 / 关闭设置面板。
+- [ ] 关于标签页(导航第一项)显示名称 / 版本 / 许可证与仓库按钮;`hsr about` 与之匹配。
 - [ ] `hsr tag enable/disable` 改变启用的标签并持久化。
 - [ ] `hsr set language zh-Hans` 切换界面语言。
 - [ ] `hsr layout row add/remove` 改变 HUD 行。

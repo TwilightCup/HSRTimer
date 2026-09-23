@@ -10,6 +10,12 @@
 
 > 作弊 / 变速 / 漂移检测(R5.1)始终开启,阈值为硬编码,刻意**不**在面板的任何地方暴露。
 
+## 关于
+
+- **插件标识** —— 前两行分别为插件名称(`HSRTimer`)与当前版本号。
+- **许可证** —— MIT 许可证的前两行(`MIT License`、`Copyright (c) 2026 TwilightCup`);法律声明,**不翻译**。
+- **GitHub 仓库** —— 通过系统默认浏览器打开 <https://github.com/TwilightCup/HSRTimer>。
+
 ## 常规
 
 - **计时** —— `auto_reset`、`restart_clears_forgivable`(暂停菜单重新开始时清除可原谅标记;见 [CONFIG.md](CONFIG.md)),以及重试目标指定(`retry_level_override_enabled` + `retry_level_override`)。开启“指定重试关卡”后会出现一个文本输入框,可填关卡的英文本地化名(不区分大小写)或创意工坊数字 id。无效值会在按下重试键时以计时器面板的红色无效样式提示;在主菜单中,有效值可直接通过重试键进入该指定关卡。暂停期间始终计时,菜单 / 大厅期间始终不计时,二者均无开关。

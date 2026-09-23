@@ -11,6 +11,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - Fixed the manual reset and one-key retry hotkeys still firing while a text input was open (for example the in-game chat), which could silently reset or restart a run while typing.
   - Fixed the settings panel showing a horizontal scrollbar when the "Specify retry level" option is enabled — the input row was wider than the panel's scroll area.
   - Removed the Save and Close buttons and the hint line from the bottom of the settings panel. Edits still apply live and are written to disk when the panel is closed (settings key) or the game exits.
+  - Added an **About** tab as the first entry in the settings panel navigation, showing the plugin name, version, the first two lines of the MIT license, and a **GitHub Repository** button that opens the project page. The `hsr about` console command prints the same information.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.5.0

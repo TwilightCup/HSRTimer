@@ -119,6 +119,7 @@ namespace HSRTimer
                     case "flags": CmdFlags(rest); break;
                     case "lc": CmdLc(rest); break;
                     case "config": CmdConfig(rest); break;
+                    case "about": CmdAbout(); break;
                     default:
                         Print($"Unknown HSRTimer command: {cmd}. Type 'hsr help' for usage.");
                         break;
@@ -399,6 +400,22 @@ namespace HSRTimer
         }
 
         // ── hud / panel / leaderboard ──────────────────────────────────────
+
+        /// <summary>
+        /// R12.6: print the same identity/license/repository content the
+        /// settings panel's About page shows, so the page's static text can be
+        /// verified from the console (the link button itself opens the system
+        /// browser).
+        /// </summary>
+        private static void CmdAbout()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine(PluginInfo.PLUGIN_NAME + " " + PluginInfo.PLUGIN_VERSION);
+            sb.AppendLine(PluginInfo.LICENSE_LINE1);
+            sb.AppendLine(PluginInfo.LICENSE_LINE2);
+            sb.AppendLine(PluginInfo.PLUGIN_REPOSITORY_URL);
+            Print(sb.ToString());
+        }
 
         private static void CmdHud(List<string> args)
         {
@@ -1575,6 +1592,7 @@ namespace HSRTimer
             sb.AppendLine("  hsr marker [list|feed|add ...|remove <id>|toggle <id>|pb <ms>|pbclear|clear|save|reload]");
             sb.AppendLine("  hsr flags [list|raise <Reason>|clear [forgivable|soft|all]]");
             sb.AppendLine("  hsr lc [status|restart] | hsr config [path|files]");
+            sb.AppendLine("  hsr about");
             Print(sb.ToString());
         }
 
@@ -1626,6 +1644,8 @@ namespace HSRTimer
                     return "hsr lc [status|restart]\r\nInspect LevelCollections integration or dispatch 'lc restart'.";
                 case "config":
                     return "hsr config [path|files]\r\nPrint HSRTimer config paths.";
+                case "about":
+                    return "hsr about\r\nPrint plugin name, version, license notice, and repository URL (the About page content).";
                 default:
                     return "Unknown HSRTimer command topic: " + topic + ". Type 'hsr' for the command list.";
             }

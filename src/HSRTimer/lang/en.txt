@@ -63,6 +63,7 @@ SETTINGS_PRESET_DELETE_FAILED:Failed to delete the selected preset.
 SETTINGS_PRESET_FAILED:Preset operation failed.
 
 # ===== Settings panel (GUI) =====
+PANEL_TAB_ABOUT:About
 PANEL_TAB_GENERAL:General
 PANEL_TAB_INTERFACE:Interface
 PANEL_TAB_CATEGORY:Category
@@ -80,6 +81,7 @@ PANEL_COLOR_HEX:Hex
 PANEL_LANG_SELECT_HINT:[Click to select]
 PANEL_RELOAD_LANGUAGE:Reload language files
 PANEL_PRESS_KEY:Press a key...
+PANEL_ABOUT_GITHUB:GitHub Repository
 
 # ===== Tags =====
 HUD_TAGS_LABEL:Tags

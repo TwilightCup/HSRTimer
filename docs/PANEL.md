@@ -15,6 +15,16 @@ HSRTimer saves.
 > Cheat/speed/drift detection (R5.1) is always on with hardcoded thresholds and
 > is intentionally **not** exposed anywhere in the panel.
 
+## About
+
+- **Plugin identity** — the plugin name (`HSRTimer`) and the current version
+  number, on the first two lines.
+- **License** — the first two lines of the MIT license (`MIT License`,
+  `Copyright (c) 2026 TwilightCup`). This is legal text and is **not**
+  translated.
+- **GitHub Repository** — opens
+  <https://github.com/TwilightCup/HSRTimer> in the system browser.
+
 ## General
 
 - **Timing** — `auto_reset`,
