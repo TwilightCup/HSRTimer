@@ -2,6 +2,14 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
+## 1.6.1
+
+- **Release Date:** _23 Sep 2026_
+- **Highlights:**
+  - Fixed the "you are up to date" message on the About tab showing the version as `vv1.6.0` instead of `v1.6.0`.
+- **Details:**
+  - Fixed the "you are up to date" message on the About tab showing the version as `vv1.6.0` instead of `v1.6.0`.
+
 ## 1.6.0
 
 - **Release Date:** _23 Sep 2026_

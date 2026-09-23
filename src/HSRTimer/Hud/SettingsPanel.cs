@@ -300,7 +300,13 @@ namespace HSRTimer
                             updater.ErrorFromCheck ? "PANEL_ABOUT_UPDATE_ERROR" : "PANEL_ABOUT_DOWNLOAD_ERROR",
                             updater.ErrorText), _small);
                     else if (updater.UpToDate)
-                        GUILayout.Label(loc.Get("PANEL_ABOUT_UP_TO_DATE", updater.CheckedVersion), _small);
+                    {
+                        // CheckedVersion holds the raw release tag (e.g. "v1.6.0"), but
+                        // PANEL_ABOUT_UP_TO_DATE already adds the "v" prefix — strip the
+                        // tag's own prefix so it doesn't render as "vv1.6.0".
+                        string checkedVersion = (updater.CheckedVersion ?? string.Empty).TrimStart('v', 'V');
+                        GUILayout.Label(loc.Get("PANEL_ABOUT_UP_TO_DATE", checkedVersion), _small);
+                    }
                     break;
             }
         }
