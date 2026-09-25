@@ -28,6 +28,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr` | 打印完整命令摘要 |
 | `hsr help [topic]` | 打印某个主题的帮助 |
 | `hsr status` | 输出计时器 / 配置 / HUD / 分段 / 标记 / LC 的实时状态 |
+| `hsr clock [status\|history [n]\|clear]` | 查看纯 tick 游戏时钟与分段边界(R1.11) |
 | `hsr keys` | 列出所有可设置的 settings/layout 键 |
 | `hsr get <key>` / `hsr get all` | 读取单个配置值,或全部配置值 |
 | `hsr set <key> <value>` | 设置并保存一个配置值 |
@@ -77,6 +78,9 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 
 ```text
 hsr status                 # 查看游戏/应用状态、游戏时间、分段、现实时间
+hsr clock                  # 纯 tick 时钟:PlayableTicks、分段起止 tick
+hsr clock history          # 最近的分段起止 tick(抖动检查,R1.11)
+hsr clock clear            # 清空边界历史
 hsr reset                  # 验证计时器归零、标记被清除
 hsr retry                  # 验证一键重试会重载关卡
 hsr pass                   # 模拟通过当前关卡(过关)
@@ -100,6 +104,8 @@ hsr pass real              # 传送到判定箱,让游戏自身完成过关
 `passedLevel`,玩家落入下方的 `FallTrigger` 由 `Game.Fall` 完成过关。PB 抑制与
 默认模式一致。若命令报告 `LevelPassed` 未锁定,说明玩家未能进入判定箱
 (检查触发器的 collider / tag / 关卡布局)。
+
+**边界确定性(R1.11)。** `hsr clock` 打印原始整数 tick 时钟(`playableTicks`、`segmentStartTicks`、`pendingEndTicks` 等)。`hsr clock history` 列出每次分段起止 tick:连续载入 + 通关同一关卡 50 次,相同操作下的 `dur=`(终点 tick − 起点 tick)必须**完全一致**(零 ±1 抖动)。测量前用 `hsr clock clear` 清空历史。
 
 ### 2. 有效性标记(R5)
 
@@ -286,6 +292,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr` 打印命令摘要。
 - [ ] 关卡内 `hsr status` 显示合理的实时值。
 - [ ] `hsr reset` 将计时器归零并清除标记。
+- [ ] `hsr clock` 显示整数 tick,且 `hsr clock history` 对重复的相同操作记录到一致的 `dur=`(R1.11)。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
 - [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
 - [ ] `hsr pass real` 把玩家传送到判定箱,由游戏自身的触发器链路完成过关(且 `LevelPassed` 已锁定);PB 同样不写入。

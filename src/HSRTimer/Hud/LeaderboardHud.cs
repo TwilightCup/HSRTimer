@@ -154,8 +154,8 @@ namespace HSRTimer
             // previous leaderboard on screen until the next level's first
             // settled diff refreshes it (R8.5.6.4).
             bool inPlayableSegment = state.InSegment;
-            bool inMultiTransition = mgr.InMultiRunActive && state.GameTime > 0d;
-            bool inPreservedTransition = mgr.InPreservedTransition && state.GameTime > 0d;
+            bool inMultiTransition = mgr.InMultiRunActive && state.PlayableTicks > 0UL;
+            bool inPreservedTransition = mgr.InPreservedTransition && state.PlayableTicks > 0UL;
             if (!inPlayableSegment && !inMultiTransition && !inPreservedTransition) return;
 
             var entries = mgr.Entries;
@@ -208,8 +208,8 @@ namespace HSRTimer
             if (state == null) return;
 
             // R10.7.6: keep the previous feed on screen through a level
-            // transition; hide it once a run has reset (GameTime back to 0).
-            if (!state.InSegment && state.GameTime <= 0d) return;
+            // transition; hide it once a run has reset (game clock back to 0).
+            if (!state.InSegment && state.PlayableTicks == 0UL) return;
 
             var feed = mgr.Feed;
             if (feed == null || feed.Count == 0) return;

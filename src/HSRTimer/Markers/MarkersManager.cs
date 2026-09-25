@@ -212,7 +212,7 @@ namespace HSRTimer
             if (Enabled && completed && !retrying && state != null && !state.Flags.IsInvalid
                 && !state.SuppressPbRecording && _currentSet != null && state.InSegment)
             {
-                long levelMs = (long)Math.Round((endTime - state.SegmentStart) * 1000.0);
+                long levelMs = GameClock.ToMs(endTime - GameClock.SegmentStartSeconds(state));
                 TryWritePb(levelMs);
             }
             ClearEvaluation();
@@ -281,7 +281,7 @@ namespace HSRTimer
         // ── trigger helpers ────────────────────────────────────────────────
 
         private static long SegmentTimeMs(RunState state)
-            => (long)Math.Round((state.GameTime - state.SegmentStart) * 1000.0);
+            => GameClock.SegmentMs(state);
 
         private static bool IsInsideBox(Vector3 pos, MarkerDef def)
         {

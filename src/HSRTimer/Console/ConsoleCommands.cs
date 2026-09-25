@@ -100,6 +100,7 @@ namespace HSRTimer
                 {
                     case "help": OnHelp(rest); break;
                     case "status": CmdStatus(); break;
+                    case "clock": CmdClock(rest); break;
                     case "keys": CmdKeys(); break;
                     case "get": CmdGet(rest); break;
                     case "set": CmdSet(rest); break;
@@ -163,8 +164,8 @@ namespace HSRTimer
             if (state != null)
             {
                 sb.AppendLine($"segment={state.InSegment} timing={state.TimingActive} retrying={state.Retrying} realTimeActive={state.RealTimeActive}");
-                sb.AppendLine($"gameTime={FormatNumber(state.GameTime)} segmentTime={FormatNumber(state.GameTime - state.SegmentStart)} realTime={FormatNumber(state.RealTime)}");
-                sb.AppendLine($"lastSegment={FormatNullable(state.LastSegment)} totalAtLastSegment={FormatNullable(state.TotalAtLastSegment)} lastRun={FormatNullable(state.LastRun)} wakeUp={FormatNullable(state.WakeUpTime)}");
+                sb.AppendLine($"gameTime={FormatNumber(state.GameTimeSeconds)} segmentTime={FormatNumber(GameClock.SegmentSeconds(state))} realTime={FormatNumber(state.RealTime)}");
+                sb.AppendLine($"lastSegment={FormatNullable(GameClock.LastSegmentSeconds(state))} totalAtLastSegment={FormatNullable(GameClock.TotalAtLastSegmentSeconds(state))} lastRun={FormatNullable(GameClock.LastRunSeconds(state))} wakeUp={FormatNullable(GameClock.WakeUpSeconds(state))}");
                 sb.AppendLine($"level={state.CurrentLevelNumber} type={state.CurrentLevelType} cp={(game != null ? game.currentCheckpointNumber : -1)} prevCp={state.PrevCheckpoint} maxCp={state.MaxCheckpointThisLevel} campaignRetryLevel={state.CampaignRetryLevel}");
                 sb.Append("flags:");
                 string hard = state.Flags.FormatReasons(loc);
@@ -210,6 +211,62 @@ namespace HSRTimer
             sb.Append("configDir=").Append(PersistenceService.PluginDir);
             Print(sb.ToString());
         }
+
+        /// <summary>
+        /// <c>hsr clock [status|history [n]|clear]</c> — inspect the pure-tick
+        /// game clock and the precise segment boundaries (TB-1/TB-3). The
+        /// history lets a tester verify that repeated level loads/passes produce
+        /// identical start/end ticks (±0 jitter, TB-5).
+        /// </summary>
+        private static void CmdClock(List<string> args)
+        {
+            string mode = args.Count > 0 ? args[0].ToLowerInvariant() : "status";
+            switch (mode)
+            {
+                case "status":
+                {
+                    var state = TimerCore.State;
+                    if (state == null) { Print("HSRTimer state is not ready."); return; }
+                    var sb = new StringBuilder();
+                    sb.AppendLine("clock: game time is integer physics ticks; seconds are derived only for display (TB-1/TB-2).");
+                    sb.AppendLine($"currentTick={GameClock.CurrentTick} tickSeconds={FormatNumber(GameClock.TickSeconds)}");
+                    sb.AppendLine($"playableTicks={state.PlayableTicks} pauseAccum={FormatNumber(state.PauseAccum)} gameTimeSeconds={FormatNumber(state.GameTimeSeconds)}");
+                    sb.AppendLine($"segmentStartTicks={state.SegmentStartTicks} segmentStartPause={FormatNumber(state.SegmentStartPause)} segmentTicks={SafeSub(state.PlayableTicks, state.SegmentStartTicks)} segmentSeconds={FormatNumber(GameClock.SegmentSeconds(state))}");
+                    sb.AppendLine($"pendingEndTicks={(state.PendingEndTicks.HasValue ? state.PendingEndTicks.Value.ToString(CultureInfo.InvariantCulture) : "-")} pendingEndPause={FormatNumber(state.PendingEndPause)}");
+                    sb.AppendLine($"lastSegmentTicks={FormatNullableTicks(state.LastSegmentTicks)} lastSegmentSeconds={FormatNullable(GameClock.LastSegmentSeconds(state))} lastRunTicks={FormatNullableTicks(state.LastRunTicks)} lastRunSeconds={FormatNullable(GameClock.LastRunSeconds(state))}");
+                    sb.AppendLine($"wakeUpTicks={FormatNullableTicks(state.WakeUpTicks)} wakeUpSeconds={FormatNullable(GameClock.WakeUpSeconds(state))} wakeUpStartTicks={state.WakeUpMeasureStartTicks}");
+                    sb.AppendLine($"inSegment={state.InSegment} timing={state.TimingActive} retrying={state.Retrying} levelPassed={state.LevelPassed} processedCurrentStep={TimerCore.HasProcessedCurrentPhysicsStep}");
+                    Print(sb.ToString());
+                    break;
+                }
+                case "history":
+                {
+                    int limit = 0;
+                    if (args.Count > 1)
+                        int.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out limit);
+                    var entries = TimerCore.BoundaryLog;
+                    int start = limit > 0 && limit < entries.Count ? entries.Count - limit : 0;
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"boundary history ({entries.Count - start}/{TimerCore.BoundaryLogCapacity} entries):");
+                    for (int i = start; i < entries.Count; i++)
+                        sb.AppendLine("  " + entries[i]);
+                    Print(sb.ToString());
+                    break;
+                }
+                case "clear":
+                    TimerCore.ClearBoundaryLog();
+                    Print("boundary history cleared.");
+                    break;
+                default:
+                    Print("usage: hsr clock [status|history [n]|clear]");
+                    break;
+            }
+        }
+
+        private static ulong SafeSub(ulong a, ulong b) => a >= b ? a - b : 0UL;
+
+        private static string FormatNullableTicks(ulong? value)
+            => value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : "-";
 
         private static void CmdKeys()
         {
@@ -1850,6 +1907,7 @@ namespace HSRTimer
             var sb = new StringBuilder();
             sb.AppendLine("HSRTimer console commands. Use 'hsr help <topic>' for details.");
             sb.AppendLine("  hsr status | keys | get <key> | set <key> <value> | reload | save");
+            sb.AppendLine("  hsr clock [status|history [n]|clear]");
             sb.AppendLine("  hsr reset | retry | pass [real]");
             sb.AppendLine("  hsr hud [on|off|toggle|status] | panel [open|close|toggle|status]");
             sb.AppendLine("  hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]");
@@ -1875,6 +1933,8 @@ namespace HSRTimer
                     return "hsr <command> [args]\r\nHSRTimer in-game test/debug console.\r\nType 'hsr' for the command list or 'hsr help <topic>' for one command.";
                 case "status":
                     return "hsr status\r\nPrint the full live state of the timer engine, config, tags, HUD, subsegment, markers, leaderboard, LC and config paths.";
+                case "clock":
+                    return "hsr clock [status|history [n]|clear]\r\nInspect the pure-tick game clock and the precise segment boundaries (TB-1/TB-3). 'history' lists the last segment start/end ticks so repeated level loads/passes can be checked for zero jitter (TB-5).";
                 case "keys":
                     return "hsr keys\r\nList all settable settings.ini / layout.ini keys accepted by 'hsr get/set'.";
                 case "get":

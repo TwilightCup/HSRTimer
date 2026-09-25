@@ -79,8 +79,11 @@ namespace HSRTimer
             // restart can restore them (it zeroes them speculatively before the
             // delegation, then restores if LC declines). Captured before any
             // guard so a blocked retry never mutates state.
-            double savedGameTime = state.GameTime;
-            double savedSegmentStart = state.SegmentStart;
+            ulong savedPlayableTicks = state.PlayableTicks;
+            double savedPauseAccum = state.PauseAccum;
+            ulong savedSegmentStartTicks = state.SegmentStartTicks;
+            double savedSegmentStartPause = state.SegmentStartPause;
+            double savedGameTimeSeconds = state.GameTimeSeconds;
             double savedRealTime = state.RealTime;
             bool savedRealTimeActive = state.RealTimeActive;
 
@@ -203,8 +206,13 @@ namespace HSRTimer
                 // run's records and non-forgivable flags (R6.2.2 applies to a
                 // collection restart too: it is independent of the R1.7 reset).
                 state.Retrying = true;
-                state.GameTime = 0d;
-                state.SegmentStart = 0d;
+                state.PlayableTicks = 0UL;
+                state.PauseAccum = 0d;
+                state.GameTimeSeconds = 0d;
+                state.SegmentStartTicks = 0UL;
+                state.SegmentStartPause = 0d;
+                state.PendingEndTicks = null;
+                state.PendingEndPause = 0d;
                 state.RealTime = 0d;
                 state.RealTimeActive = false;
 
@@ -214,8 +222,11 @@ namespace HSRTimer
                     // the live timers we just zeroed so we don't corrupt the run,
                     // then fall through to the single-level reload as a fallback.
                     state.Retrying = false;
-                    state.GameTime = savedGameTime;
-                    state.SegmentStart = savedSegmentStart;
+                    state.PlayableTicks = savedPlayableTicks;
+                    state.PauseAccum = savedPauseAccum;
+                    state.SegmentStartTicks = savedSegmentStartTicks;
+                    state.SegmentStartPause = savedSegmentStartPause;
+                    state.GameTimeSeconds = savedGameTimeSeconds;
                     state.RealTime = savedRealTime;
                     state.RealTimeActive = savedRealTimeActive;
                 }
@@ -236,8 +247,13 @@ namespace HSRTimer
             // records (PBs, completed segments, LastRun) and validity flags
             // (R6.2.2: retry is a level-level restart, not the R1.7 reset).
             state.Retrying = true;
-            state.GameTime = 0d;
-            state.SegmentStart = 0d;
+            state.PlayableTicks = 0UL;
+            state.PauseAccum = 0d;
+            state.GameTimeSeconds = 0d;
+            state.SegmentStartTicks = 0UL;
+            state.SegmentStartPause = 0d;
+            state.PendingEndTicks = null;
+            state.PendingEndPause = 0d;
             state.RealTime = 0d;
             state.RealTimeActive = false;
             SubsegmentManager.Instance?.OnRetryStart();

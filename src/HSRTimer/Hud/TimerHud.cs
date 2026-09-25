@@ -126,9 +126,9 @@ namespace HSRTimer
             // LastRun hides once a *new* run starts timing — but not during the
             // epilogue (the Credits level the game loads after the campaign
             // finishes), which belongs to the run that just ended.
-            bool showLastRun = state.LastRun.HasValue
-                && (state.InEpilogueSegment || (!state.InSegment && state.GameTime <= 0d));
-            bool showWakeUp = cfg.Settings.ShowWakeUpTime && state.WakeUpTime.HasValue;
+            bool showLastRun = state.LastRunTicks.HasValue
+                && (state.InEpilogueSegment || (!state.InSegment && state.PlayableTicks == 0UL));
+            bool showWakeUp = cfg.Settings.ShowWakeUpTime && state.WakeUpTicks.HasValue;
             if (!showLastRun && !showWakeUp)
                 return;
 
@@ -142,14 +142,14 @@ namespace HSRTimer
 
             if (showLastRun)
             {
-                string line = loc.Get("TIMER_LAST_RUN") + ":  " + TimeFormatter.Format(state.LastRun);
+                string line = loc.Get("TIMER_LAST_RUN") + ":  " + TimeFormatter.Format(GameClock.LastRunSeconds(state));
                 DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
                 y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
             }
 
             if (showWakeUp)
             {
-                string line = loc.Get("TIMER_WAKE_UP_TIME") + ":  " + TimeFormatter.FormatWakeUp(state.WakeUpTime);
+                string line = loc.Get("TIMER_WAKE_UP_TIME") + ":  " + TimeFormatter.FormatWakeUp(GameClock.WakeUpSeconds(state));
                 DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
             }
         }
@@ -394,7 +394,7 @@ namespace HSRTimer
             {
                 case RowType.GameTime:
                     label = loc.Get("TIMER_GAME_TIME");
-                    value = TimeFormatter.Format(state.GameTime);
+                    value = TimeFormatter.Format(state.GameTimeSeconds);
                     break;
                 case RowType.RealTime:
                     label = loc.Get("TIMER_REAL_TIME");
@@ -402,19 +402,19 @@ namespace HSRTimer
                     break;
                 case RowType.CurrentSegment:
                     label = loc.Get("TIMER_SEGMENT_TIME");
-                    value = TimeFormatter.Format(state.GameTime - state.SegmentStart);
+                    value = TimeFormatter.Format(GameClock.SegmentSeconds(state));
                     break;
                 case RowType.TotalAtLastSegment:
                     label = loc.Get("TIMER_LAST_TOTAL");
-                    value = TimeFormatter.Format(state.TotalAtLastSegment);
+                    value = TimeFormatter.Format(GameClock.TotalAtLastSegmentSeconds(state));
                     break;
                 case RowType.LastSegment:
                     label = loc.Get("TIMER_LAST_SEGMENT");
-                    value = TimeFormatter.Format(state.LastSegment);
+                    value = TimeFormatter.Format(GameClock.LastSegmentSeconds(state));
                     break;
                 case RowType.LastRun:
                     label = loc.Get("TIMER_LAST_RUN");
-                    value = TimeFormatter.Format(state.LastRun);
+                    value = TimeFormatter.Format(GameClock.LastRunSeconds(state));
                     break;
                 case RowType.CurrentState:
                     label = loc.Get("TIMER_CURRENT_STATE");
@@ -470,7 +470,7 @@ namespace HSRTimer
         {
             if (cfg == null || cfg.Layout.CustomTexts.Count == 0) return;
             var state = TimerCore.State;
-            double gt = state != null ? state.GameTime : 0d;
+            double gt = state != null ? state.GameTimeSeconds : 0d;
             double rt = state != null ? state.RealTime : 0d;
             foreach (var ct in cfg.Layout.CustomTexts)
             {

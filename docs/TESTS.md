@@ -39,6 +39,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr` | Print the full command summary |
 | `hsr help [topic]` | Print help for one topic |
 | `hsr status` | Dump live timer/config/HUD/subsegment/marker/LC state |
+| `hsr clock [status\|history [n]\|clear]` | Inspect the pure-tick game clock and segment boundaries (R1.11) |
 | `hsr keys` | List every settable settings/layout key |
 | `hsr get <key>` / `hsr get all` | Read one config value, or all values |
 | `hsr set <key> <value>` | Set and save a config value |
@@ -92,6 +93,9 @@ Unity `KeyCode` names (e.g. `Backspace`, `R`, `Home`, `Tab`). Colors accept
 
 ```text
 hsr status                 # see game/app state, game time, segment, real time
+hsr clock                  # pure-tick clock: PlayableTicks, segment start/end ticks
+hsr clock history          # last segment start/end ticks (jitter check, R1.11)
+hsr clock clear            # clear the boundary history
 hsr reset                  # verify timers zero and flags clear
 hsr retry                  # verify one-key retry reloads the level
 hsr pass                   # simulate passing the current level (过关)
@@ -121,6 +125,13 @@ takes over — the pass zone latches `passedLevel`, the player drops into the
 `FallTrigger` below and `Game.Fall` completes the level. PBs are suppressed
 exactly as in default mode. If the command reports that `LevelPassed` was not
 latched, the level's pass trigger could not be entered (collider/tag/layout).
+
+**Boundary determinism (R1.11).** `hsr clock` prints the raw integer tick clock
+(`playableTicks`, `segmentStartTicks`, `pendingEndTicks`, …). `hsr clock
+history` lists each segment start/end tick: load + finish a level 50 times and
+the `dur=` (end tick − start tick) for the same level and same inputs must be
+**identical** every time (zero ±1 jitter). `hsr clock clear` resets the history
+before a measurement run.
 
 ### 2. Validity flags (R5)
 
@@ -329,6 +340,7 @@ Notes:
 - [ ] `hsr` prints the command summary.
 - [ ] `hsr status` shows plausible live values while in a level.
 - [ ] `hsr reset` zeroes timers and clears flags.
+- [ ] `hsr clock` shows integer ticks and `hsr clock history` records identical `dur=` for repeated identical runs (R1.11).
 - [ ] `hsr retry` reloads the current level (or the configured override).
 - [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
 - [ ] `hsr pass real` teleports the player into the pass zone and the game's own trigger flow completes the level (with `LevelPassed` latched); PBs still not written.

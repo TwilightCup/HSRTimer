@@ -14,7 +14,8 @@ module's PB + LoadPath model.
   subsegment rule (R8.2.4): `Any` with no enabled tags, otherwise the sorted
   enabled tag ids joined with `+`.
 - A marker's time is the **segment time** at the trigger frame:
-  `t_ms = round((GameTime - SegmentStart) * 1000)` — the same time base as the
+  `t_ms = round((PlayableTicks - SegmentStartTicks) * tickSeconds * 1000)` (via
+  `GameClock.SegmentMs`) — the same time base as the
   HUD's *Segment Time* row and the subsegment IL comparisons.
 - Each marker records only its **first** trigger per level attempt. Records and
   the leaderboard feed reset on level start, one-key retry, pause-menu level

@@ -28,13 +28,23 @@ cheaply, and resilient to game updates that rename or inline private methods.
 hooks (`NarrativeBlock.Play` and `SubtitleManager.PlayNarrative`, see
 [VOICELINE.md](VOICELINE.md)), the pause-menu restart hook
 (`PauseMenu.RestartClick`, which fires the `restart_clears_forgivable` option),
-and the Jumpless jump-key suppression (`HumanControls.HandleInput`, R3.5.3).
+the Jumpless jump-key suppression (`HumanControls.HandleInput`, R3.5.3), and
+the precise timing-boundary hooks (`Game.AfterLoad`, `Game.EnterPassZone`,
+`Game.Fall` — R1.11/TB-3).
 The last one is a deliberate exception: a pollable field *does* exist
 (`HumanControls.jump`), but enforcement is a *write* into a chain the game both
 writes and consumes within one physics frame (`NetPlayer.PreFixedUpdate` →
 `Human.FixedUpdate`); writing it from this plugin's own `FixedUpdate` would race
 on undefined script execution order. Polling covers *observation* — suppression
 of an input the game consumes same-frame must hook inside the chain.
+
+The timing-boundary hooks are the same kind of exception for a different
+reason: the state flip and the pass detection happen **inside** the game's
+physics step, so a poll can only ever observe them on a later tick, and *which*
+tick depends on Unity script execution order (BepInEx-added components cannot
+set a script execution order). The hooks therefore record the exact tick while
+the poll still owns every transition, segment, and reset decision — see
+[Pure-tick clock and precise boundaries](#pure-tick-clock-and-precise-boundaries-r111).
 
 ## Module layout
 
@@ -43,7 +53,8 @@ Plugin.cs                 entry: wires config + rules + patches + LC, spawns sin
 PluginInfo.cs             GUID/NAME/VERSION
 Core/
   TimerCore.cs            engine MonoBehaviour (FixedUpdate=timing, Update=keys/validators)
-  RunState.cs             single source of truth (time, segments, flags, caches)
+  RunState.cs             single source of truth (tick clock, segments, flags, caches)
+  GameClock.cs            tick↔seconds facade; the only Time.fixedDeltaTime reference
   SegmentLogic.cs         pure Appendix-B truth table
   RetryAction.cs          one-key retry (R6)
   RetryTargetResolver.cs  user-specified retry target resolution (R6.5)
@@ -63,6 +74,7 @@ Patches/
   NarrativeBlockPatches.cs    postfix on NarrativeBlock.Play
   SubtitleManagerPatches.cs   postfix on SubtitleManager.PlayNarrative
   PauseMenuPatches.cs         postfix on PauseMenu.RestartClick / LoadClick
+  TimingBoundaryPatches.cs    precise segment start/end ticks (Game.AfterLoad / EnterPassZone / Fall, R1.11)
   HumanControlsPatches.cs     postfix on HumanControls.HandleInput (Jumpless enforcement)
 Hud/
   TimerHud.cs             IMGUI panel (R2)
@@ -110,19 +122,60 @@ Each physics frame (`FixedUpdate`), in order:
    - **Auto-reset (R1.7)**: `Paused→Inactive`, `ServerLoadLobby→ServerLobby`, `ClientLoadLobby→ClientLobby`, or `PlayingLevel→Inactive` (local) — only when `AutoReset` is on.
    - **Segment start (R1.2)**: `LoadingLevel/Inactive → PlayingLevel`, not in a lobby.
    - **Resume from pause (R1.3)**: `Paused → PlayingLevel` while timing was stopped.
-2. **Accumulate** — `GameTime += Time.fixedDeltaTime` when `PlayingLevel` and not in a lobby / not waiting on the server.
+2. **Accumulate** — `PlayableTicks += 1` when `PlayingLevel` and not in a lobby / not waiting on the server (R1.11.1). Seconds are never accumulated per frame.
 3. **Rules** — run each active category's tag rules' `OnTick`.
 
 `Update` (per render frame) handles: the cheat-code check, the **pause
-supplement** (`unscaledDeltaTime` while `Paused`, since `timeScale=0` halts
-`FixedUpdate`), and keybinds.
+supplement** (`PauseAccum += unscaledDeltaTime` while `Paused`, since
+`timeScale=0` halts `FixedUpdate`), and keybinds.
 
 Pause time is always counted; menu/lobby time is never counted. `LoadingLevel`
 and the client-wait gap (`ClientWaitServerLoad`) **never** count either.
 
+### Pure-tick clock and precise boundaries (R1.11)
+
+The engine's game clock is an **integer physics-tick counter**, not a
+`double` seconds accumulator:
+
+- `RunState.PlayableTicks` (`ulong`) counts playable `FixedUpdate` frames. Every
+  segment snapshot (`SegmentStartTicks`, `LastSegmentTicks`,
+  `TotalAtLastSegmentTicks`, `LastRunTicks`, `WakeUpTicks`) is an integer tick.
+  Segment duration is the pure integer difference
+  `PlayableTicks - SegmentStartTicks`.
+- `RunState.PauseAccum` (`double`) is the one non-tick component: pausing halts
+  `FixedUpdate`, so it accumulates wall-clock `unscaledDeltaTime` (R1.8.3).
+- `Core/GameClock.cs` is the **only** place that reads `Time.fixedDeltaTime`.
+  It converts a tick count to seconds with a single multiply
+  (`Seconds(ticks, pauseAccum)`), so the same tick count always yields the same
+  seconds value (no per-frame float accumulation drift). All display and
+  persistence (HUD rows, `t_ms`, PB comparison) convert through it; the engine
+  also writes the `RunState.GameTimeSeconds` cache each tick for cheap
+  read-only consumers.
+
+**Why the boundary hooks exist.** The game flips `Game.state` to
+`PlayingLevel` inside `Game.AfterLoad`, and detects a level pass inside
+`Game.Fall` — both while the game's own physics step is executing. A polling
+loop can only observe those flips on a later tick, and *which* tick depends on
+Unity script execution order, which is why the old code showed a random ±1 tick
+at load and at the finish. `Patches/TimingBoundaryPatches.cs` therefore records
+the exact tick at the authoritative methods:
+
+| Boundary | Hook | Recorded value |
+|---|---|---|
+| Segment start (R1.2.2) | `Game.AfterLoad` postfix | `SegmentStartTicks` (consumed by `StartSegment`) |
+| Pass flag (R1.4.2) | `Game.EnterPassZone` postfix | `LevelPassed` latch |
+| Segment end (R1.4.2) | `Game.Fall` prefix/postfix | `PendingEndTicks` — the exact pass tick |
+
+The `Game.Fall` prefix snapshots whether the call took the pass branch (the
+method itself clears `passedLevel` for Workshop/EditorPick before returning);
+the postfix latches `PendingEndTicks` and the poll freezes accumulation there.
+The hooks only record ticks and set flags — every transition, segment, reset,
+and validity decision still goes through the single polling loop, consistent
+with the rest of the engine.
+
 ### Real Time clock (R1.10)
 
-Separate from `GameTime`, `RunState.RealTime` is a wall-clock timer that starts
+Separate from the tick game clock, `RunState.RealTime` is a wall-clock timer that starts
 on the first playable segment of a run and accumulates with
 `Time.unscaledDeltaTime` in `TimerCore.Update` as long as
 `RunState.RealTimeActive` is true. Because it is not gated on `PlayingLevel`,
@@ -169,7 +222,8 @@ the level is timed from scratch. It is independent of the R1.7 run reset in the
 sense that it does **not** clear the run's records (completed
 segments, `LastRun`) or validity flags. The reload drives the level through
 `PlayingLevel → Inactive → LoadingLevel → PlayingLevel`; to keep that from
-looking like a run exit, `RetryAction` zeroes `GameTime`/`SegmentStart` and sets
+looking like a run exit, `RetryAction` zeroes the live tick clock
+(`PlayableTicks`/`SegmentStartTicks`) and sets
 `RunState.Retrying`, and the engine honors it for the duration of the reload:
 
 - `SegmentLogic.IsAutoReset` suppresses its `PlayingLevel/Paused → Inactive`
@@ -204,7 +258,8 @@ launching — and it works for both config collections and transient (`lc random
 is the same code path the console uses, so the dispatched command behaves exactly like typing
 `lc restart`.
 
-The timer treats this exactly like the single-level retry: it zeroes `GameTime`/`SegmentStart` and
+The timer treats this exactly like the single-level retry: it zeroes the live tick clock
+(`PlayableTicks`/`SegmentStartTicks`) and
 sets `RunState.Retrying` first, so the abandoned level's segment end is not recorded as a `LastRun`
 and the reload into level 1 is not mistaken for a run exit — while keeping the run's records and
 non-forgivable flags (R6.2.2 independence from R1.7 applies here too). Implementation lives in
@@ -306,11 +361,11 @@ each physics tick the engine latches `Game.passedLevel` into `LevelPassed`
 `passedLevel` itself during the completion/leave flow, before the state flips,
 so the latch must read it beforehand). `LevelPassed` is reset on segment start.
 
-`EndSegment(completed: LevelPassed)` records `LastSegment`/`TotalAtLastSegment`,
+`EndSegment(completed: LevelPassed)` records `LastSegmentTicks`/`TotalAtLastSegmentTicks`,
 the tag `OnLevelExit` completion checks (R4.2,
 voiceline), and the LC last-level `LastRun` capture **only when `completed`**.
 A mid-level quit (or a retry, where `LevelPassed` is false) leaves the previous
-attempt's `LastSegment`/`TotalAtLastSegment` untouched — exactly the desired
+attempt's `LastSegmentTicks`/`TotalAtLastSegmentTicks` untouched — exactly the desired
 behavior: the "last segment" reference reflects the last level you *finished*,
 not one you walked out of. Note the `PlayingLevel → LoadingLevel` edge (a
 built-in level's `StartNextLevel` reload) is inherently a completion, and there
@@ -341,7 +396,7 @@ only on these genuine completions.
 
 `LastRun` renders in its own column immediately to the right of the timer stack
 (not inside it, anchored at the main block's widest line), and only while idle
-(`!InSegment && GameTime == 0`) — once a new run starts timing it hides until
+(`!InSegment && PlayableTicks == 0`) — once a new run starts timing it hides until
 the next completion. That same right-hand column can also show the current level's **Wake Up Time**
 as its second row (gated by `show_wake_up_time`), so the per-level value stays
 visible during a run even when `LastRun` is hidden. By default the measurement
@@ -360,11 +415,11 @@ active — appearing in Credits mid-collection is just an ordinary level), so
 
 ## Why auto-reset and menu entry clear the last-segment snapshots
 
-`LastSegment` and `TotalAtLastSegment` are HUD reference values for the most
-recent completed segment, while `LastRun` is the last completed run's total.
+`LastSegmentTicks` and `TotalAtLastSegmentTicks` are HUD reference values for the most
+recent completed segment, while `LastRunTicks` is the last completed run's total.
 **Auto-reset (R1.7) clears the live timers and the two last-segment snapshots**,
 so leaving to the menu presents a fresh segment baseline, while keeping
-`LastRun` as the previous completed-run reference (R1.7.4). The manual reset key
+`LastRunTicks` as the previous completed-run reference (R1.7.4). The manual reset key
 clears all three snapshots (R1.7.1).
 
 `RunState.Reset(bool keepLastValues, bool keepLastRun)` keeps these concerns
@@ -421,7 +476,8 @@ Markers follow the same **poll, don't patch** principle as everything else:
   `TimerCore.FixedUpdate` (right after the subsegment tick) and reads public
   fields only: `Human.Localplayer.transform.position`, `Human.jump`,
   `Human.state`, `Human.Localplayer.GetComponent<GrabManager>().grabbedObjects`,
-  `Game.currentCheckpointNumber`, and `RunState.GameTime`/`SegmentStart`.
+  `Game.currentCheckpointNumber`, and `RunState.PlayableTicks`/`SegmentStartTicks`
+  (converted to segment milliseconds through `GameClock`).
 - **The one non-pollable event** is the pause-menu checkpoint load
   (`PauseMenu.LoadClick` → `Game.RestartCheckpoint`), which runs while
   `FixedUpdate` is halted. It is delivered through the *existing*
