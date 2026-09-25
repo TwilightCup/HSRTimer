@@ -7,11 +7,18 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+- **Contributors:** _To be filled from PRs merged into dev._
+
+## 1.7.0
+
+- **Release Date:** _25 Sep 2026_
+- **Highlights:**
+  - Fixed the timer gaining a random physics frame (≈16.7 ms) at level completion, times are now exact and repeatable.
+- **Details:**
   - Stopped writing a "level restarted" message to the BepInEx log on every one-key retry; successful retries are now silent in the log, and only refused (blocked) retries report their reason.
   - Stopped writing a "level loaded with N marker(s)" message to the BepInEx log on every level load; marker level-start info now appears only when markers debug logging is enabled.
   - Fixed a random one-physics-frame (±1 tick) offset at level load and level completion: the game clock is now a pure integer physics-tick clock and the start/end boundaries are recorded from the game's authoritative load and pass code paths, so the same inputs always produce the same segment and total times. Pause time, retry, reset, subsegment/marker timestamps, and PB comparisons keep their previous behavior.
   - Added the `hsr clock` console command (`status` / `history [n]` / `clear`) so the integer tick clock and the exact segment start/end ticks can be inspected in-game; `hsr clock history` is the quickest way to verify that repeated runs no longer jitter.
-- **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.6.1
 
