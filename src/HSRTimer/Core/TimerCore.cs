@@ -508,9 +508,14 @@ namespace HSRTimer
             }
             if (InputUtil.GetKeyDown(s.RetryKey))
             {
+                // A successful retry is silent: logging its outcome on every
+                // press would spam the BepInEx log during normal play. Only log
+                // when the retry is refused, so the block reason stays
+                // diagnosable without the per-press noise.
                 if (RetryAction.TryExecute(this, State, s, out string key))
                     UpdateOptions(); // restart may change timing context
-                Notify(key);
+                else
+                    Notify(key);
             }
         }
 

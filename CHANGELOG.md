@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - Stopped writing a "level restarted" message to the BepInEx log on every one-key retry; successful retries are now silent in the log, and only refused (blocked) retries report their reason.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.6.1
