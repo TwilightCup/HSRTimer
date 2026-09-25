@@ -107,7 +107,7 @@ namespace HSRTimer
                     case "save": CmdSave(); break;
                     case "reset": CmdReset(); break;
                     case "retry": CmdRetry(); break;
-                    case "pass": CmdPass(); break;
+                    case "pass": CmdPass(rest); break;
                     case "hud": CmdHud(rest); break;
                     case "panel": CmdPanel(rest); break;
                     case "leaderboard": CmdLeaderboard(rest); break;
@@ -402,11 +402,12 @@ namespace HSRTimer
         }
 
         /// <summary>
-        /// Simulate a genuine level-completion (过关) flow for testing: set
-        /// <c>Game.passedLevel</c> exactly like the pass-zone trigger
-        /// (<c>Game.EnterPassZone</c>) does, then dispatch <c>Game.Fall</c> so
-        /// the real <c>PassLevel</c>/<c>PauseLeave</c> path runs and the engine
-        /// records the segment as a genuine completion.
+        /// Simulate a genuine level-completion (过关) flow for testing.
+        ///
+        /// Default mode: set <c>Game.passedLevel</c> exactly like the pass-zone
+        /// trigger (<c>Game.EnterPassZone</c>) does, then dispatch
+        /// <c>Game.Fall</c> so the real <c>PassLevel</c>/<c>PauseLeave</c> path
+        /// runs and the engine records the segment as a genuine completion.
         ///
         /// The two steps are deliberately split across frames: the engine
         /// OR-latches <see cref="RunState.LevelPassed"/> from
@@ -416,8 +417,15 @@ namespace HSRTimer
         /// segment would be recorded as an abandoned quit instead of a
         /// completion (same race the real pass zone avoids by setting
         /// <c>passedLevel</c> a frame before the player actually falls).
+        ///
+        /// With <c>real</c>: instead of forcing the flag, clear the player's
+        /// momentum, release both hand grabs and teleport the local player to
+        /// the center of this level's pass-zone trigger
+        /// (<c>HumanAPI.LevelPassTrigger</c>), so the game's own trigger flow
+        /// (<c>LevelPassTrigger</c> → <c>EnterPassZone</c> →
+        /// <c>FallTrigger</c> → <c>Game.Fall</c>) completes the level.
         /// </summary>
-        private static void CmdPass()
+        private static void CmdPass(List<string> args)
         {
             var core = TimerCore.Instance;
             var state = TimerCore.State;
@@ -454,8 +462,17 @@ namespace HSRTimer
                 return;
             }
 
-            core.StartCoroutine(SimulatePass(game, human));
-            Print("Simulated pass started: Game.passedLevel set; Fall dispatched once the engine latches LevelPassed.");
+            bool real = args.Count > 0 && string.Equals(args[0], "real", StringComparison.OrdinalIgnoreCase);
+            if (real)
+            {
+                core.StartCoroutine(SimulateRealPass(game, human));
+                Print("Simulated real pass started: momentum cleared, grabs released, player teleported to the pass-zone center.");
+            }
+            else
+            {
+                core.StartCoroutine(SimulatePass(game, human));
+                Print("Simulated pass started: Game.passedLevel set; Fall dispatched once the engine latches LevelPassed.");
+            }
         }
 
         private static System.Collections.IEnumerator SimulatePass(Game game, Human human)
@@ -496,6 +513,100 @@ namespace HSRTimer
             // PauseLeave. The engine records the segment on the state flip.
             game.Fall(human);
             Print("Simulated pass dispatched: Game.Fall called with passedLevel set; subsegment/marker PBs suppressed; run 'hsr status' to verify the recorded segment/run.");
+        }
+
+        /// <summary>
+        /// 'hsr pass real': drive the genuine trigger-based completion flow. The
+        /// player's momentum is zeroed (all body rigidbodies), both hand grabs
+        /// are released, and the whole body is teleported to the center of this
+        /// level's pass-zone trigger (<c>LevelPassTrigger</c>). The game's own
+        /// trigger flow then fires naturally: the pass zone latches
+        /// <c>passedLevel</c>, the player falls into the <c>FallTrigger</c>
+        /// below and <c>Game.Fall</c> completes the level.
+        ///
+        /// PBs are suppressed via <see cref="RunState.SuppressPbRecording"/>
+        /// exactly like the flag-forced mode.
+        /// </summary>
+        private static System.Collections.IEnumerator SimulateRealPass(Game game, Human human)
+        {
+            var state = TimerCore.State;
+
+            // Mark the upcoming completion as a test pass (PB suppression). The
+            // flag is cleared on the next segment start / full reset.
+            if (state != null)
+                state.SuppressPbRecording = true;
+
+            var trigger = FindCurrentLevelPassTrigger();
+            var passCollider = trigger != null ? trigger.GetComponentInChildren<Collider>() : null;
+            if (trigger == null || passCollider == null)
+            {
+                if (state != null)
+                    state.SuppressPbRecording = false;
+                Print("Simulated real pass aborted: no LevelPassTrigger (pass-zone) with a collider found in the current level.");
+                yield break;
+            }
+            Vector3 center = passCollider.bounds.center;
+
+            // Cancel both-hand grabs.
+            human.ReleaseGrab();
+
+            // Clear the player's momentum: zero linear + angular velocity on
+            // every body part so the fall into the pass zone is a clean drop.
+            if (human.rigidbodies != null)
+            {
+                foreach (var rb in human.rigidbodies)
+                {
+                    if (rb == null)
+                        continue;
+                    rb.velocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
+            }
+
+            // Teleport the whole body to the pass-zone center (the game's own
+            // SetPosition scrolls body + camera + cloud system).
+            human.SetPosition(center);
+            Print($"Simulated real pass dispatched: player teleported to pass-zone center {center}; waiting for the pass trigger to latch LevelPassed...");
+
+            // Self-verify: the trigger should fire EnterPassZone → passedLevel
+            // → engine latch within a moment.
+            int guard = 0;
+            while (state != null && !state.LevelPassed && guard < 180)
+            {
+                yield return null;
+                guard++;
+            }
+
+            if (state == null || !state.LevelPassed)
+            {
+                if (state != null)
+                    state.SuppressPbRecording = false;
+                Print("Simulated real pass warning: LevelPassed was not latched (the pass-zone trigger did not fire — check the trigger collider / level layout).");
+                yield break;
+            }
+            Print("Simulated real pass: pass zone entered (LevelPassed latched); completion follows via the game's own Fall flow. Subsegment/marker PBs suppressed.");
+        }
+
+        /// <summary>
+        /// Find the first active pass-zone trigger belonging to the current
+        /// level (the 通关判定箱), or null when none is present.
+        /// </summary>
+        private static LevelPassTrigger FindCurrentLevelPassTrigger()
+        {
+            Level currentLevel = Game.currentLevel;
+            foreach (var trigger in UnityEngine.Object.FindObjectsOfType<LevelPassTrigger>())
+            {
+                if (trigger == null || !trigger.enabled || !trigger.gameObject.activeInHierarchy)
+                    continue;
+                if (currentLevel != null)
+                {
+                    var owner = trigger.GetComponentInParent<Level>();
+                    if (owner != null && owner != currentLevel)
+                        continue;
+                }
+                return trigger;
+            }
+            return null;
         }
 
         // ── hud / panel / leaderboard ──────────────────────────────────────
@@ -1739,7 +1850,7 @@ namespace HSRTimer
             var sb = new StringBuilder();
             sb.AppendLine("HSRTimer console commands. Use 'hsr help <topic>' for details.");
             sb.AppendLine("  hsr status | keys | get <key> | set <key> <value> | reload | save");
-            sb.AppendLine("  hsr reset | retry | pass");
+            sb.AppendLine("  hsr reset | retry | pass [real]");
             sb.AppendLine("  hsr hud [on|off|toggle|status] | panel [open|close|toggle|status]");
             sb.AppendLine("  hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]");
             sb.AppendLine("  hsr layout [status|row ...|text ...]");
@@ -1779,7 +1890,7 @@ namespace HSRTimer
                 case "retry":
                     return "hsr retry\r\nPerform the same one-key retry as the retry key (R6).";
                 case "pass":
-                    return "hsr pass\r\nSimulate a genuine level-completion (pass) flow for testing: sets Game.passedLevel like the pass-zone trigger, then dispatches Game.Fall once the engine has latched LevelPassed, so the real PassLevel/PauseLeave path runs and the timer records the segment/run as completed. Subsegment and marker PBs are NOT written (test pass; use 'hsr status' afterwards to verify, and check that no PB file changed). Requires an active segment with a local player (single-player / host).";
+                    return "hsr pass [real]\r\nSimulate a genuine level-completion (pass) flow for testing. Default: sets Game.passedLevel like the pass-zone trigger, then dispatches Game.Fall once the engine has latched LevelPassed. 'real': clears the player's momentum, releases both hand grabs and teleports the local player to the center of this level's pass-zone trigger (LevelPassTrigger), letting the game's own trigger flow (pass zone → FallTrigger → Game.Fall) complete the level. In both modes subsegment/marker PBs are NOT written (test pass). Requires an active segment with a local player (single-player / host); run 'hsr status' afterwards to verify.";
                 case "hud":
                     return "hsr hud [on|off|toggle|status]\r\nShow/hide/toggle the timer HUD (show_hud).";
                 case "panel":

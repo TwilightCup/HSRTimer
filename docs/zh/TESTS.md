@@ -35,7 +35,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr save` | 保存当前内存中的配置 |
 | `hsr reset` | 整局重置(等同于重置键) |
 | `hsr retry` | 一键重试(等同于重试键,R6) |
-| `hsr pass` | 模拟真实的过关流程:设置 `Game.passedLevel`,再触发 `Game.Fall` |
+| `hsr pass [real]` | 模拟过关流程:默认设置 `Game.passedLevel` 后触发 `Game.Fall`;`real` 清除动量、取消抓取并把玩家传送到判定箱,由游戏自身的触发器完成过关。均不写入 subsegment/marker 的 PB |
 | `hsr hud [on\|off\|toggle\|status]` | 控制计时 HUD 的显示 |
 | `hsr panel [open\|close\|toggle\|status]` | 控制设置面板 |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | 控制排行榜 HUD |
@@ -80,6 +80,7 @@ hsr status                 # 查看游戏/应用状态、游戏时间、分段�
 hsr reset                  # 验证计时器归零、标记被清除
 hsr retry                  # 验证一键重试会重载关卡
 hsr pass                   # 模拟通过当前关卡(过关)
+hsr pass real              # 传送到判定箱,让游戏自身完成过关
 ```
 
 在关卡内,`hsr status` 应显示 `segment=True`、`timing=True` 且 `gameTime` 持续增长。
@@ -92,6 +93,13 @@ hsr pass                   # 模拟通过当前关卡(过关)
 本段用时,若为一场成绩的最后一关还应显示 `lastRun`。该命令需要处于分段内且存在
 本地玩家,客户端与回放播放期间为无效操作。**subsegment 与 marker 的 PB 不会写入**
 (这是测试过关),真实的 PB 文件保持不变。
+
+`hsr pass real` 走真实的触发器链路而不是直接置标志:它把玩家动量清零
+(所有身体部件的线速度与角速度)、取消双手抓取,并把本地玩家传送到本关
+`LevelPassTrigger`(通关判定箱)的中心。随后由游戏自身流程接管 —— 判定箱触发
+`passedLevel`,玩家落入下方的 `FallTrigger` 由 `Game.Fall` 完成过关。PB 抑制与
+默认模式一致。若命令报告 `LevelPassed` 未锁定,说明玩家未能进入判定箱
+(检查触发器的 collider / tag / 关卡布局)。
 
 ### 2. 有效性标记(R5)
 
@@ -280,6 +288,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr reset` 将计时器归零并清除标记。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
 - [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
+- [ ] `hsr pass real` 把玩家传送到判定箱,由游戏自身的触发器链路完成过关(且 `LevelPassed` 已锁定);PB 同样不写入。
 - [ ] `hsr hud off/on` 隐藏 / 显示计时 HUD。
 - [ ] `hsr panel open/close` 打开 / 关闭设置面板。
 - [ ] 关于标签页(导航第一项)显示名称 / 版本 / 许可证与仓库按钮;`hsr about` 与之匹配。

@@ -46,7 +46,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr save` | Save current in-memory config |
 | `hsr reset` | Full-run reset (same as the reset key) |
 | `hsr retry` | One-key retry (same as the retry key, R6) |
-| `hsr pass` | Simulate a real level-completion flow: sets `Game.passedLevel`, then dispatches `Game.Fall` |
+| `hsr pass [real]` | Simulate a level-completion flow: default sets `Game.passedLevel` then dispatches `Game.Fall`; `real` clears momentum, releases grabs and teleports the player into the pass zone so the game's own triggers complete the level. No subsegment/marker PB is written |
 | `hsr hud [on\|off\|toggle\|status]` | Control timer HUD visibility |
 | `hsr panel [open\|close\|toggle\|status]` | Control the settings panel |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | Control the leaderboard HUD |
@@ -95,6 +95,7 @@ hsr status                 # see game/app state, game time, segment, real time
 hsr reset                  # verify timers zero and flags clear
 hsr retry                  # verify one-key retry reloads the level
 hsr pass                   # simulate passing the current level (过关)
+hsr pass real              # teleport into the pass zone and let the game complete it
 ```
 
 While playing a level, `hsr status` should show `segment=True`, `timing=True`
@@ -111,6 +112,15 @@ segment time and (for the last level of a run) a `lastRun` value. It requires
 an active segment with a local player and is a no-op for clients / during
 replays. **Subsegment and marker PBs are deliberately not written** (it is a
 test pass), so real PB files stay untouched.
+
+`hsr pass real` exercises the actual trigger chain instead of forcing the
+flag: it zeroes the player's momentum (linear + angular on every body part),
+releases both hand grabs, and teleports the local player to the center of the
+current level's `LevelPassTrigger` (the 通关判定箱). The game's own flow then
+takes over — the pass zone latches `passedLevel`, the player drops into the
+`FallTrigger` below and `Game.Fall` completes the level. PBs are suppressed
+exactly as in default mode. If the command reports that `LevelPassed` was not
+latched, the level's pass trigger could not be entered (collider/tag/layout).
 
 ### 2. Validity flags (R5)
 
@@ -321,6 +331,7 @@ Notes:
 - [ ] `hsr reset` zeroes timers and clears flags.
 - [ ] `hsr retry` reloads the current level (or the configured override).
 - [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
+- [ ] `hsr pass real` teleports the player into the pass zone and the game's own trigger flow completes the level (with `LevelPassed` latched); PBs still not written.
 - [ ] `hsr hud off/on` hides/shows the timer HUD.
 - [ ] `hsr panel open/close` opens/closes the settings panel.
 - [ ] The About tab (first in the navigation) shows name/version/license and the repository button; `hsr about` matches it.
