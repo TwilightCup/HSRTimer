@@ -1,6 +1,6 @@
 # TESTS(测试文档)
 
-> **English (source of truth)**: [../../TESTS.md](../../TESTS.md)
+> **English (source of truth)**: [../TESTS.md](../TESTS.md)
 
 本文说明如何**在游戏内**通过自带的开发者控制台(默认按键 **`~`** 或 **F1**)测试 HSRTimer 的每一个功能。
 
