@@ -133,6 +133,18 @@ the `dur=` (end tick − start tick) for the same level and same inputs must be
 **identical** every time (zero ±1 jitter). `hsr clock clear` resets the history
 before a measurement run.
 
+Each history `end` line carries two diagnostics: `src=hook|poll` says whether
+the precise `Game.Fall` boundary hook fixed the end tick (a genuine completion)
+or the polling loop recorded it (a mid-level quit), and `step=` is the global
+physics step it was observed on. A `pass` line marks the authoritative pass
+tick. Together they show that physics steps between the pass and the observed
+state flip are **not** counted into the segment — the source of the old ±1.
+
+The same pair exists on the start side: `load` is the `Game.AfterLoad` hook frame
+(the authoritative segment start) and the following `start` line is the polling
+loop consuming that latch. A `start tick` equal to `load tick` with a larger
+`step=` proves the start boundary no longer depends on when the poll noticed it.
+
 ### 2. Validity flags (R5)
 
 ```text

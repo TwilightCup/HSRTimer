@@ -342,7 +342,7 @@ namespace HSRTimer
             // Fire tag OnLevelEnter for every enabled tag.
             ForEachEnabledRule(rule => Safe(rule, r => r.OnLevelEnter(MakeContext(game))));
 
-            LogBoundary($"start level={State.CurrentLevelNumber} type={State.CurrentLevelType} tick={startTicks} pause={startPause:0.###}");
+            LogBoundary($"start level={State.CurrentLevelNumber} type={State.CurrentLevelType} tick={startTicks} pause={startPause:0.###} step={GameClock.CurrentTick}");
         }
 
         private void EndSegment(Game game, bool completed)
@@ -364,7 +364,8 @@ namespace HSRTimer
             bool retrying = State.Retrying;
 
             ulong durationTicks = endTicks >= State.SegmentStartTicks ? endTicks - State.SegmentStartTicks : 0UL;
-            LogBoundary($"end   level={State.CurrentLevelNumber} tick={endTicks} dur={durationTicks} completed={completed} retrying={retrying}");
+            bool fromHook = State.PendingEndTicks.HasValue;
+            LogBoundary($"end   level={State.CurrentLevelNumber} tick={endTicks} dur={durationTicks} completed={completed} retrying={retrying} src={(fromHook ? "hook" : "poll")} step={GameClock.CurrentTick}");
 
             // Fire tag OnLevelExit first — but only for a genuine level
             // completion. A retry or a mid-level quit abandons the level (its
@@ -681,6 +682,8 @@ namespace HSRTimer
             core._segmentStartLatched = true;
             core._segmentStartTicks = st.PlayableTicks;
             core._segmentStartPause = st.PauseAccum;
+            long loadLevel = Game.instance != null ? Game.instance.currentLevelNumber : -1;
+            LogBoundary($"load  level={loadLevel} tick={st.PlayableTicks} step={GameClock.CurrentTick} processed={HasProcessedCurrentPhysicsStep}");
         }
 
         /// <summary>
@@ -721,6 +724,7 @@ namespace HSRTimer
             st.PendingEndTicks = endTicks;
             st.PendingEndPause = st.PauseAccum;
             st.GameTimeSeconds = GameClock.Seconds(st.PlayableTicks, st.PauseAccum);
+            LogBoundary($"pass  level={st.CurrentLevelNumber} tick={endTicks} step={GameClock.CurrentTick}");
         }
 
         /// <summary>
