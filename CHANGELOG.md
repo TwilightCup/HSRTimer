@@ -8,6 +8,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
   - Stopped writing a "level restarted" message to the BepInEx log on every one-key retry; successful retries are now silent in the log, and only refused (blocked) retries report their reason.
+  - Stopped writing a "level loaded with N marker(s)" message to the BepInEx log on every level load; marker level-start info now appears only when markers debug logging is enabled.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.6.1

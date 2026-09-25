@@ -93,15 +93,6 @@ namespace HSRTimer
                 return;
             _currentSet = GetOrCreateSet(_currentLevelKey, game.currentLevelType.ToString(), game.currentLevelNumber, _currentCategory);
             Log($"level start: key='{_currentLevelKey}' category='{_currentCategory}' markers={CountEnabled(_currentSet)}");
-            // One concise info line whenever the level actually has markers, so a
-            // user can confirm the runtime sees their marker set (and that the
-            // panel/runtime are sharing one instance).
-            int markerCount = CountEnabled(_currentSet);
-            if (markerCount > 0)
-            {
-                Plugin.Logger.LogInfo(
-                    $"HSRTimer[markers]: level '{_currentLevelKey}' [{_currentCategory}] loaded with {markerCount} marker(s).");
-            }
 
             // R10.7.6: a new level with no markers clears the previous feed
             // immediately; otherwise the old feed stays until the first trigger.
