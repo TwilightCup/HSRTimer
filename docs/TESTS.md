@@ -46,6 +46,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr save` | Save current in-memory config |
 | `hsr reset` | Full-run reset (same as the reset key) |
 | `hsr retry` | One-key retry (same as the retry key, R6) |
+| `hsr pass` | Simulate a real level-completion flow: sets `Game.passedLevel`, then dispatches `Game.Fall` |
 | `hsr hud [on\|off\|toggle\|status]` | Control timer HUD visibility |
 | `hsr panel [open\|close\|toggle\|status]` | Control the settings panel |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | Control the leaderboard HUD |
@@ -93,12 +94,23 @@ Unity `KeyCode` names (e.g. `Backspace`, `R`, `Home`, `Tab`). Colors accept
 hsr status                 # see game/app state, game time, segment, real time
 hsr reset                  # verify timers zero and flags clear
 hsr retry                  # verify one-key retry reloads the level
+hsr pass                   # simulate passing the current level (过关)
 ```
 
 While playing a level, `hsr status` should show `segment=True`, `timing=True`
 and an increasing `gameTime`. After `hsr reset`, `gameTime` should be `0` and
 `inSegment` should be `False` (or the transition cache is preserved so the
 level does not restart).
+
+`hsr pass` drives the real completion flow without touching the exit zone: it
+sets `Game.passedLevel` (like `Game.EnterPassZone`), waits one frame for the
+engine to latch `LevelPassed`, then calls `Game.Fall` — so a BuiltIn campaign
+level advances via `PassLevel` → `StartNextLevel`, and a Workshop/EditorPick
+level leaves via `PauseLeave`. Afterwards `hsr status` should show the final
+segment time and (for the last level of a run) a `lastRun` value. It requires
+an active segment with a local player and is a no-op for clients / during
+replays. **Subsegment and marker PBs are deliberately not written** (it is a
+test pass), so real PB files stay untouched.
 
 ### 2. Validity flags (R5)
 
@@ -308,6 +320,7 @@ Notes:
 - [ ] `hsr status` shows plausible live values while in a level.
 - [ ] `hsr reset` zeroes timers and clears flags.
 - [ ] `hsr retry` reloads the current level (or the configured override).
+- [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
 - [ ] `hsr hud off/on` hides/shows the timer HUD.
 - [ ] `hsr panel open/close` opens/closes the settings panel.
 - [ ] The About tab (first in the navigation) shows name/version/license and the repository button; `hsr about` matches it.

@@ -130,6 +130,15 @@ namespace HSRTimer
         public bool LevelPassed;
 
         /// <summary>
+        /// When set, the current completion flow must NOT persist subsegment /
+        /// marker PBs. Set by the <c>hsr pass</c> test command (a simulated
+        /// level pass that should not pollute real PB data); the segment is
+        /// still recorded normally (LastSegment / LastRun), only the PB write
+        /// paths are skipped. Cleared on segment start and on any full reset.
+        /// </summary>
+        public bool SuppressPbRecording;
+
+        /// <summary>
         /// Whether the current segment is on the LAST level of an LC collection
         /// run, latched per tick from <c>LcIntegration.IsLastLevelOfCollection</c>.
         /// Latching is required because LC's Harmony patch ends the run
@@ -263,6 +272,7 @@ namespace HSRTimer
             SegmentJustEnded = false;
             Retrying = false;
             LevelPassed = false;
+            SuppressPbRecording = false;
             OnCollectionLastLevel = false;
             InCollectionRunSegment = false;
             InEpilogueSegment = false;
@@ -290,6 +300,7 @@ namespace HSRTimer
             WakeUpMeasureStart = SegmentStart;
             SegmentJustEnded = false;
             LevelPassed = false;
+            SuppressPbRecording = false;
             OnCollectionLastLevel = false;
             InCollectionRunSegment = false;
             InEpilogueSegment = false;

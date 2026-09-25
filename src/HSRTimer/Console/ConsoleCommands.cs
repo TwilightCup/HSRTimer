@@ -107,6 +107,7 @@ namespace HSRTimer
                     case "save": CmdSave(); break;
                     case "reset": CmdReset(); break;
                     case "retry": CmdRetry(); break;
+                    case "pass": CmdPass(); break;
                     case "hud": CmdHud(rest); break;
                     case "panel": CmdPanel(rest); break;
                     case "leaderboard": CmdLeaderboard(rest); break;
@@ -398,6 +399,103 @@ namespace HSRTimer
                 core.RefreshTimingOptions(); // restart may change timing context
             string msg = notifyKey != null ? cfg.Localization.Get(notifyKey) : "retry blocked";
             Print("HSRTimer retry: " + msg);
+        }
+
+        /// <summary>
+        /// Simulate a genuine level-completion (过关) flow for testing: set
+        /// <c>Game.passedLevel</c> exactly like the pass-zone trigger
+        /// (<c>Game.EnterPassZone</c>) does, then dispatch <c>Game.Fall</c> so
+        /// the real <c>PassLevel</c>/<c>PauseLeave</c> path runs and the engine
+        /// records the segment as a genuine completion.
+        ///
+        /// The two steps are deliberately split across frames: the engine
+        /// OR-latches <see cref="RunState.LevelPassed"/> from
+        /// <c>Game.passedLevel</c> every FixedUpdate, while Workshop/EditorPick
+        /// completions clear <c>passedLevel</c> synchronously inside <c>Fall</c>
+        /// — so the latch must happen before <c>Fall</c> runs, otherwise the
+        /// segment would be recorded as an abandoned quit instead of a
+        /// completion (same race the real pass zone avoids by setting
+        /// <c>passedLevel</c> a frame before the player actually falls).
+        /// </summary>
+        private static void CmdPass()
+        {
+            var core = TimerCore.Instance;
+            var state = TimerCore.State;
+            if (core == null || state == null)
+            {
+                Print("TimerCore is not ready.");
+                return;
+            }
+            var game = Game.instance;
+            if (game == null)
+            {
+                Print("Game is not ready (must be inside a level).");
+                return;
+            }
+            if (!state.InSegment)
+            {
+                Print("Not in a segment; enter a level with the timer active first (use 'hsr reset' after entering to start fresh).");
+                return;
+            }
+            if (NetGame.isClient)
+            {
+                Print("Cannot simulate a pass as a client (Game.Fall is a no-op for clients).");
+                return;
+            }
+            if (ReplayRecorder.instance != null && ReplayRecorder.isPlaying)
+            {
+                Print("Cannot simulate a pass while a replay is playing (Game.Fall is a no-op).");
+                return;
+            }
+            var human = Human.Localplayer;
+            if (human == null)
+            {
+                Print("No local player to simulate the fall.");
+                return;
+            }
+
+            core.StartCoroutine(SimulatePass(game, human));
+            Print("Simulated pass started: Game.passedLevel set; Fall dispatched once the engine latches LevelPassed.");
+        }
+
+        private static System.Collections.IEnumerator SimulatePass(Game game, Human human)
+        {
+            var state = TimerCore.State;
+
+            // Mark the upcoming completion as a test pass so subsegment/marker
+            // PBs are not persisted (the segment/run totals still record). The
+            // flag is cleared on the next segment start / full reset.
+            if (state != null)
+                state.SuppressPbRecording = true;
+
+            // Step 1: set the pass flag the same way the pass-zone trigger does.
+            game.passedLevel = true;
+
+            // Step 2: wait until the engine's FixedUpdate has latched
+            // LevelPassed. Workshop/EditorPick Fall() clears passedLevel
+            // synchronously, so the latch must be observed before Fall runs or
+            // the completion would be lost. The guard bounds the wait in case
+            // the in-segment check passed but the engine never saw the flag.
+            int guard = 0;
+            while (state != null && !state.LevelPassed && guard < 180)
+            {
+                yield return null;
+                guard++;
+            }
+
+            if (state == null || !state.LevelPassed)
+            {
+                if (state != null)
+                    state.SuppressPbRecording = false;
+                Print("Simulated pass aborted: LevelPassed was not latched (the engine did not observe passedLevel?).");
+                yield break;
+            }
+
+            // Step 3: dispatch the real completion flow — BuiltIn campaign goes
+            // through PassLevel → StartNextLevel, Workshop/EditorPick through
+            // PauseLeave. The engine records the segment on the state flip.
+            game.Fall(human);
+            Print("Simulated pass dispatched: Game.Fall called with passedLevel set; subsegment/marker PBs suppressed; run 'hsr status' to verify the recorded segment/run.");
         }
 
         // ── hud / panel / leaderboard ──────────────────────────────────────
@@ -1641,7 +1739,7 @@ namespace HSRTimer
             var sb = new StringBuilder();
             sb.AppendLine("HSRTimer console commands. Use 'hsr help <topic>' for details.");
             sb.AppendLine("  hsr status | keys | get <key> | set <key> <value> | reload | save");
-            sb.AppendLine("  hsr reset | retry");
+            sb.AppendLine("  hsr reset | retry | pass");
             sb.AppendLine("  hsr hud [on|off|toggle|status] | panel [open|close|toggle|status]");
             sb.AppendLine("  hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]");
             sb.AppendLine("  hsr layout [status|row ...|text ...]");
@@ -1680,6 +1778,8 @@ namespace HSRTimer
                     return "hsr reset\r\nPerform the same full-run reset as the reset key (clears timers and all validity flags).";
                 case "retry":
                     return "hsr retry\r\nPerform the same one-key retry as the retry key (R6).";
+                case "pass":
+                    return "hsr pass\r\nSimulate a genuine level-completion (pass) flow for testing: sets Game.passedLevel like the pass-zone trigger, then dispatches Game.Fall once the engine has latched LevelPassed, so the real PassLevel/PauseLeave path runs and the timer records the segment/run as completed. Subsegment and marker PBs are NOT written (test pass; use 'hsr status' afterwards to verify, and check that no PB file changed). Requires an active segment with a local player (single-player / host).";
                 case "hud":
                     return "hsr hud [on|off|toggle|status]\r\nShow/hide/toggle the timer HUD (show_hud).";
                 case "panel":

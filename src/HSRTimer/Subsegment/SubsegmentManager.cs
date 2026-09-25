@@ -1057,6 +1057,9 @@ namespace HSRTimer
 
         private void WriteIlPb(string levelId, RunState state, long endTimeMs)
         {
+            // A simulated test pass ('hsr pass') must not persist a PB.
+            if (state != null && state.SuppressPbRecording)
+                return;
             if (_currentSamples.Count == 0)
                 return;
             string category = GetCategoryKey();
@@ -1104,6 +1107,9 @@ namespace HSRTimer
 
         private void WriteMultiPb(RunState state)
         {
+            // A simulated test pass ('hsr pass') must not persist a PB.
+            if (state != null && state.SuppressPbRecording)
+                return;
             if (_multiRunSamples.Count == 0)
                 return;
             string subproject = MultiSubprojectForLevel(_lastCompletedLevelNumber);

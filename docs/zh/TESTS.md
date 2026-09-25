@@ -35,6 +35,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr save` | 保存当前内存中的配置 |
 | `hsr reset` | 整局重置(等同于重置键) |
 | `hsr retry` | 一键重试(等同于重试键,R6) |
+| `hsr pass` | 模拟真实的过关流程:设置 `Game.passedLevel`,再触发 `Game.Fall` |
 | `hsr hud [on\|off\|toggle\|status]` | 控制计时 HUD 的显示 |
 | `hsr panel [open\|close\|toggle\|status]` | 控制设置面板 |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | 控制排行榜 HUD |
@@ -78,10 +79,19 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 hsr status                 # 查看游戏/应用状态、游戏时间、分段、现实时间
 hsr reset                  # 验证计时器归零、标记被清除
 hsr retry                  # 验证一键重试会重载关卡
+hsr pass                   # 模拟通过当前关卡(过关)
 ```
 
 在关卡内,`hsr status` 应显示 `segment=True`、`timing=True` 且 `gameTime` 持续增长。
 执行 `hsr reset` 后,`gameTime` 应为 `0`,`inSegment` 应为 `False`(或过渡缓存被保留,关卡不会因此重新计时)。
+
+`hsr pass` 无需走到终点落地区即可驱动真实的过关流程:它先设置
+`Game.passedLevel`(等同于 `Game.EnterPassZone`),等待一帧让引擎锁定
+`LevelPassed`,再调用 `Game.Fall` —— 内置战役关卡经 `PassLevel` → `StartNextLevel`
+推进,Workshop / EditorPick 关卡经 `PauseLeave` 离开。之后 `hsr status` 应显示
+本段用时,若为一场成绩的最后一关还应显示 `lastRun`。该命令需要处于分段内且存在
+本地玩家,客户端与回放播放期间为无效操作。**subsegment 与 marker 的 PB 不会写入**
+(这是测试过关),真实的 PB 文件保持不变。
 
 ### 2. 有效性标记(R5)
 
@@ -269,6 +279,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] 关卡内 `hsr status` 显示合理的实时值。
 - [ ] `hsr reset` 将计时器归零并清除标记。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
+- [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
 - [ ] `hsr hud off/on` 隐藏 / 显示计时 HUD。
 - [ ] `hsr panel open/close` 打开 / 关闭设置面板。
 - [ ] 关于标签页(导航第一项)显示名称 / 版本 / 许可证与仓库按钮;`hsr about` 与之匹配。
