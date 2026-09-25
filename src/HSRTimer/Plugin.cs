@@ -79,7 +79,7 @@ namespace HSRTimer
             registry.Register(new GlitchlessTagRule());
             registry.Register(new NoEcTagRule());
 
-            // 3. Harmony patches (voiceline hooks only).
+            // 3. Harmony patches (voiceline / pause-menu / Jumpless / timing-boundary hooks).
             PatchModule.Apply();
 
             // 4. Optional LevelCollections integration (reflection; no-op if absent).

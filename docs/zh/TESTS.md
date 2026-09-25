@@ -1,6 +1,6 @@
 # TESTS(测试文档)
 
-> **English (source of truth)**: [../../TESTS.md](../../TESTS.md)
+> **English (source of truth)**: [../TESTS.md](../TESTS.md)
 
 本文说明如何**在游戏内**通过自带的开发者控制台(默认按键 **`~`** 或 **F1**)测试 HSRTimer 的每一个功能。
 
@@ -28,6 +28,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr` | 打印完整命令摘要 |
 | `hsr help [topic]` | 打印某个主题的帮助 |
 | `hsr status` | 输出计时器 / 配置 / HUD / 分段 / 标记 / LC 的实时状态 |
+| `hsr clock [status\|history [n]\|clear]` | 查看纯 tick 游戏时钟与分段边界(R1.11) |
 | `hsr keys` | 列出所有可设置的 settings/layout 键 |
 | `hsr get <key>` / `hsr get all` | 读取单个配置值,或全部配置值 |
 | `hsr set <key> <value>` | 设置并保存一个配置值 |
@@ -35,6 +36,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr save` | 保存当前内存中的配置 |
 | `hsr reset` | 整局重置(等同于重置键) |
 | `hsr retry` | 一键重试(等同于重试键,R6) |
+| `hsr pass [real]` | 模拟过关流程:默认设置 `Game.passedLevel` 后触发 `Game.Fall`;`real` 清除动量、取消抓取并把玩家传送到判定箱,由游戏自身的触发器完成过关。均不写入 subsegment/marker 的 PB |
 | `hsr hud [on\|off\|toggle\|status]` | 控制计时 HUD 的显示 |
 | `hsr panel [open\|close\|toggle\|status]` | 控制设置面板 |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | 控制排行榜 HUD |
@@ -76,12 +78,38 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 
 ```text
 hsr status                 # 查看游戏/应用状态、游戏时间、分段、现实时间
+hsr clock                  # 纯 tick 时钟:PlayableTicks、分段起止 tick
+hsr clock history          # 最近的分段起止 tick(抖动检查,R1.11)
+hsr clock clear            # 清空边界历史
 hsr reset                  # 验证计时器归零、标记被清除
 hsr retry                  # 验证一键重试会重载关卡
+hsr pass                   # 模拟通过当前关卡(过关)
+hsr pass real              # 传送到判定箱,让游戏自身完成过关
 ```
 
 在关卡内,`hsr status` 应显示 `segment=True`、`timing=True` 且 `gameTime` 持续增长。
 执行 `hsr reset` 后,`gameTime` 应为 `0`,`inSegment` 应为 `False`(或过渡缓存被保留,关卡不会因此重新计时)。
+
+`hsr pass` 无需走到终点落地区即可驱动真实的过关流程:它先设置
+`Game.passedLevel`(等同于 `Game.EnterPassZone`),等待一帧让引擎锁定
+`LevelPassed`,再调用 `Game.Fall` —— 内置战役关卡经 `PassLevel` → `StartNextLevel`
+推进,Workshop / EditorPick 关卡经 `PauseLeave` 离开。之后 `hsr status` 应显示
+本段用时,若为一场成绩的最后一关还应显示 `lastRun`。该命令需要处于分段内且存在
+本地玩家,客户端与回放播放期间为无效操作。**subsegment 与 marker 的 PB 不会写入**
+(这是测试过关),真实的 PB 文件保持不变。
+
+`hsr pass real` 走真实的触发器链路而不是直接置标志:它把玩家动量清零
+(所有身体部件的线速度与角速度)、取消双手抓取,并把本地玩家传送到本关
+`LevelPassTrigger`(通关判定箱)的中心。随后由游戏自身流程接管 —— 判定箱触发
+`passedLevel`,玩家落入下方的 `FallTrigger` 由 `Game.Fall` 完成过关。PB 抑制与
+默认模式一致。若命令报告 `LevelPassed` 未锁定,说明玩家未能进入判定箱
+(检查触发器的 collider / tag / 关卡布局)。
+
+**边界确定性(R1.11)。** `hsr clock` 打印原始整数 tick 时钟(`playableTicks`、`segmentStartTicks`、`pendingEndTicks` 等)。`hsr clock history` 列出每次分段起止 tick:连续载入 + 通关同一关卡 50 次,相同操作下的 `dur=`(终点 tick − 起点 tick)必须**完全一致**(零 ±1 抖动)。测量前用 `hsr clock clear` 清空历史。
+
+每条 `end` 记录带两个诊断字段:`src=hook|poll` 表示终点 tick 是由精确的 `Game.Fall` 边界 hook 锁定(真实通关)还是由轮询记录(中途退出);`step=` 是观察到该边界的全局物理帧。另有一条 `pass` 行标记权威过关 tick。二者合起来说明:**过关到状态翻转之间的物理帧没有被计入分段** —— 这正是旧版 ±1 抖动的来源。
+
+起点侧同样成对出现:`load` 是 `Game.AfterLoad` hook 帧(权威分段起点),紧随其后的 `start` 行是轮询消费该闩锁的结果。`start` 的 tick 等于 `load` 的 tick 而 `step=` 更大,即证明起点边界不再取决于轮询何时发现它。
 
 ### 2. 有效性标记(R5)
 
@@ -268,7 +296,10 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr` 打印命令摘要。
 - [ ] 关卡内 `hsr status` 显示合理的实时值。
 - [ ] `hsr reset` 将计时器归零并清除标记。
+- [ ] `hsr clock` 显示整数 tick,且 `hsr clock history` 对重复的相同操作记录到一致的 `dur=`(R1.11)。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
+- [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
+- [ ] `hsr pass real` 把玩家传送到判定箱,由游戏自身的触发器链路完成过关(且 `LevelPassed` 已锁定);PB 同样不写入。
 - [ ] `hsr hud off/on` 隐藏 / 显示计时 HUD。
 - [ ] `hsr panel open/close` 打开 / 关闭设置面板。
 - [ ] 关于标签页(导航第一项)显示名称 / 版本 / 许可证与仓库按钮;`hsr about` 与之匹配。

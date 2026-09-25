@@ -7,7 +7,7 @@
 ## 概念
 
 - 每个 **(关卡, 类别键)** 对应一套标记。类别键遵循 subsegment 规则（R8.2.4）：无启用标签时为 `Any`，否则为按字母序排序的启用标签 id，以 `+` 连接。
-- 标记的时间口径是触发帧的**分段时间**：`t_ms = round((GameTime - SegmentStart) * 1000)`——与 HUD 的"分段时间"行及 subsegment IL 对比同源。
+- 标记的时间口径是触发帧的**分段时间**：`t_ms = round((PlayableTicks - SegmentStartTicks) * tickSeconds * 1000)`（经 `GameClock.SegmentMs`）——与 HUD 的"分段时间"行及 subsegment IL 对比同源。
 - 每次关卡尝试中，每个标记只记录**首次**触发。触发记录与排行榜 feed 在进入关卡、一键重试、暂停菜单重开关卡、手动重置、离开关卡时清空；PB 保留。
 
 ## 标记类型（R10.1.4 / R10.2）

@@ -9,33 +9,79 @@ namespace HSRTimer
     /// </summary>
     public sealed class RunState
     {
-        // ── Time ──────────────────────────────────────────────────────
-        /// <summary>Accumulated game time since the run started, in seconds.</summary>
-        public double GameTime;
-
+        // ── Game clock: integer physics ticks (TB-1) ──────────────────
         /// <summary>
-        /// Snapshot of <see cref="GameTime"/> at the start of the current
-        /// segment (level). The current segment time is GameTime - SegmentStart.
+        /// Playable <c>FixedUpdate</c> frames since the run started: one
+        /// increment per physics frame in which the engine may accumulate
+        /// (B.1). This is the core's game-time representation — no floating
+        /// point, no dependency on the physics step constant.
         /// </summary>
-        public double SegmentStart;
-
-        /// <summary>Duration of the most recently completed segment, or null.</summary>
-        public double? LastSegment;
+        public ulong PlayableTicks;
 
         /// <summary>
-        /// Total game time frozen at the instant the most recently completed
-        /// segment ended (i.e. the cumulative time "as of last segment
-        /// completion"), or null. Unlike <see cref="LastSegment"/> (the segment's
-        /// duration), this is the run total at that moment. Snapshotted in
-        /// <see cref="EndSegment"/>.
+        /// Paused wall-clock seconds since the run started, accumulated with
+        /// <c>Time.unscaledDeltaTime</c> (R1.8.3/TB-6). Pausing halts
+        /// <c>FixedUpdate</c>, so there are no ticks to count; this is the one
+        /// documented non-tick component and is merged back in by
+        /// <see cref="GameClock.Seconds"/> only at the display boundary.
         /// </summary>
-        public double? TotalAtLastSegment;
-
-        /// <summary>Total game time of the most recently completed run, or null.</summary>
-        public double? LastRun;
+        public double PauseAccum;
 
         /// <summary>
-        /// Time from the current wake-up measurement start to
+        /// Read-only cache of <c>GameClock.Seconds(PlayableTicks, PauseAccum)</c>,
+        /// refreshed by the engine each tick (and each pause frame). Consumers
+        /// that only display the total may keep reading a single double without
+        /// converting themselves (4.1).
+        /// </summary>
+        public double GameTimeSeconds;
+
+        /// <summary>
+        /// Snapshot of <see cref="PlayableTicks"/> at the start of the current
+        /// segment (level). The current segment time is the integer difference
+        /// <c>PlayableTicks - SegmentStartTicks</c>.
+        /// </summary>
+        public ulong SegmentStartTicks;
+
+        /// <summary>Snapshot of <see cref="PauseAccum"/> at the start of the current segment.</summary>
+        public double SegmentStartPause;
+
+        /// <summary>
+        /// Exact end tick of the current segment, latched by the authoritative
+        /// pass-zone boundary hook (TB-3), or null when no pass has been
+        /// recorded. Once set, the poll freezes accumulation so the segment
+        /// ends on the hook's tick, not on the frame the state flip happens to
+        /// be observed.
+        /// </summary>
+        public ulong? PendingEndTicks;
+
+        /// <summary>Snapshot of <see cref="PauseAccum"/> at the instant <see cref="PendingEndTicks"/> was recorded.</summary>
+        public double PendingEndPause;
+
+        /// <summary>Duration of the most recently completed segment, in ticks, or null.</summary>
+        public ulong? LastSegmentTicks;
+
+        /// <summary>Pause wall time accrued during the most recently completed segment, or 0.</summary>
+        public double LastSegmentPause;
+
+        /// <summary>
+        /// Run total (in ticks) frozen at the instant the most recently
+        /// completed segment ended, or null. Unlike <see cref="LastSegmentTicks"/>
+        /// (the segment's duration), this is the run total at that moment.
+        /// Snapshotted in <see cref="EndSegment"/>.
+        /// </summary>
+        public ulong? TotalAtLastSegmentTicks;
+
+        /// <summary>Pause wall time at the instant the last segment ended.</summary>
+        public double TotalAtLastSegmentPause;
+
+        /// <summary>Total game ticks of the most recently completed run, or null.</summary>
+        public ulong? LastRunTicks;
+
+        /// <summary>Pause wall time accrued during the most recently completed run.</summary>
+        public double LastRunPause;
+
+        /// <summary>
+        /// Ticks from the current wake-up measurement start to
         /// the local player leaving the soft/spawn state
         /// (<c>Spawning</c> / <c>Unconscious</c> / <c>Dead</c>), or null before
         /// that wake-up has been observed. By default the measurement restarts
@@ -45,20 +91,26 @@ namespace HSRTimer
         /// starts, when the level ends/exits, and on any reset — it is purely a
         /// live per-level display value.
         /// </summary>
-        public double? WakeUpTime;
+        public ulong? WakeUpTicks;
+
+        /// <summary>Pause wall time accrued during the current wake-up measurement.</summary>
+        public double WakeUpPause;
 
         /// <summary>
-        /// Authoritative game time at which the current Wake Up Time measurement
+        /// Authoritative tick at which the current Wake Up Time measurement
         /// began. For the original "first wake-up only" mode this is the segment
         /// start; for the default mode it is updated to each respawn/restart
         /// moment so Wake Up Time shows how long the player took to get up after
         /// that particular respawn.
         /// </summary>
-        public double WakeUpMeasureStart;
+        public ulong WakeUpMeasureStartTicks;
+
+        /// <summary>Pause wall time at the start of the current wake-up measurement.</summary>
+        public double WakeUpMeasureStartPause;
 
         /// <summary>
-        /// Accumulated wall-clock time since the current run began. Unlike
-        /// <see cref="GameTime"/>, this keeps advancing through level loading
+        /// Accumulated wall-clock time since the current run began. Unlike the
+        /// game clock, this keeps advancing through level loading
         /// screens and pauses, so it represents the real time spent on the run.
         /// </summary>
         public double RealTime;
@@ -128,6 +180,15 @@ namespace HSRTimer
         /// completion even leaves via the same PauseLeave path as a quit.
         /// </summary>
         public bool LevelPassed;
+
+        /// <summary>
+        /// When set, the current completion flow must NOT persist subsegment /
+        /// marker PBs. Set by the <c>hsr pass</c> test command (a simulated
+        /// level pass that should not pollute real PB data); the segment is
+        /// still recorded normally (LastSegment / LastRun), only the PB write
+        /// paths are skipped. Cleared on segment start and on any full reset.
+        /// </summary>
+        public bool SuppressPbRecording;
 
         /// <summary>
         /// Whether the current segment is on the LAST level of an LC collection
@@ -225,29 +286,41 @@ namespace HSRTimer
 
         /// <summary>
         /// Full-run reset. When <paramref name="keepLastValues"/> is true the
-        /// segment snapshots (<see cref="LastSegment"/> and
-        /// <see cref="TotalAtLastSegment"/>) are preserved. When
+        /// segment snapshots (<see cref="LastSegmentTicks"/> and
+        /// <see cref="TotalAtLastSegmentTicks"/>) are preserved. When
         /// <paramref name="keepLastRun"/> is true, the previous run's total
-        /// (<see cref="LastRun"/>) is preserved separately — auto-reset and
+        /// (<see cref="LastRunTicks"/>) is preserved separately — auto-reset and
         /// menu-entry reset keep it as the "previous completed run" reference,
         /// while the manual reset clears everything. Live timers and
         /// segment/transition caches are zeroed regardless.
         /// </summary>
         public void Reset(bool keepLastValues, bool keepLastRun)
         {
-            GameTime = 0d;
-            SegmentStart = 0d;
+            PlayableTicks = 0UL;
+            PauseAccum = 0d;
+            GameTimeSeconds = 0d;
+            SegmentStartTicks = 0UL;
+            SegmentStartPause = 0d;
+            PendingEndTicks = null;
+            PendingEndPause = 0d;
             if (!keepLastValues)
             {
-                LastSegment = null;
-                TotalAtLastSegment = null;
+                LastSegmentTicks = null;
+                LastSegmentPause = 0d;
+                TotalAtLastSegmentTicks = null;
+                TotalAtLastSegmentPause = 0d;
             }
             if (!keepLastRun)
-                LastRun = null;
+            {
+                LastRunTicks = null;
+                LastRunPause = 0d;
+            }
             // Wake Up time is a per-level live stat only; it is cleared whenever
             // the level ends/exits and on any reset.
-            WakeUpTime = null;
-            WakeUpMeasureStart = 0d;
+            WakeUpTicks = null;
+            WakeUpPause = 0d;
+            WakeUpMeasureStartTicks = 0UL;
+            WakeUpMeasureStartPause = 0d;
             RealTime = 0d;
             RealTimeActive = false;
             TimingActive = false;
@@ -263,6 +336,7 @@ namespace HSRTimer
             SegmentJustEnded = false;
             Retrying = false;
             LevelPassed = false;
+            SuppressPbRecording = false;
             OnCollectionLastLevel = false;
             InCollectionRunSegment = false;
             InEpilogueSegment = false;
@@ -274,22 +348,28 @@ namespace HSRTimer
         }
 
         /// <summary>
-        /// Begin a new segment (level): snapshot the start time and mark active.
-        /// Does not touch accumulated run time.
+        /// Begin a new segment (level): snapshot the start tick/pause and mark
+        /// active. Does not touch accumulated run time.
         /// </summary>
-        public void BeginSegment(double gameTime, int levelNumber, WorkshopItemSource levelType, int startCheckpoint)
+        public void BeginSegment(ulong playableTicks, double pauseAccum, int levelNumber, WorkshopItemSource levelType, int startCheckpoint)
         {
-            SegmentStart = gameTime;
+            SegmentStartTicks = playableTicks;
+            SegmentStartPause = pauseAccum;
+            PendingEndTicks = null;
+            PendingEndPause = 0d;
             TimingActive = true;
             InSegment = true;
             CurrentLevelNumber = levelNumber;
             CurrentLevelType = levelType;
             PrevCheckpoint = startCheckpoint;
             MaxCheckpointThisLevel = startCheckpoint;
-            WakeUpTime = null;
-            WakeUpMeasureStart = SegmentStart;
+            WakeUpTicks = null;
+            WakeUpPause = 0d;
+            WakeUpMeasureStartTicks = SegmentStartTicks;
+            WakeUpMeasureStartPause = SegmentStartPause;
             SegmentJustEnded = false;
             LevelPassed = false;
+            SuppressPbRecording = false;
             OnCollectionLastLevel = false;
             InCollectionRunSegment = false;
             InEpilogueSegment = false;
@@ -302,31 +382,44 @@ namespace HSRTimer
         /// <b>passed</b>, not abandoned by a mid-level quit. No-op if no segment
         /// is active (avoids recording a garbage segment from a stale transition
         /// cache, e.g. across a Game.instance null window).
+        /// <para><paramref name="endTicks"/> is the segment's exact end tick:
+        /// the pass-zone boundary hook's value when one was latched (TB-3), else
+        /// the polled <see cref="PlayableTicks"/>. The run total is normalized
+        /// to it so a pass that the poll had not yet counted is still included.</para>
         /// </summary>
-        public void EndSegment(double gameTime, bool completed)
+        public void EndSegment(ulong endTicks, double endPause, bool completed)
         {
             if (!InSegment) return;
             if (completed)
             {
-                LastSegment = gameTime - SegmentStart;
-                TotalAtLastSegment = gameTime;
+                LastSegmentTicks = endTicks >= SegmentStartTicks ? endTicks - SegmentStartTicks : 0UL;
+                LastSegmentPause = endPause >= SegmentStartPause ? endPause - SegmentStartPause : 0d;
+                TotalAtLastSegmentTicks = endTicks;
+                TotalAtLastSegmentPause = endPause;
             }
+            PlayableTicks = endTicks;
+            PauseAccum = endPause;
+            PendingEndTicks = null;
+            PendingEndPause = 0d;
             TimingActive = false;
             InSegment = false;
             SegmentJustEnded = true;
-            WakeUpTime = null; // the level is over; do not keep showing it
+            WakeUpTicks = null; // the level is over; do not keep showing it
+            WakeUpPause = 0d;
         }
 
         /// <summary>
         /// Clear the current Wake Up Time display and start a fresh measurement
-        /// from <paramref name="gameTime"/>. Used by the default respawn-aware
+        /// from the given tick/pause. Used by the default respawn-aware
         /// wake-up behavior; not called when "only record first wake-up time" is
         /// enabled.
         /// </summary>
-        public void RestartWakeUpMeasurement(double gameTime)
+        public void RestartWakeUpMeasurement(ulong playableTicks, double pauseAccum)
         {
-            WakeUpTime = null;
-            WakeUpMeasureStart = gameTime;
+            WakeUpTicks = null;
+            WakeUpPause = 0d;
+            WakeUpMeasureStartTicks = playableTicks;
+            WakeUpMeasureStartPause = pauseAccum;
         }
     }
 }

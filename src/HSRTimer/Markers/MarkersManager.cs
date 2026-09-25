@@ -93,15 +93,6 @@ namespace HSRTimer
                 return;
             _currentSet = GetOrCreateSet(_currentLevelKey, game.currentLevelType.ToString(), game.currentLevelNumber, _currentCategory);
             Log($"level start: key='{_currentLevelKey}' category='{_currentCategory}' markers={CountEnabled(_currentSet)}");
-            // One concise info line whenever the level actually has markers, so a
-            // user can confirm the runtime sees their marker set (and that the
-            // panel/runtime are sharing one instance).
-            int markerCount = CountEnabled(_currentSet);
-            if (markerCount > 0)
-            {
-                Plugin.Logger.LogInfo(
-                    $"HSRTimer[markers]: level '{_currentLevelKey}' [{_currentCategory}] loaded with {markerCount} marker(s).");
-            }
 
             // R10.7.6: a new level with no markers clears the previous feed
             // immediately; otherwise the old feed stays until the first trigger.
@@ -217,9 +208,11 @@ namespace HSRTimer
             // TimerCore.EndSegment runs tag OnLevelExit before this hook, so
             // final-validity checks (R4.2 checkpoint-final / voiceline) have
             // already raised any invalid flag; an invalid run never gets a PB.
-            if (Enabled && completed && !retrying && state != null && !state.Flags.IsInvalid && _currentSet != null && state.InSegment)
+            // A simulated test pass ('hsr pass') must not persist a PB either.
+            if (Enabled && completed && !retrying && state != null && !state.Flags.IsInvalid
+                && !state.SuppressPbRecording && _currentSet != null && state.InSegment)
             {
-                long levelMs = (long)Math.Round((endTime - state.SegmentStart) * 1000.0);
+                long levelMs = GameClock.ToMs(endTime - GameClock.SegmentStartSeconds(state));
                 TryWritePb(levelMs);
             }
             ClearEvaluation();
@@ -288,7 +281,7 @@ namespace HSRTimer
         // ── trigger helpers ────────────────────────────────────────────────
 
         private static long SegmentTimeMs(RunState state)
-            => (long)Math.Round((state.GameTime - state.SegmentStart) * 1000.0);
+            => GameClock.SegmentMs(state);
 
         private static bool IsInsideBox(Vector3 pos, MarkerDef def)
         {

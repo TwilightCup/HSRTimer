@@ -300,7 +300,7 @@ namespace HSRTimer
             }
 
             if (completed && _firstAwake)
-                AddFinalSample(_multiRunActive ? endTime : Math.Max(0d, endTime - state.SegmentStart));
+                AddFinalSample(_multiRunActive ? endTime : Math.Max(0d, endTime - GameClock.SegmentStartSeconds(state)));
 
             // TimerCore.EndSegment runs tag OnLevelExit before this hook, so
             // final-validity checks (R4.2 checkpoint-final / voiceline) have
@@ -317,7 +317,7 @@ namespace HSRTimer
             if (completed)
             {
                 if (valid)
-                    WriteIlPb(ilLevelId, state, (long)Math.Round(endTime * 1000.0));
+                    WriteIlPb(ilLevelId, state, GameClock.ToMs(endTime));
 
                 // Track ML run contents/endpoint.
                 if (_multiRunCandidate)
@@ -330,7 +330,7 @@ namespace HSRTimer
                         _multiRunSamples[levelId] = copy;
                     }
                     _lastCompletedLevelNumber = game.currentLevelNumber;
-                    _multiRunTotalMs = (long)Math.Round(endTime * 1000.0);
+                    _multiRunTotalMs = GameClock.ToMs(endTime);
                 }
 
                 // Each completed multi-run endpoint is also its own subproject
@@ -457,7 +457,7 @@ namespace HSRTimer
         /// multi-level run is in progress.
         /// </summary>
         private double SampleTime(RunState state)
-            => _multiRunActive ? state.GameTime : Math.Max(0d, state.GameTime - state.SegmentStart);
+            => _multiRunActive ? state.GameTimeSeconds : Math.Max(0d, GameClock.SegmentSeconds(state));
 
         /// <summary>Per-render-frame hook: quiet-settle timers (runs even while paused, R8.4.3.4).</summary>
         public void OnUpdate()
@@ -692,7 +692,7 @@ namespace HSRTimer
             {
                 seq = _nextSeq++,
                 level_index = GetLevelIndex(),
-                t_ms = (long)Math.Round(gameTime * 1000.0),
+                t_ms = GameClock.ToMs(gameTime),
                 px = pos.x,
                 py = pos.y,
                 pz = pos.z,
@@ -722,7 +722,7 @@ namespace HSRTimer
             {
                 seq = _nextSeq++,
                 level_index = GetLevelIndex(),
-                t_ms = (long)Math.Round(gameTime * 1000.0),
+                t_ms = GameClock.ToMs(gameTime),
                 px = pos.x,
                 py = pos.y,
                 pz = pos.z,
@@ -756,7 +756,7 @@ namespace HSRTimer
             {
                 seq = _nextSeq++,
                 level_index = GetLevelIndex(),
-                t_ms = (long)Math.Round(endTime * 1000.0),
+                t_ms = GameClock.ToMs(endTime),
                 px = pos.Value.x,
                 py = pos.Value.y,
                 pz = pos.Value.z,
@@ -989,7 +989,7 @@ namespace HSRTimer
                             continue;
                         }
 
-                        long hitMs = (long)Math.Round(time * 1000.0);
+                        long hitMs = GameClock.ToMs(time);
                         plane.CandidateHitMs = hitMs;
                         plane.QuietStartUnscaledTime = Time.unscaledTime;
                         plane.HasQuiet = true;
@@ -1057,6 +1057,9 @@ namespace HSRTimer
 
         private void WriteIlPb(string levelId, RunState state, long endTimeMs)
         {
+            // A simulated test pass ('hsr pass') must not persist a PB.
+            if (state != null && state.SuppressPbRecording)
+                return;
             if (_currentSamples.Count == 0)
                 return;
             string category = GetCategoryKey();
@@ -1068,7 +1071,7 @@ namespace HSRTimer
             // recorder holds cumulative game-time samples (which are correct for
             // the ML files), so normalize a copy before writing the IL record;
             // in IL mode the samples are already segment-relative.
-            long levelStartMs = (long)Math.Round(state.SegmentStart * 1000.0);
+            long levelStartMs = GameClock.ToMs(GameClock.SegmentStartSeconds(state));
             bool normalizeForIl = _multiRunActive;
             long totalMs = Math.Max(0L, endTimeMs - levelStartMs);
             if (SubsegmentFileStore.TryReadTotalMs(metaPath, out long existing) && existing <= totalMs)
@@ -1104,6 +1107,9 @@ namespace HSRTimer
 
         private void WriteMultiPb(RunState state)
         {
+            // A simulated test pass ('hsr pass') must not persist a PB.
+            if (state != null && state.SuppressPbRecording)
+                return;
             if (_multiRunSamples.Count == 0)
                 return;
             string subproject = MultiSubprojectForLevel(_lastCompletedLevelNumber);
