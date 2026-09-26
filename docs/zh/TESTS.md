@@ -229,13 +229,16 @@ hsr sub clientmode off       # 模拟为主机 / 单人 -> 正常
 hsr sub clientmode auto      # 恢复自动(仅 NetGame.isClient 时禁用)
 ```
 
-验证:`hsr sub clientmode on` 后 `hsr sub status` 显示 `active=off, coopClientGate=on`,关卡内排行榜不再显示任何 subsegment 内容;`hsr sub clientmode off` 恢复采样 / 检测。真实合作会话中,客机端会自动呈现相同行为。
+验证:`hsr sub clientmode on` 后 `hsr sub status` 显示 `active=off, coopClientGate=on`(以及新的自动禁用字段 `userEnabled=on autoDisabled=on autoReasons=coop-client`),关卡内排行榜不再显示任何 subsegment 内容;`hsr sub clientmode off` 恢复采样 / 检测。真实合作会话中,客机端会自动呈现相同行为。
+
+**用户禁用 vs 自动禁用(R8.5.1.5)。** `hsr sub status` 把用户的 `Subsegment.Enable` 设置(`enable` / `userEnabled`)与自动禁用来源(`autoDisabled` / `autoReasons`)分开报告。例如 `hsr set subsegment_enable false` 得到 `userEnabled=off autoDisabled=off`,而 `hsr sub clientmode on` 得到 `userEnabled=on autoDisabled=on autoReasons=coop-client`——两个维度相互独立,任一者都会使模块处于 `active=off`。
 
 ### 8. 标记(R10)
 
 进入关卡后:
 
 ```text
+hsr marker status
 hsr marker list
 hsr marker add range "Test Box"          # 使用玩家位置,2 米盒子
 hsr marker add checkpoint "CP1" 1
@@ -247,6 +250,8 @@ hsr marker save
 hsr marker reload
 hsr marker clear
 ```
+
+`hsr marker status` 报告模块的启用 / 可用状态:用户的 `Markers.Enable` 设置(`enable` / `userEnabled`)、当前生效的自动禁用来源(`autoDisabled` / `autoReasons`,目前没有)、合并后的 `active`、合作 PB 角色(`pbWrite`)与当前 feed 大小。`hsr set markers_enable false` 使 `userEnabled=off` 而 `autoDisabled` 仍为 off——两个维度相互独立(R8.5.1.5)。
 
 当编辑模式开启(`hsr set markers_edit_mode true`)时,标记覆盖层 / feed 应响应这些改动。
 
@@ -284,6 +289,8 @@ hsr leaderboard mode Subsegment
 hsr leaderboard hide
 hsr leaderboard cycle
 ```
+
+**循环会跳过被禁用的模式(R8.5.1.2)。** `hsr leaderboard status` 显示当前 `mode` 与 `available` 模式(用户开启且未被自动禁用)。两个模块都开启时,`cycle` 依次走关闭 → 分段对比 → 标记 → 关闭。禁用 subsegment(`hsr sub clientmode on`,或 `hsr set subsegment_enable false`)后,`cycle` 只在关闭 ↔ 标记之间轮换:从关闭直接进入标记(绝不进入分段对比),从标记进入关闭。两者都禁用时 `cycle` 保持关闭。禁用 markers(`hsr set markers_enable false`)同理,循环变为关闭 ↔ 分段对比。当前显示的模式变得不可用时(例如排行榜处于分段对比模式时客机门控生效),该模式不再绘制任何内容,下一次 `cycle` 按键进入关闭。
 
 ### 11. LevelCollections 集成(可选)
 

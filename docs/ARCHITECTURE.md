@@ -494,7 +494,10 @@ Markers follow the same **poll, don't patch** principle as everything else:
   renders either the subsegment references or the marker feed based on
   `LayoutModel.LeaderboardMode`; the mode-cycle key moved from
   `SubsegmentManager` to the HUD, so the same key and appearance settings work
-  for both modes. It cycles hidden → Subsegment → Markers → hidden. Its top
+  for both modes. It cycles hidden → the available content modes → hidden; a
+  mode whose module is disabled (user setting or an auto-disable mechanism such
+  as the co-op client gate, see `AutoDisableRegistry`) is skipped, so with
+  subsegment off the cycle is only hidden ↔ Markers. Its top
   edge is fixed at the screen center (plus `layout.ini [leaderboard] offset_y`),
   so content extends downward instead of re-centering as the number of rows
   changes. The marker feed is newest-first, format `{name}: {time}` (absolute

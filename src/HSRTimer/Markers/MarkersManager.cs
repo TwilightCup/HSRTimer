@@ -34,6 +34,16 @@ namespace HSRTimer
         public static MarkersManager Instance { get; private set; }
 
         /// <summary>
+        /// Auto-disable sources for this module (R8.5.1.2). Currently no
+        /// mechanism auto-disables markers — the module runs on both host and
+        /// client in co-op (R10.10) — so this registry starts empty; future
+        /// mechanisms can register sources with <c>AutoDisable.Register</c> and
+        /// the leaderboard mode-cycle will drop the markers mode while one is
+        /// on.
+        /// </summary>
+        public AutoDisableRegistry AutoDisable { get; private set; }
+
+        /// <summary>
         /// Session-only override for the co-op client role used by PB writes,
         /// set by the dev console ('hsr marker clientmode on|off|auto') so the
         /// host-only PB rule can be tested without a real client session
@@ -96,6 +106,7 @@ namespace HSRTimer
         private void Awake()
         {
             Instance = this;
+            AutoDisable = new AutoDisableRegistry();
         }
 
         private void OnDestroy()
@@ -106,7 +117,30 @@ namespace HSRTimer
 
         private SettingsModel Settings => ConfigService.Instance != null ? ConfigService.Instance.Settings : null;
 
-        private bool Enabled => Settings != null && Settings.MarkersEnable;
+        /// <summary>Whether the user enabled markers in settings (R10.8 <c>Markers.Enable</c>).</summary>
+        public bool IsUserEnabled => Settings != null && Settings.MarkersEnable;
+
+        /// <summary>Whether some auto-disable mechanism currently turns the module off (none registered today).</summary>
+        public bool IsAutoDisabled => AutoDisable != null && AutoDisable.IsDisabled;
+
+        /// <summary>Reasons of the auto-disable sources currently active. Empty when none.</summary>
+        public List<string> AutoDisabledReasons => AutoDisable != null ? AutoDisable.ActiveReasons() : new List<string>();
+
+        /// <summary>
+        /// Whether the module is currently active: user-enabled and not
+        /// auto-disabled. All runtime behavior (level start, trigger
+        /// evaluation, checkpoint-load, PB write, feed, overlay set) is gated
+        /// on this, so a future auto-disable source truly turns the module off
+        /// (R8.5.1.5) — today no source is registered, so it equals
+        /// <c>IsUserEnabled</c>.
+        /// </summary>
+        public bool IsActiveNow => IsUserEnabled && !IsAutoDisabled;
+
+        /// <summary>
+        /// Whether the markers leaderboard mode may appear in the cycle:
+        /// user-enabled and not auto-disabled (R8.5.1.2).
+        /// </summary>
+        public bool IsLeaderboardAvailable => IsUserEnabled && !IsAutoDisabled;
 
         private void Log(string message)
         {
@@ -126,7 +160,7 @@ namespace HSRTimer
             if (game == null) return;
             _currentLevelKey = LevelIdentity.CurrentLevelKey(game, folderFallbackForLocalWorkshop: true);
             _currentTitle = CurrentLevelDisplayName(game);
-            if (!Enabled)
+            if (!IsActiveNow)
                 return;
             _currentSet = GetOrCreateSet(_currentLevelKey, game.currentLevelType.ToString(), game.currentLevelNumber, _currentCategory);
             Log($"level start: key='{_currentLevelKey}' category='{_currentCategory}' markers={CountEnabled(_currentSet)}");
@@ -151,7 +185,7 @@ namespace HSRTimer
         /// </summary>
         public void OnPhysicsTick(Game game, GameState gState, RunState state)
         {
-            if (!Enabled || state == null || _currentSet == null || _currentSet.markers == null)
+            if (!IsActiveNow || state == null || _currentSet == null || _currentSet.markers == null)
                 return;
             if (!state.InSegment || state.Retrying || gState != GameState.PlayingLevel)
                 return;
@@ -204,7 +238,7 @@ namespace HSRTimer
         /// </summary>
         public void OnCheckpointLoaded(int checkpointNumber)
         {
-            if (!Enabled || _currentSet == null || _currentSet.markers == null)
+            if (!IsActiveNow || _currentSet == null || _currentSet.markers == null)
                 return;
             var state = TimerCore.State;
             if (state == null)
@@ -241,7 +275,7 @@ namespace HSRTimer
             // already raised any invalid flag; an invalid run never gets a PB.
             // A simulated test pass ('hsr pass') must not persist a PB either,
             // and a co-op client never persists a PB (R10.10.2, host-only).
-            if (Enabled && completed && !retrying && state != null && !state.Flags.IsInvalid
+            if (IsActiveNow && completed && !retrying && state != null && !state.Flags.IsInvalid
                 && !state.SuppressPbRecording && _currentSet != null && state.InSegment
                 && IsPbWriteEnabled)
             {
@@ -476,7 +510,7 @@ namespace HSRTimer
         // ── leaderboard feed (R10.7) ───────────────────────────────────────
 
         /// <summary>Whether the markers feed should be drawn (R10.7.2).</summary>
-        public bool HasFeedData => Enabled && _feed.Count > 0;
+        public bool HasFeedData => IsActiveNow && _feed.Count > 0;
 
         /// <summary>Feed in trigger order (oldest first); the HUD renders it reversed.</summary>
         public IReadOnlyList<MarkerFeedRow> Feed => _feed;
@@ -491,7 +525,7 @@ namespace HSRTimer
         // ── overlay (R10.6) ────────────────────────────────────────────────
 
         /// <summary>The current level's marker set, or null when not in a level / disabled.</summary>
-        public MarkerSet CurrentSet => Enabled ? _currentSet : null;
+        public MarkerSet CurrentSet => IsActiveNow ? _currentSet : null;
 
         /// <summary>The current level's storage key (used by the overlay to reset per-level warnings).</summary>
         public string CurrentLevelKey => _currentLevelKey;

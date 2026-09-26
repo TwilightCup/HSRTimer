@@ -284,15 +284,26 @@ hsr sub clientmode auto      # back to auto (disabled only when NetGame.isClient
 ```
 
 Verify: `hsr sub clientmode on` then `hsr sub status` shows `active=off,
-coopClientGate=on` and the leaderboard shows no subsegment content even while
-in a level; `hsr sub clientmode off` restores sampling/detection. A real
-co-op session behaves the same on the client's machine automatically.
+coopClientGate=on` (and the new auto-disable fields `userEnabled=on
+autoDisabled=on autoReasons=coop-client`) and the leaderboard shows no
+subsegment content even while in a level; `hsr sub clientmode off` restores
+sampling/detection. A real co-op session behaves the same on the client's
+machine automatically.
+
+**User vs auto disable (R8.5.1.5).** `hsr sub status` reports the user's
+`Subsegment.Enable` setting (`enable` / `userEnabled`) separately from any
+auto-disable source (`autoDisabled` / `autoReasons`). For example
+`hsr set subsegment_enable false` gives `userEnabled=off autoDisabled=off`,
+while `hsr sub clientmode on` gives `userEnabled=on autoDisabled=on
+autoReasons=coop-client` — the two axes are independent, and either one makes
+the module inactive (`active=off`).
 
 ### 8. Markers (R10)
 
 Enter a level, then:
 
 ```text
+hsr marker status
 hsr marker list
 hsr marker add range "Test Box"          # uses player position, 2m box
 hsr marker add checkpoint "CP1" 1
@@ -304,6 +315,13 @@ hsr marker save
 hsr marker reload
 hsr marker clear
 ```
+
+`hsr marker status` reports the module's enable/availability state: the
+user's `Markers.Enable` setting (`enable` / `userEnabled`), any active
+auto-disable sources (`autoDisabled` / `autoReasons`, none today), the
+combined `active` flag, the co-op PB role (`pbWrite`), and the current feed
+size. `hsr set markers_enable false` turns `userEnabled=off` while
+`autoDisabled` stays off — the two axes are independent (R8.5.1.5).
 
 The marker overlay/feed should react to these changes when edit mode is enabled
 (`hsr set markers_edit_mode true`).
@@ -356,6 +374,18 @@ hsr leaderboard mode Subsegment
 hsr leaderboard hide
 hsr leaderboard cycle
 ```
+
+**Mode-cycle skips disabled modes (R8.5.1.2).** `hsr leaderboard status` shows
+the current `mode` and the `available` modes (user-enabled and not
+auto-disabled). With both modules on, `cycle` walks hidden → Subsegment →
+Markers → hidden. Disable subsegment (`hsr sub clientmode on`, or
+`hsr set subsegment_enable false`) and `cycle` now walks hidden → Markers →
+hidden only: from hidden it goes straight to Markers (never Subsegment), and
+from Markers it hides. Disable both and `cycle` stays hidden. The same applies
+when markers is the disabled side (`hsr set markers_enable false`): the cycle
+becomes hidden ↔ Subsegment. A mode that is currently shown but became
+unavailable (e.g. the leaderboard is in Subsegment mode when the co-op client
+gate turns on) draws nothing, and the next `cycle` press hides it.
 
 ### 11. LevelCollections integration (optional)
 

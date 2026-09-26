@@ -7,6 +7,8 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - The leaderboard mode-cycle key now skips modes whose module is disabled: when Subsegment or Markers is off (your setting, or auto-disabled — e.g. as a co-op client Subsegment is off), the cycle only rotates between hidden and the remaining available modes instead of always walking hidden → Subsegment → Markers → hidden.
+  - Subsegment and Markers now report "disabled by your setting" separately from "auto-disabled by another mechanism" (e.g. the co-op client gate for Subsegment); `hsr status`, `hsr sub status`, `hsr marker status`, and `hsr leaderboard status` expose both axes and the active reasons.
   - Added a "Co-op" category label (shown as "多人" in the Chinese UI) that is active automatically during multiplayer sessions: it has no rule or validity impact, is not listed on the Category page, and turns off again when you return to single-player.
   - Subsegment now respects co-op roles: as a multiplayer client the module is disabled entirely (no sampling, leaderboard, or PB writes); as the host it runs normally and only uses your own (host) character for detection.
   - Markers now respect co-op roles: any player can trigger a marker during a multiplayer session, but only the host writes marker PBs — a co-op client never does.
