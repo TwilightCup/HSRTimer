@@ -73,12 +73,45 @@ namespace HSRTimer
     /// This is a plain polled MonoBehaviour owned by <see cref="TimerCore"/>;
     /// TimerCore calls the lifecycle/tick hooks at the same points it processes
     /// timing, so subsegment sampling shares the authoritative game-time clock.
+    ///
+    /// Co-op behavior (R8.9): during a multiplayer session the module only runs
+    /// on the host. A co-op <b>client</b> (<c>NetGame.isClient</c>) has the
+    /// module gated off entirely — no sampling, no detection, no leaderboard,
+    /// no PB writes — because the run's reference data belongs to the host's
+    /// run. The <b>host</b> (<c>NetGame.isServer</c>) runs it normally, and
+    /// detection always uses the local player's own character
+    /// (<c>Human.Localplayer</c>, which on the host machine is the host's
+    /// character), never other players'.
     /// </summary>
     public sealed class SubsegmentManager : MonoBehaviour
     {
         public static SubsegmentManager Instance { get; private set; }
 
         private SubsegmentOptions _options;
+
+        /// <summary>
+        /// Session-only override for the co-op client gate, set by the dev
+        /// console ('hsr sub clientmode on|off|auto') so the client-disable can
+        /// be tested without a real multiplayer client session (mirrors the
+        /// 'hsr tag label' / 'hsr flags raise' test tools). Null = follow
+        /// <c>NetGame.isClient</c> (default).
+        /// </summary>
+        public static bool? CoopClientOverride;
+
+        /// <summary>
+        /// True when the co-op client gate disables the module: a multiplayer
+        /// client's subsegment is off entirely (R8.9.1).
+        /// </summary>
+        public bool IsCoopClientDisabled => CoopClientOverride ?? NetGame.isClient;
+
+        /// <summary>
+        /// Whether the module is currently active: the user's SubsegmentEnable
+        /// setting on, and not gated off as a co-op client (R8.9).
+        /// </summary>
+        public bool IsActiveNow => IsActive();
+
+        /// <summary>User setting on AND not a co-op client (R8.9).</summary>
+        private bool IsActive() => _options.Enable && !IsCoopClientDisabled;
 
         // Recorder state
         private readonly List<SubsegmentSample> _currentSamples = new List<SubsegmentSample>();
@@ -173,7 +206,7 @@ namespace HSRTimer
             get
             {
                 var source = _displayReferences ?? _references;
-                if (!_options.Enable || source.Count == 0) return new List<SubsegmentReference>();
+                if (!IsActive() || source.Count == 0) return new List<SubsegmentReference>();
                 var visible = source.Where(r => _options.IsReferenceEnabled(r.DisplayId)).ToList();
                 var with = visible.Where(r => r.DiffMs.HasValue)
                     .OrderByDescending(r => r.DiffMs.Value)
@@ -190,7 +223,7 @@ namespace HSRTimer
         public void OnLevelStart(Game game, RunState state)
         {
             _options = SubsegmentOptions.FromSettings(SettingsFromConfig());
-            if (!_options.Enable)
+            if (!IsActive())
             {
                 ClearRuntime();
                 return;
@@ -282,7 +315,7 @@ namespace HSRTimer
         public void OnLevelEnd(Game game, RunState state, double endTime, bool completed, bool retrying, GameState nowGameState, AppSate nowAppState)
         {
             UpdateOptions();
-            if (!_options.Enable)
+            if (!IsActive())
             {
                 ClearRuntime();
                 return;
@@ -395,7 +428,7 @@ namespace HSRTimer
         public void OnRunExit()
         {
             UpdateOptions();
-            if (!_options.Enable)
+            if (!IsActive())
             {
                 ClearRuntime();
                 return;
@@ -422,7 +455,12 @@ namespace HSRTimer
         public void OnPhysicsTick(Game game, GameState gState, RunState state)
         {
             UpdateOptions();
-            if (!_options.Enable || !state.InSegment || gState != GameState.PlayingLevel)
+            if (!IsActive())
+            {
+                ClearRuntimeIfGatedOff();
+                return;
+            }
+            if (!state.InSegment || gState != GameState.PlayingLevel)
                 return;
 
             var pos = GetCurrentPosition();
@@ -463,8 +501,11 @@ namespace HSRTimer
         public void OnUpdate()
         {
             UpdateOptions();
-            if (!_options.Enable)
+            if (!IsActive())
+            {
+                ClearRuntimeIfGatedOff();
                 return;
+            }
 
             float now = Time.unscaledTime;
             bool firstSettled = false;
@@ -539,6 +580,22 @@ namespace HSRTimer
             _activeMultiProject = "Any%";
             _pendingMultiProject = null;
             _pendingLeaderboardTitle = null;
+        }
+
+        /// <summary>
+        /// Cheap per-frame call used while the module is gated off (co-op
+        /// client, R8.9.1): clears runtime only when there is something to
+        /// clear, so a mid-session join into client mode cannot leave stale
+        /// references / leaderboard content behind, without allocating on
+        /// every tick while already idle.
+        /// </summary>
+        private void ClearRuntimeIfGatedOff()
+        {
+            if (_references.Count > 0 || _displayReferences != null
+                || _currentSamples.Count > 0 || _multiRunCandidate || _multiRunActive)
+            {
+                ClearRuntime();
+            }
         }
 
         private void ClearMultiRun()

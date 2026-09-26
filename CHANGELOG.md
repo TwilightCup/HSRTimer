@@ -8,6 +8,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
   - Added a "Co-op" category label (shown as "多人" in the Chinese UI) that is active automatically during multiplayer sessions: it has no rule or validity impact, is not listed on the Category page, and turns off again when you return to single-player.
+  - Subsegment now respects co-op roles: as a multiplayer client the module is disabled entirely (no sampling, leaderboard, or PB writes); as the host it runs normally and only uses your own (host) character for detection.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.7.1

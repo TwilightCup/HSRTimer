@@ -44,7 +44,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | 开关启用的标签规则;查看/强制自动 Co-op 标签 |
 | `hsr lang [list\|set <code>\|reload\|current]` | 管理本地化 |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | 管理预设(R11) |
-| `hsr sub [status\|entries\|clear]` | 查看 / 清空分段模块 |
+| `hsr sub [status\|entries\|clear\|clientmode <status\|on\|off\|auto>]` | 查看 / 清空分段模块;查看 / 强制合作客机门控 |
 | `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|pb <ms>\|pbclear\|clear\|save\|reload]` | 查看 / 编辑标记(R10) |
 | `hsr flags [list\|raise <Reason>\|clear [forgivable\|soft\|all]]` | 查看 / 修改有效性标记(R5) |
 | `hsr lc [status\|restart]` | 查看 LevelCollections 集成或触发 `lc restart` |
@@ -217,8 +217,19 @@ hsr sub entries
 hsr sub clear
 ```
 
-`hsr sub status` 打印启用标志、路径、多局状态与当前排行榜条目数。
+`hsr sub status` 打印启用标志、合作门控状态、路径、多局状态与当前排行榜条目数。
 `hsr sub entries` 列出每个已加载参考及其最新结算的差值。
+
+**合作门控(R8.9)。** 作为多人客机时模块整体禁用(`hsr sub status` 显示 `active=off`、`coopClientGate=on`);作为主机时正常运行,且只使用自己(主机)的角色判定。无需真实客机会话,可用 `hsr sub clientmode` 强制门控(仅本次会话有效;`auto` 恢复):
+
+```text
+hsr sub clientmode status    # effective / net / override
+hsr sub clientmode on        # 模拟为合作客机 -> 禁用 subsegment
+hsr sub clientmode off       # 模拟为主机 / 单人 -> 正常
+hsr sub clientmode auto      # 恢复自动(仅 NetGame.isClient 时禁用)
+```
+
+验证:`hsr sub clientmode on` 后 `hsr sub status` 显示 `active=off, coopClientGate=on`,关卡内排行榜不再显示任何 subsegment 内容;`hsr sub clientmode off` 恢复采样 / 检测。真实合作会话中,客机端会自动呈现相同行为。
 
 ### 8. 标记(R10)
 

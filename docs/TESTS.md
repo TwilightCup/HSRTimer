@@ -55,7 +55,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | Toggle enabled tag rules; inspect/force the auto Co-op label |
 | `hsr lang [list\|set <code>\|reload\|current]` | Manage localization |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | Manage presets (R11) |
-| `hsr sub [status\|entries\|clear]` | Inspect/clear the subsegment module |
+| `hsr sub [status\|entries\|clear\|clientmode <status\|on\|off\|auto>]` | Inspect/clear the subsegment module; inspect/force the co-op client gate |
 | `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|pb <ms>\|pbclear\|clear\|save\|reload]` | Inspect/edit markers (R10) |
 | `hsr flags [list\|raise <Reason>\|clear [forgivable\|soft\|all]]` | Inspect/mutate validity flags (R5) |
 | `hsr lc [status\|restart]` | Inspect LevelCollections integration or dispatch `lc restart` |
@@ -267,9 +267,26 @@ hsr sub entries
 hsr sub clear
 ```
 
-`hsr sub status` prints the enabled flag, paths, multi-run state and current
-leaderboard entry count. `hsr sub entries` lists each loaded reference and its
-latest settled diff.
+`hsr sub status` prints the enabled flag, co-op gate state, paths, multi-run
+state and current leaderboard entry count. `hsr sub entries` lists each loaded
+reference and its latest settled diff.
+
+**Co-op gate (R8.9).** As a multiplayer client the module is disabled entirely
+(`active=off`, `coopClientGate=on` in `hsr sub status`); as the host it runs
+normally using only your own (host) character. Without a real client session,
+force the gate with `hsr sub clientmode` (session-only; `auto` restores):
+
+```text
+hsr sub clientmode status    # effective / net / override
+hsr sub clientmode on        # treat as co-op client -> subsegment disabled
+hsr sub clientmode off       # treat as host/single-player -> normal
+hsr sub clientmode auto      # back to auto (disabled only when NetGame.isClient)
+```
+
+Verify: `hsr sub clientmode on` then `hsr sub status` shows `active=off,
+coopClientGate=on` and the leaderboard shows no subsegment content even while
+in a level; `hsr sub clientmode off` restores sampling/detection. A real
+co-op session behaves the same on the client's machine automatically.
 
 ### 8. Markers (R10)
 

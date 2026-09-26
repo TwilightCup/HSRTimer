@@ -196,7 +196,7 @@ namespace HSRTimer
             sb.AppendLine();
 
             var sub = SubsegmentManager.Instance;
-            sb.AppendLine($"subsegment={(sub != null && s.SubsegmentEnable ? "on" : "off")} entries={(sub != null ? sub.Entries.Count : 0)} title=\"{sub?.LeaderboardTitle}\" multiRun={sub != null && sub.InMultiRunActive} preserved={sub != null && sub.InPreservedTransition}");
+            sb.AppendLine($"subsegment={(sub != null && s.SubsegmentEnable ? "on" : "off")} active={(sub != null && sub.IsActiveNow ? "on" : "off")} coopClientGate={(sub != null && sub.IsCoopClientDisabled ? "on" : "off")} entries={(sub != null ? sub.Entries.Count : 0)} title=\"{sub?.LeaderboardTitle}\" multiRun={sub != null && sub.InMultiRunActive} preserved={sub != null && sub.InPreservedTransition}");
 
             var markers = MarkersManager.Instance;
             int markerCount = markers?.CurrentSet != null ? markers.CurrentSet.markers.Count : 0;
@@ -1259,11 +1259,14 @@ namespace HSRTimer
                 case "status":
                     var opts = sub.Options;
                     var sb = new StringBuilder();
-                    sb.AppendLine($"enable={opts.Enable} multiRun={sub.InMultiRunActive} preserved={sub.InPreservedTransition}");
+                    sb.AppendLine($"enable={opts.Enable} active={sub.IsActiveNow} coopClientGate={sub.IsCoopClientDisabled} multiRun={sub.InMultiRunActive} preserved={sub.InPreservedTransition}");
                     sb.AppendLine($"title=\"{sub.LeaderboardTitle}\" entries={sub.Entries.Count}");
                     sb.AppendLine($"pbPath={opts.PBPath} loadPath={opts.LoadPath} multiProject={opts.MultiProject}");
                     sb.AppendLine($"samplesPerLevelCap={opts.MaxSamplesPerLevel} quietSettle={opts.QuietSettleSeconds} debug={opts.DebugLogging}");
                     Print(sb.ToString());
+                    break;
+                case "clientmode":
+                    CmdSubClientMode(sub, args);
                     break;
                 case "entries":
                     var entries = sub.Entries;
@@ -1284,9 +1287,50 @@ namespace HSRTimer
                     Print("Cleared subsegment runtime state (no PB written).");
                     break;
                 default:
-                    Print("Usage: hsr sub [status|entries|clear]");
+                    Print("Usage: hsr sub [status|entries|clear|clientmode <status|on|off|auto>]");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Inspect / override the co-op client gate (R8.9). Normally a
+        /// multiplayer client (NetGame.isClient) has the subsegment module
+        /// disabled entirely; the override forces the gate for testing without a
+        /// real client session ('on' = treat as client → module off, 'off' =
+        /// treat as host/single-player, 'auto' restores the net-driven state).
+        /// Session-only, mirroring 'hsr tag label' / 'hsr flags raise'.
+        /// </summary>
+        private static void CmdSubClientMode(SubsegmentManager sub, List<string> args)
+        {
+            if (args.Count < 2)
+            {
+                Print("Usage: hsr sub clientmode <status|on|off|auto>");
+                return;
+            }
+            string mode = args[1].ToLowerInvariant();
+            switch (mode)
+            {
+                case "status":
+                {
+                    bool net = NetGame.isClient;
+                    bool effective = SubsegmentManager.CoopClientOverride ?? net;
+                    Print($"subsegment client gate: effective={(effective ? "on" : "off")} net={(net ? "on" : "off")} override={(SubsegmentManager.CoopClientOverride.HasValue ? (SubsegmentManager.CoopClientOverride.Value ? "on" : "off") : "auto")} (on = treated as co-op client, subsegment disabled)");
+                    return;
+                }
+                case "on":
+                    SubsegmentManager.CoopClientOverride = true;
+                    break;
+                case "off":
+                    SubsegmentManager.CoopClientOverride = false;
+                    break;
+                case "auto":
+                    SubsegmentManager.CoopClientOverride = null;
+                    break;
+                default:
+                    Print("Usage: hsr sub clientmode <status|on|off|auto>");
+                    return;
+            }
+            Print($"subsegment client gate override = {(SubsegmentManager.CoopClientOverride.HasValue ? (SubsegmentManager.CoopClientOverride.Value ? "on" : "off") : "auto")}.");
         }
 
         // ── markers ────────────────────────────────────────────────────────
@@ -2036,7 +2080,7 @@ namespace HSRTimer
                 case "preset":
                     return "hsr preset [list|current|create <name>|apply [name]|save|delete <name>]\r\nManage layout/marker presets (R11).";
                 case "sub":
-                    return "hsr sub [status|entries|clear]\r\nInspect the subsegment module: options, leaderboard entries, or clear runtime state.";
+                    return "hsr sub [status|entries|clear|clientmode <status|on|off|auto>]\r\nInspect the subsegment module: options, leaderboard entries, or clear runtime state. 'clientmode' inspects/overrides the co-op client gate (R8.9): as a multiplayer client the module is disabled entirely ('on' forces that state for testing, 'auto' restores it).";
                 case "marker":
                     return "hsr marker [list|feed|add <range|checkpoint|grab> ...|remove <id>|toggle <id>|pb <total_ms>|pbclear|clear|save|reload]\r\nInspect/edit the current level's marker set.";
                 case "flags":
