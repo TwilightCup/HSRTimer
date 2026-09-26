@@ -146,6 +146,13 @@ namespace HSRTimer
         {
             if (State == null || _cfg == null) return;
 
+            // Auto label tags (R3.10): the Co-op label follows the live game
+            // mode every frame — on during a multiplayer session
+            // (NetGame.isServer/isClient), off in single-player. Label tags are
+            // never persisted (EnabledTagsModel.Save filters them out) and carry
+            // no rule, so this only affects the enabled-tag display surfaces.
+            SyncAutoLabels();
+
             GameState gState = Game.instance != null ? Game.instance.state : GameState.Inactive;
 
             // Generic always-on validity check (R5.1): cheat codes.
@@ -609,6 +616,35 @@ namespace HSRTimer
                     Notify(key);
             }
         }
+
+        /// <summary>
+        /// Keep label-only tags (<see cref="TagLabels"/>, R3.10) in sync with the
+        /// live game mode. The Co-op label is enabled only while a multiplayer
+        /// session is active (<c>NetGame.isServer</c> or <c>NetGame.isClient</c>)
+        /// and removed as soon as the player is back in single-player. It carries
+        /// no rule and no validity flag (nothing in the rule pipeline references
+        /// it), and it is never persisted — this only turns the label on/off on
+        /// the enabled-tag display surfaces (HUD tags line, {category}).
+        /// Called every frame from <see cref="Update"/>.
+        /// </summary>
+        private void SyncAutoLabels()
+        {
+            var tags = _cfg != null ? _cfg.EnabledTags : null;
+            if (tags == null) return;
+            bool coop = CoopLabelOverride ?? (NetGame.isServer || NetGame.isClient);
+            if (coop)
+                tags.Enable(TagLabels.Coop);
+            else
+                tags.Disable(TagLabels.Coop);
+        }
+
+        /// <summary>
+        /// Session-only override for the Co-op auto label (R3.10), set by the
+        /// dev console ('hsr tag label on|off|auto') so the label's display can
+        /// be tested without an actual multiplayer session (mirrors the 'hsr
+        /// flags raise' test tool). Null = follow the live game mode (default).
+        /// </summary>
+        public static bool? CoopLabelOverride;
 
         /// <summary>
         /// Public entry point used by the in-game dev console to perform the

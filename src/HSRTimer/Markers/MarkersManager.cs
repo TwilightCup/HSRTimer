@@ -22,10 +22,45 @@ namespace HSRTimer
     /// public game fields (poll, don't patch); the only event source outside the
     /// polling loop is the existing <c>PauseMenu.LoadClick</c> postfix, because
     /// FixedUpdate is halted while paused (R10.2.4).
+    ///
+    /// Co-op behavior (R10.10): during a multiplayer session any player can
+    /// trigger markers — evaluation probes every human (<c>Human.all</c>) on
+    /// both host and client. PB persistence is host-only: a co-op client never
+    /// writes a PB, because the official PB for the shared run lives with the
+    /// host's files.
     /// </summary>
     public sealed class MarkersManager : MonoBehaviour
     {
         public static MarkersManager Instance { get; private set; }
+
+        /// <summary>
+        /// Auto-disable sources for this module (R8.5.1.2). Currently no
+        /// mechanism auto-disables markers — the module runs on both host and
+        /// client in co-op (R10.10) — so this registry starts empty; future
+        /// mechanisms can register sources with <c>AutoDisable.Register</c> and
+        /// the leaderboard mode-cycle will drop the markers mode while one is
+        /// on.
+        /// </summary>
+        public AutoDisableRegistry AutoDisable { get; private set; }
+
+        /// <summary>
+        /// Session-only override for the co-op client role used by PB writes,
+        /// set by the dev console ('hsr marker clientmode on|off|auto') so the
+        /// host-only PB rule can be tested without a real client session
+        /// (mirrors 'hsr sub clientmode'). Null = follow
+        /// <c>NetGame.isClient</c> (default).
+        /// </summary>
+        public static bool? PbClientOverride;
+
+        /// <summary>True during a multiplayer session (host or client).</summary>
+        private static bool IsCoop => NetGame.isServer || NetGame.isClient;
+
+        /// <summary>
+        /// Whether this machine may persist a marker PB (R10.10.2): always in
+        /// single-player; in co-op only the host writes — a co-op client never
+        /// does.
+        /// </summary>
+        public bool IsPbWriteEnabled => !(PbClientOverride ?? NetGame.isClient);
 
         // ── level context (current level being played) ──
         private string _currentLevelKey;
@@ -42,6 +77,10 @@ namespace HSRTimer
 
         // ── evaluation state: cleared whenever a new level/attempt starts ──
         private readonly Dictionary<string, long> _records = new Dictionary<string, long>();
+
+        // Reusable per-frame player probe list (one entry per human present),
+        // so the any-player co-op evaluation allocates nothing per tick.
+        private readonly List<PlayerProbe> _probes = new List<PlayerProbe>();
 
         // ── display feed: survives the level-end transition (R10.7.6) ──
         private readonly List<MarkerFeedRow> _feed = new List<MarkerFeedRow>();
@@ -67,6 +106,7 @@ namespace HSRTimer
         private void Awake()
         {
             Instance = this;
+            AutoDisable = new AutoDisableRegistry();
         }
 
         private void OnDestroy()
@@ -77,7 +117,30 @@ namespace HSRTimer
 
         private SettingsModel Settings => ConfigService.Instance != null ? ConfigService.Instance.Settings : null;
 
-        private bool Enabled => Settings != null && Settings.MarkersEnable;
+        /// <summary>Whether the user enabled markers in settings (R10.8 <c>Markers.Enable</c>).</summary>
+        public bool IsUserEnabled => Settings != null && Settings.MarkersEnable;
+
+        /// <summary>Whether some auto-disable mechanism currently turns the module off (none registered today).</summary>
+        public bool IsAutoDisabled => AutoDisable != null && AutoDisable.IsDisabled;
+
+        /// <summary>Reasons of the auto-disable sources currently active. Empty when none.</summary>
+        public List<string> AutoDisabledReasons => AutoDisable != null ? AutoDisable.ActiveReasons() : new List<string>();
+
+        /// <summary>
+        /// Whether the module is currently active: user-enabled and not
+        /// auto-disabled. All runtime behavior (level start, trigger
+        /// evaluation, checkpoint-load, PB write, feed, overlay set) is gated
+        /// on this, so a future auto-disable source truly turns the module off
+        /// (R8.5.1.5) — today no source is registered, so it equals
+        /// <c>IsUserEnabled</c>.
+        /// </summary>
+        public bool IsActiveNow => IsUserEnabled && !IsAutoDisabled;
+
+        /// <summary>
+        /// Whether the markers leaderboard mode may appear in the cycle:
+        /// user-enabled and not auto-disabled (R8.5.1.2).
+        /// </summary>
+        public bool IsLeaderboardAvailable => IsUserEnabled && !IsAutoDisabled;
 
         private void Log(string message)
         {
@@ -97,7 +160,7 @@ namespace HSRTimer
             if (game == null) return;
             _currentLevelKey = LevelIdentity.CurrentLevelKey(game, folderFallbackForLocalWorkshop: true);
             _currentTitle = CurrentLevelDisplayName(game);
-            if (!Enabled)
+            if (!IsActiveNow)
                 return;
             _currentSet = GetOrCreateSet(_currentLevelKey, game.currentLevelType.ToString(), game.currentLevelNumber, _currentCategory);
             Log($"level start: key='{_currentLevelKey}' category='{_currentCategory}' markers={CountEnabled(_currentSet)}");
@@ -112,29 +175,26 @@ namespace HSRTimer
         /// <summary>
         /// Per-frame trigger evaluation (R10.2). Called from
         /// <c>TimerCore.FixedUpdate</c> right after the subsegment tick.
+        ///
+        /// In co-op (R10.10.1) every player in the level can trigger a marker:
+        /// the evaluation probes all humans (<c>Human.all</c>) instead of just
+        /// the local player, on both the host and the client. In single-player
+        /// it probes only <c>Human.Localplayer</c> (unchanged behavior).
+        /// Checkpoint markers already follow the party's shared checkpoint
+        /// progress (<c>Game.currentCheckpointNumber</c>).
         /// </summary>
         public void OnPhysicsTick(Game game, GameState gState, RunState state)
         {
-            if (!Enabled || state == null || _currentSet == null || _currentSet.markers == null)
+            if (!IsActiveNow || state == null || _currentSet == null || _currentSet.markers == null)
                 return;
             if (!state.InSegment || state.Retrying || gState != GameState.PlayingLevel)
                 return;
             if (CountEnabled(_currentSet) == 0)
                 return;
 
-            var human = Human.Localplayer;
-            Vector3? pos = human != null && human.transform != null
-                ? (Vector3?)human.transform.position
-                : null;
-            bool humanUsable = human != null && human.transform != null
-                && human.state != HumanState.Spawning
-                && human.state != HumanState.Unconscious
-                && human.state != HumanState.Dead;
-            var grab = human != null ? human.GetComponent<GrabManager>() : null;
-            bool anyGrabbed = grab != null && grab.grabbedObjects != null && grab.grabbedObjects.Count > 0;
-            bool jumping = human != null && human.jump;
-            int cp = game != null ? game.currentCheckpointNumber : -1;
             long nowMs = SegmentTimeMs(state);
+            int cp = game != null ? game.currentCheckpointNumber : -1;
+            ProbePlayers(_probes);
 
             foreach (var def in _currentSet.markers)
             {
@@ -147,20 +207,24 @@ namespace HSRTimer
                 switch (def.Kind)
                 {
                     case MarkerKind.Range:
-                        if (pos.HasValue && humanUsable
-                            && IsInsideBox(pos.Value, def)
-                            && (!def.requireGrab || anyGrabbed)
-                            && (!def.requireJump || jumping))
+                        // Any player inside the box, with that same player's own
+                        // grab/jump state satisfying the marker's requirements.
+                        if (AnyProbeMatches(_probes, p => p.Usable
+                                && IsInsideBox(p.Position, def)
+                                && (!def.requireGrab || p.Grabbing)
+                                && (!def.requireJump || p.Jumping)))
                         {
                             Record(def, nowMs);
                         }
                         break;
                     case MarkerKind.GrabObject:
-                        if (humanUsable && IsObjectGrabbed(def, grab))
+                        // Any player currently grabbing the captured object.
+                        if (AnyProbeMatches(_probes, p => p.Usable && IsObjectGrabbed(def, p.Grab)))
                             Record(def, nowMs);
                         break;
                     case MarkerKind.Checkpoint:
-                        // R10.2.3: touch/reach uses >= (non-linear checkpoint levels).
+                        // R10.2.3: touch/reach uses >= (non-linear checkpoint
+                        // levels). Checkpoint progress is shared by the party.
                         if (!def.triggerOnLoad && cp >= def.checkpointIndex)
                             Record(def, nowMs);
                         break;
@@ -174,7 +238,7 @@ namespace HSRTimer
         /// </summary>
         public void OnCheckpointLoaded(int checkpointNumber)
         {
-            if (!Enabled || _currentSet == null || _currentSet.markers == null)
+            if (!IsActiveNow || _currentSet == null || _currentSet.markers == null)
                 return;
             var state = TimerCore.State;
             if (state == null)
@@ -209,9 +273,11 @@ namespace HSRTimer
             // TimerCore.EndSegment runs tag OnLevelExit before this hook, so
             // final-validity checks (R4.2 checkpoint-final / voiceline) have
             // already raised any invalid flag; an invalid run never gets a PB.
-            // A simulated test pass ('hsr pass') must not persist a PB either.
-            if (Enabled && completed && !retrying && state != null && !state.Flags.IsInvalid
-                && !state.SuppressPbRecording && _currentSet != null && state.InSegment)
+            // A simulated test pass ('hsr pass') must not persist a PB either,
+            // and a co-op client never persists a PB (R10.10.2, host-only).
+            if (IsActiveNow && completed && !retrying && state != null && !state.Flags.IsInvalid
+                && !state.SuppressPbRecording && _currentSet != null && state.InSegment
+                && IsPbWriteEnabled)
             {
                 long levelMs = GameClock.ToMs(endTime - GameClock.SegmentStartSeconds(state));
                 TryWritePb(levelMs);
@@ -291,6 +357,73 @@ namespace HSRTimer
 
         private static long SegmentTimeMs(RunState state)
             => GameClock.SegmentMs(state);
+
+        /// <summary>
+        /// Snapshot of one human's trigger-relevant state for the co-op any-player
+        /// evaluation (R10.10.1). Grab/jump are per-player, so a range marker's
+        /// requireGrab/requireJump must be satisfied by the same player that is
+        /// inside the box.
+        /// </summary>
+        private struct PlayerProbe
+        {
+            public Vector3 Position;
+            public bool Usable;   // not spawning / unconscious / dead
+            public bool Grabbing; // holding at least one object
+            public bool Jumping;
+            public GrabManager Grab;
+        }
+
+        /// <summary>
+        /// Fill <paramref name="into"/> with one probe per present human. In
+        /// co-op this is every player (<c>Human.all</c>); in single-player it is
+        /// only <c>Human.Localplayer</c>, preserving the original behavior.
+        /// </summary>
+        private static void ProbePlayers(List<PlayerProbe> into)
+        {
+            into.Clear();
+            if (IsCoop)
+            {
+                var all = Human.all;
+                if (all != null)
+                {
+                    foreach (var h in all)
+                    {
+                        if (h == null || h.transform == null)
+                            continue;
+                        into.Add(ProbeOne(h));
+                    }
+                }
+            }
+            else
+            {
+                var h = Human.Localplayer;
+                if (h != null && h.transform != null)
+                    into.Add(ProbeOne(h));
+            }
+        }
+
+        private static PlayerProbe ProbeOne(Human h)
+        {
+            var grab = h.GetComponent<GrabManager>();
+            return new PlayerProbe
+            {
+                Position = h.transform.position,
+                Usable = h.state != HumanState.Spawning
+                    && h.state != HumanState.Unconscious
+                    && h.state != HumanState.Dead,
+                Grabbing = grab != null && grab.grabbedObjects != null && grab.grabbedObjects.Count > 0,
+                Jumping = h.jump,
+                Grab = grab,
+            };
+        }
+
+        /// <summary>True when at least one probed player satisfies the predicate.</summary>
+        private static bool AnyProbeMatches(List<PlayerProbe> probes, System.Func<PlayerProbe, bool> match)
+        {
+            foreach (var p in probes)
+                if (match(p)) return true;
+            return false;
+        }
 
         private static bool IsInsideBox(Vector3 pos, MarkerDef def)
         {
@@ -377,7 +510,7 @@ namespace HSRTimer
         // ── leaderboard feed (R10.7) ───────────────────────────────────────
 
         /// <summary>Whether the markers feed should be drawn (R10.7.2).</summary>
-        public bool HasFeedData => Enabled && _feed.Count > 0;
+        public bool HasFeedData => IsActiveNow && _feed.Count > 0;
 
         /// <summary>Feed in trigger order (oldest first); the HUD renders it reversed.</summary>
         public IReadOnlyList<MarkerFeedRow> Feed => _feed;
@@ -392,7 +525,7 @@ namespace HSRTimer
         // ── overlay (R10.6) ────────────────────────────────────────────────
 
         /// <summary>The current level's marker set, or null when not in a level / disabled.</summary>
-        public MarkerSet CurrentSet => Enabled ? _currentSet : null;
+        public MarkerSet CurrentSet => IsActiveNow ? _currentSet : null;
 
         /// <summary>The current level's storage key (used by the overlay to reset per-level warnings).</summary>
         public string CurrentLevelKey => _currentLevelKey;

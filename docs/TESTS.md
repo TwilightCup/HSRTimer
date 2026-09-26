@@ -52,11 +52,11 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr panel [open\|close\|toggle\|status]` | Control the settings panel |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | Control the leaderboard HUD |
 | `hsr layout [status\|row ...\|text ...\|get <key>\|set <key> <value>]` | Inspect/edit the HUD layout |
-| `hsr tag [list\|enable <id>\|disable <id>\|set <id> <on\|off>]` | Toggle enabled tag rules |
+| `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | Toggle enabled tag rules; inspect/force the auto Co-op label |
 | `hsr lang [list\|set <code>\|reload\|current]` | Manage localization |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | Manage presets (R11) |
-| `hsr sub [status\|entries\|clear]` | Inspect/clear the subsegment module |
-| `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|pb <ms>\|pbclear\|clear\|save\|reload]` | Inspect/edit markers (R10) |
+| `hsr sub [status\|entries\|clear\|clientmode <status\|on\|off\|auto>]` | Inspect/clear the subsegment module; inspect/force the co-op client gate |
+| `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|clientmode <status\|on\|off\|auto>\|pb <ms>\|pbclear\|clear\|save\|reload]` | Inspect/edit markers (R10); inspect/force the co-op PB role |
 | `hsr flags [list\|raise <Reason>\|clear [forgivable\|soft\|all]]` | Inspect/mutate validity flags (R5) |
 | `hsr lc [status\|restart]` | Inspect LevelCollections integration or dispatch `lc restart` |
 | `hsr config [path\|files]` | Print HSRTimer config paths |
@@ -174,6 +174,31 @@ hsr status          # enabled tags are listed
 
 Tag changes persist to `tags.ini` immediately.
 
+**Auto label `Co-op` (R3.10).** `hsr tag list` shows label tags on their own
+`labels (auto):` line with their live state — `Co-op [on]` only while a
+multiplayer session is active (`server=` / `client=` in `hsr status`), `[off]`
+in single-player. The label cannot be toggled like a rule tag:
+
+```text
+hsr tag set Co-op on      # rejected: "is an auto label ... cannot be toggled manually"
+```
+
+To test the label's display without an actual multiplayer session, force it
+with `hsr tag label` (session-only; `auto` restores the multiplayer-driven
+state):
+
+```text
+hsr tag label status      # effective / net / override
+hsr tag label on          # force the label on (HUD tags line + {category} show "Co-op")
+hsr tag label off
+hsr tag label auto        # back to auto (on only while in multiplayer)
+```
+
+Verify the real cycle: host or join a co-op game → `hsr tag list` shows
+`Co-op [on]` and the HUD "Tags" line / `{category}` template include
+"Co-op" (English UI) / "多人" (Chinese UI); leave the session → it turns `[off]` again. The label is never
+persisted: `hsr get all` (tags section) and `tags.ini` never contain `Co-op`.
+
 ### 4. HUD / layout (R2)
 
 ```text
@@ -242,15 +267,43 @@ hsr sub entries
 hsr sub clear
 ```
 
-`hsr sub status` prints the enabled flag, paths, multi-run state and current
-leaderboard entry count. `hsr sub entries` lists each loaded reference and its
-latest settled diff.
+`hsr sub status` prints the enabled flag, co-op gate state, paths, multi-run
+state and current leaderboard entry count. `hsr sub entries` lists each loaded
+reference and its latest settled diff.
+
+**Co-op gate (R8.9).** As a multiplayer client the module is disabled entirely
+(`active=off`, `coopClientGate=on` in `hsr sub status`); as the host it runs
+normally using only your own (host) character. Without a real client session,
+force the gate with `hsr sub clientmode` (session-only; `auto` restores):
+
+```text
+hsr sub clientmode status    # effective / net / override
+hsr sub clientmode on        # treat as co-op client -> subsegment disabled
+hsr sub clientmode off       # treat as host/single-player -> normal
+hsr sub clientmode auto      # back to auto (disabled only when NetGame.isClient)
+```
+
+Verify: `hsr sub clientmode on` then `hsr sub status` shows `active=off,
+coopClientGate=on` (and the new auto-disable fields `userEnabled=on
+autoDisabled=on autoReasons=coop-client`) and the leaderboard shows no
+subsegment content even while in a level; `hsr sub clientmode off` restores
+sampling/detection. A real co-op session behaves the same on the client's
+machine automatically.
+
+**User vs auto disable (R8.5.1.5).** `hsr sub status` reports the user's
+`Subsegment.Enable` setting (`enable` / `userEnabled`) separately from any
+auto-disable source (`autoDisabled` / `autoReasons`). For example
+`hsr set subsegment_enable false` gives `userEnabled=off autoDisabled=off`,
+while `hsr sub clientmode on` gives `userEnabled=on autoDisabled=on
+autoReasons=coop-client` — the two axes are independent, and either one makes
+the module inactive (`active=off`).
 
 ### 8. Markers (R10)
 
 Enter a level, then:
 
 ```text
+hsr marker status
 hsr marker list
 hsr marker add range "Test Box"          # uses player position, 2m box
 hsr marker add checkpoint "CP1" 1
@@ -263,6 +316,13 @@ hsr marker reload
 hsr marker clear
 ```
 
+`hsr marker status` reports the module's enable/availability state: the
+user's `Markers.Enable` setting (`enable` / `userEnabled`), any active
+auto-disable sources (`autoDisabled` / `autoReasons`, none today), the
+combined `active` flag, the co-op PB role (`pbWrite`), and the current feed
+size. `hsr set markers_enable false` turns `userEnabled=off` while
+`autoDisabled` stays off — the two axes are independent (R8.5.1.5).
+
 The marker overlay/feed should react to these changes when edit mode is enabled
 (`hsr set markers_edit_mode true`).
 
@@ -271,6 +331,27 @@ level and the next attempt starts — including when the next level is the same
 level again (a repeated campaign level) — `hsr marker feed` should list only the
 new attempt's rows. The new attempt's first trigger replaces the previous
 attempt's stale rows instead of appending to them.
+
+**Co-op behavior (R10.10).** In a multiplayer session any player can trigger a
+marker (both host and client evaluate all players), and marker PB writes are
+host-only: a co-op client never persists a PB (`hsr marker list` shows
+`pbWrite=disabled (co-op client, host-only)`, and `hsr marker pb` is
+rejected). Force the role without a real client session with `hsr marker
+clientmode` (session-only; `auto` restores):
+
+```text
+hsr marker clientmode status   # role / pbWrite / net / override
+hsr marker clientmode on       # treat as co-op client -> PB writes blocked
+hsr marker clientmode off      # treat as host/single-player -> PB writes allowed
+hsr marker clientmode auto     # back to auto (blocked only when NetGame.isClient)
+```
+
+Verify: `hsr marker clientmode on` then `hsr marker list` shows
+`pbWrite=disabled...` and `hsr marker pb 12345` is rejected; `hsr marker
+clientmode off` restores them. The "any player can trigger" part needs a real
+co-op session: with two players in the level, a marker triggers when either
+player enters its box / grabs its object, and `hsr marker feed` lists it on
+both machines.
 
 ### 9. Localization (R7)
 
@@ -293,6 +374,18 @@ hsr leaderboard mode Subsegment
 hsr leaderboard hide
 hsr leaderboard cycle
 ```
+
+**Mode-cycle skips disabled modes (R8.5.1.2).** `hsr leaderboard status` shows
+the current `mode` and the `available` modes (user-enabled and not
+auto-disabled). With both modules on, `cycle` walks hidden → Subsegment →
+Markers → hidden. Disable subsegment (`hsr sub clientmode on`, or
+`hsr set subsegment_enable false`) and `cycle` now walks hidden → Markers →
+hidden only: from hidden it goes straight to Markers (never Subsegment), and
+from Markers it hides. Disable both and `cycle` stays hidden. The same applies
+when markers is the disabled side (`hsr set markers_enable false`): the cycle
+becomes hidden ↔ Subsegment. A mode that is currently shown but became
+unavailable (e.g. the leaderboard is in Subsegment mode when the co-op client
+gate turns on) draws nothing, and the next `cycle` press hides it.
 
 ### 11. LevelCollections integration (optional)
 

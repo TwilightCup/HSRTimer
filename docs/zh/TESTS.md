@@ -41,11 +41,11 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr panel [open\|close\|toggle\|status]` | 控制设置面板 |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | 控制排行榜 HUD |
 | `hsr layout [status\|row ...\|text ...\|get <key>\|set <key> <value>]` | 查看 / 编辑 HUD 布局 |
-| `hsr tag [list\|enable <id>\|disable <id>\|set <id> <on\|off>]` | 开关启用的标签规则 |
+| `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | 开关启用的标签规则;查看/强制自动 Co-op 标签 |
 | `hsr lang [list\|set <code>\|reload\|current]` | 管理本地化 |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | 管理预设(R11) |
-| `hsr sub [status\|entries\|clear]` | 查看 / 清空分段模块 |
-| `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|pb <ms>\|pbclear\|clear\|save\|reload]` | 查看 / 编辑标记(R10) |
+| `hsr sub [status\|entries\|clear\|clientmode <status\|on\|off\|auto>]` | 查看 / 清空分段模块;查看 / 强制合作客机门控 |
+| `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|clientmode <status\|on\|off\|auto>\|pb <ms>\|pbclear\|clear\|save\|reload]` | 查看 / 编辑标记(R10);查看 / 强制合作 PB 角色 |
 | `hsr flags [list\|raise <Reason>\|clear [forgivable\|soft\|all]]` | 查看 / 修改有效性标记(R5) |
 | `hsr lc [status\|restart]` | 查看 LevelCollections 集成或触发 `lc restart` |
 | `hsr config [path\|files]` | 打印 HSRTimer 配置路径 |
@@ -139,6 +139,23 @@ hsr status          # 会列出已启用的标签
 
 标签改动会立即持久化到 `tags.ini`。
 
+**自动标签 `Co-op`(R3.10)。** `hsr tag list` 会在独立的 `labels (auto):` 行中列出标签型标签及其实时状态 —— 仅在多人会话期间(`hsr status` 中的 `server=` / `client=`)显示 `Co-op [on]`,单人模式下为 `[off]`。该标签无法像规则标签一样手动开关:
+
+```text
+hsr tag set Co-op on      # 会被拒绝:"is an auto label ... cannot be toggled manually"
+```
+
+无需真实多人会话即可测试标签显示,可用 `hsr tag label` 强制开关(仅本次会话有效;`auto` 恢复按多人模式自动):
+
+```text
+hsr tag label status      # effective / net / override
+hsr tag label on          # 强制开启(HUD"规则标签"行与 {category} 显示 "Co-op")
+hsr tag label off
+hsr tag label auto        # 恢复自动(仅在多人会话期间开启)
+```
+
+验证真实周期:主持或加入合作游戏 → `hsr tag list` 显示 `Co-op [on]`,且 HUD 的"规则标签"行 / `{category}` 模板变量包含 "多人"(中文界面;英文界面为 "Co-op");离开会话 → 变回 `[off]`。该标签从不持久化:`hsr get all`(tags 段)与 `tags.ini` 中永远不会有 `Co-op`。
+
 ### 4. HUD / 布局(R2)
 
 ```text
@@ -200,14 +217,28 @@ hsr sub entries
 hsr sub clear
 ```
 
-`hsr sub status` 打印启用标志、路径、多局状态与当前排行榜条目数。
+`hsr sub status` 打印启用标志、合作门控状态、路径、多局状态与当前排行榜条目数。
 `hsr sub entries` 列出每个已加载参考及其最新结算的差值。
+
+**合作门控(R8.9)。** 作为多人客机时模块整体禁用(`hsr sub status` 显示 `active=off`、`coopClientGate=on`);作为主机时正常运行,且只使用自己(主机)的角色判定。无需真实客机会话,可用 `hsr sub clientmode` 强制门控(仅本次会话有效;`auto` 恢复):
+
+```text
+hsr sub clientmode status    # effective / net / override
+hsr sub clientmode on        # 模拟为合作客机 -> 禁用 subsegment
+hsr sub clientmode off       # 模拟为主机 / 单人 -> 正常
+hsr sub clientmode auto      # 恢复自动(仅 NetGame.isClient 时禁用)
+```
+
+验证:`hsr sub clientmode on` 后 `hsr sub status` 显示 `active=off, coopClientGate=on`(以及新的自动禁用字段 `userEnabled=on autoDisabled=on autoReasons=coop-client`),关卡内排行榜不再显示任何 subsegment 内容;`hsr sub clientmode off` 恢复采样 / 检测。真实合作会话中,客机端会自动呈现相同行为。
+
+**用户禁用 vs 自动禁用(R8.5.1.5)。** `hsr sub status` 把用户的 `Subsegment.Enable` 设置(`enable` / `userEnabled`)与自动禁用来源(`autoDisabled` / `autoReasons`)分开报告。例如 `hsr set subsegment_enable false` 得到 `userEnabled=off autoDisabled=off`,而 `hsr sub clientmode on` 得到 `userEnabled=on autoDisabled=on autoReasons=coop-client`——两个维度相互独立,任一者都会使模块处于 `active=off`。
 
 ### 8. 标记(R10)
 
 进入关卡后:
 
 ```text
+hsr marker status
 hsr marker list
 hsr marker add range "Test Box"          # 使用玩家位置,2 米盒子
 hsr marker add checkpoint "CP1" 1
@@ -220,9 +251,22 @@ hsr marker reload
 hsr marker clear
 ```
 
+`hsr marker status` 报告模块的启用 / 可用状态:用户的 `Markers.Enable` 设置(`enable` / `userEnabled`)、当前生效的自动禁用来源(`autoDisabled` / `autoReasons`,目前没有)、合并后的 `active`、合作 PB 角色(`pbWrite`)与当前 feed 大小。`hsr set markers_enable false` 使 `userEnabled=off` 而 `autoDisabled` 仍为 off——两个维度相互独立(R8.5.1.5)。
+
 当编辑模式开启(`hsr set markers_edit_mode true`)时,标记覆盖层 / feed 应响应这些改动。
 
 排行榜 feed 必须**按尝试**重置:`hsr pass` 过关后进入下一次尝试——即使下一关仍是同一关(剧情重复关卡)——`hsr marker feed` 应只列出新尝试的行。新尝试的首次触发会**替换**掉上一次尝试的残留行,而不是追加在其后。
+
+**合作行为(R10.10)。** 多人会话中**任意玩家**都可以触发标记(主机与客机端都会遍历全部玩家判定);标记 PB 写入仅主机进行——客机从不持久化 PB(`hsr marker list` 显示 `pbWrite=disabled (co-op client, host-only)`,`hsr marker pb` 会被拒绝)。无需真实客机会话,可用 `hsr marker clientmode` 强制角色(仅本次会话有效;`auto` 恢复):
+
+```text
+hsr marker clientmode status   # role / pbWrite / net / override
+hsr marker clientmode on       # 模拟为合作客机 -> 禁止写 PB
+hsr marker clientmode off      # 模拟为主机 / 单人 -> 允许写 PB
+hsr marker clientmode auto     # 恢复自动(仅 NetGame.isClient 时禁止)
+```
+
+验证:`hsr marker clientmode on` 后 `hsr marker list` 显示 `pbWrite=disabled...`,`hsr marker pb 12345` 被拒绝;`hsr marker clientmode off` 恢复。**"任意玩家触发"**部分需要真实合作会话:两名玩家在同一关时,任一人进入范围盒 / 抓住目标物体都会触发标记,`hsr marker feed` 在两台机器上都会列出。
 
 ### 9. 本地化(R7)
 
@@ -245,6 +289,8 @@ hsr leaderboard mode Subsegment
 hsr leaderboard hide
 hsr leaderboard cycle
 ```
+
+**循环会跳过被禁用的模式(R8.5.1.2)。** `hsr leaderboard status` 显示当前 `mode` 与 `available` 模式(用户开启且未被自动禁用)。两个模块都开启时,`cycle` 依次走关闭 → 分段对比 → 标记 → 关闭。禁用 subsegment(`hsr sub clientmode on`,或 `hsr set subsegment_enable false`)后,`cycle` 只在关闭 ↔ 标记之间轮换:从关闭直接进入标记(绝不进入分段对比),从标记进入关闭。两者都禁用时 `cycle` 保持关闭。禁用 markers(`hsr set markers_enable false`)同理,循环变为关闭 ↔ 分段对比。当前显示的模式变得不可用时(例如排行榜处于分段对比模式时客机门控生效),该模式不再绘制任何内容,下一次 `cycle` 按键进入关闭。
 
 ### 11. LevelCollections 集成(可选)
 

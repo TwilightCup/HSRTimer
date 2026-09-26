@@ -63,6 +63,7 @@ enabled = Checkpoint, Jumpless
 ```
 
 - `enabled` —— 逗号分隔的标签 id。内置 id:`Checkpoint`、`NoCheckpoint`、`Jumpless`、`Voiceline`、`Glitchless`、`NoEC`。第三方插件的自定义标签用其自身的 id(见 [EXTENDING.md](EXTENDING.md))。留空即为纯任意%(仅受通用有效性约束)。
+- 自动的 `Co-op` 标签(R3.10)由引擎在运行时管理,**永远不会写入** `tags.ini`,因此无法在此处启用;它在多人会话期间自动开启(见 [CATEGORIES.md](CATEGORIES.md))。
 
 见 [CATEGORIES.md](CATEGORIES.md)。
 
@@ -139,7 +140,7 @@ DisabledLeaderboardSources =
 | `Enable` | true | 总开关；关闭后不记录、不加载、不显示。 |
 | `PBPath` | `subsegment/pb` | 相对路径基于 `<config>/HSRTimer/` 解析；绝对路径也可用。写入 PB 时自动创建目录。 |
 | `LoadPath` | `subsegment/load` | 玩家手动放置的采样目录。插件加载时会自动创建该目录，以便直接放入参考采样。 |
-| `ToggleKey` | `Tab` | 共享排行榜循环切换键：关闭 → 分段对比 → 标记 → 关闭。 |
+| `ToggleKey` | `Tab` | 共享排行榜循环切换键：关闭 → 可用内容模式 → 关闭。模块被禁用（用户设置或自动禁用机制，如客机门控）时对应模式自动跳过，例如 subsegment 关闭后仅在关闭 ↔ 标记之间轮换。 |
 | `MultiProject` | `Any%` | 多关实时对比的初始子项目（`Aztec%`/`Dark%`/`Steam%`/`Any%`）。当前局内可沿包含关系自动升级（`Aztec%`→`Dark%`→`Steam%`→`Any%`），不写回配置；若所选项目完全没有数据，则回退到有数据的最小项目（仅当前局内）。PB 写入仍按实际最后完成关卡判定。 |
 | `PlaneRadius` | `50.0` | 虚拟检测平面半径（米）。 |
 | `MinMove` | `0.5` | 最小采样位移；低于该值的位移置零，且不建平面。 |

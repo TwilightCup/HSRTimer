@@ -196,20 +196,41 @@ namespace HSRTimer
             sb.AppendLine();
 
             var sub = SubsegmentManager.Instance;
-            sb.AppendLine($"subsegment={(sub != null && s.SubsegmentEnable ? "on" : "off")} entries={(sub != null ? sub.Entries.Count : 0)} title=\"{sub?.LeaderboardTitle}\" multiRun={sub != null && sub.InMultiRunActive} preserved={sub != null && sub.InPreservedTransition}");
+            sb.AppendLine($"subsegment={(sub != null && s.SubsegmentEnable ? "on" : "off")} active={(sub != null && sub.IsActiveNow ? "on" : "off")} userEnabled={(sub != null && sub.IsUserEnabled ? "on" : "off")} autoDisabled={(sub != null && sub.IsAutoDisabled ? "on" : "off")} autoReasons={FormatReasons(sub?.AutoDisabledReasons)} coopClientGate={(sub != null && sub.IsCoopClientDisabled ? "on" : "off")} entries={(sub != null ? sub.Entries.Count : 0)} title=\"{sub?.LeaderboardTitle}\" multiRun={sub != null && sub.InMultiRunActive} preserved={sub != null && sub.InPreservedTransition}");
 
             var markers = MarkersManager.Instance;
             int markerCount = markers?.CurrentSet != null ? markers.CurrentSet.markers.Count : 0;
-            sb.AppendLine($"markers={(s.MarkersEnable ? "on" : "off")} currentLevel=\"{markers?.CurrentLevelKey}\" markers={markerCount} feed={markers?.Feed.Count ?? 0}");
+            sb.AppendLine($"markers={(s.MarkersEnable ? "on" : "off")} userEnabled={(markers != null && markers.IsUserEnabled ? "on" : "off")} autoDisabled={(markers != null && markers.IsAutoDisabled ? "on" : "off")} autoReasons={FormatReasons(markers?.AutoDisabledReasons)} pbWrite={(markers != null && markers.IsPbWriteEnabled ? "on" : "off")} currentLevel=\"{markers?.CurrentLevelKey}\" markers={markerCount} feed={markers?.Feed.Count ?? 0}");
 
             var lb = LeaderboardHud.Instance;
-            sb.AppendLine($"leaderboard={(lb != null && lb.Visible ? "visible" : "hidden")} mode={cfg.Layout.LeaderboardMode}");
+            sb.AppendLine($"leaderboard={(lb != null && lb.Visible ? "visible" : "hidden")} mode={cfg.Layout.LeaderboardMode} available={FormatAvailableModes()}");
 
             var lc = LcIntegration.Instance;
             sb.AppendLine($"lc={(lc != null && lc.Enabled ? "enabled" : "absent")} inRun={lc != null && lc.IsInCollectionRun} lastLevel={lc != null && lc.IsLastLevelOfCollection} name=\"{lc?.CollectionName}\"");
 
             sb.Append("configDir=").Append(PersistenceService.PluginDir);
             Print(sb.ToString());
+        }
+
+        /// <summary>Format a list of active auto-disable source reasons; "none" when empty.</summary>
+        private static string FormatReasons(List<string> reasons)
+        {
+            if (reasons == null || reasons.Count == 0)
+                return "none";
+            return string.Join(",", reasons);
+        }
+
+        /// <summary>
+        /// The leaderboard content modes currently in the cycle (user-enabled
+        /// and not auto-disabled), or "none". Mirrors
+        /// <see cref="LeaderboardHud.AvailableModes"/>.
+        /// </summary>
+        private static string FormatAvailableModes()
+        {
+            var modes = LeaderboardHud.AvailableModes();
+            if (modes == null || modes.Count == 0)
+                return "none";
+            return string.Join(",", modes);
         }
 
         /// <summary>
@@ -753,13 +774,13 @@ namespace HSRTimer
                     lb.SetMode(args[1]);
                     break;
                 case "status":
-                    Print($"leaderboard = {(lb.Visible ? "visible" : "hidden")}, mode = {cfg.Layout.LeaderboardMode}");
+                    Print($"leaderboard = {(lb.Visible ? "visible" : "hidden")}, mode = {cfg.Layout.LeaderboardMode}, available = {FormatAvailableModes()}");
                     return;
                 default:
                     Print("Usage: hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]");
                     return;
             }
-            Print($"leaderboard = {(lb.Visible ? "visible" : "hidden")}, mode = {cfg.Layout.LeaderboardMode}");
+            Print($"leaderboard = {(lb.Visible ? "visible" : "hidden")}, mode = {cfg.Layout.LeaderboardMode}, available = {FormatAvailableModes()}");
         }
 
         // ── layout ─────────────────────────────────────────────────────────
@@ -934,6 +955,11 @@ namespace HSRTimer
                         Print($"Unknown tag: {args[1]}. Use 'hsr tag list'.");
                         return;
                     }
+                    if (TagLabels.IsLabel(enableId))
+                    {
+                        Print($"Tag {enableId} is an auto label (enabled only while in multiplayer); it cannot be toggled manually.");
+                        return;
+                    }
                     cfg.EnabledTags.Enable(enableId);
                     cfg.SaveSettings();
                     Print($"Tag {enableId} enabled.");
@@ -941,6 +967,11 @@ namespace HSRTimer
                 case "disable":
                     if (args.Count < 2) { Print("Usage: hsr tag disable <id>"); return; }
                     string disableId = CanonicalTagId(args[1]) ?? args[1];
+                    if (TagLabels.IsLabel(disableId))
+                    {
+                        Print($"Tag {disableId} is an auto label (enabled only while in multiplayer); it cannot be toggled manually.");
+                        return;
+                    }
                     cfg.EnabledTags.Disable(disableId);
                     cfg.SaveSettings();
                     Print($"Tag {disableId} disabled.");
@@ -953,6 +984,11 @@ namespace HSRTimer
                         Print($"Unknown tag: {args[1]}. Use 'hsr tag list'.");
                         return;
                     }
+                    if (TagLabels.IsLabel(setId))
+                    {
+                        Print($"Tag {setId} is an auto label (enabled only while in multiplayer); it cannot be toggled manually.");
+                        return;
+                    }
                     if (SettingsModel.ParseBool(args[2], false))
                         cfg.EnabledTags.Enable(setId);
                     else
@@ -960,28 +996,79 @@ namespace HSRTimer
                     cfg.SaveSettings();
                     Print($"Tag {setId} = {(cfg.EnabledTags.HasTag(setId) ? "on" : "off")}.");
                     break;
+                case "label":
+                    CmdTagLabel(args);
+                    break;
                 default:
-                    Print("Usage: hsr tag [list|enable <id>|disable <id>|set <id> <on|off>]");
+                    Print("Usage: hsr tag [list|label <status|on|off|auto>|enable <id>|disable <id>|set <id> <on|off>]");
                     break;
             }
         }
 
         /// <summary>
+        /// Inspect / override the auto Co-op label (R3.10). The label normally
+        /// follows the live game mode (on while NetGame.isServer/isClient, i.e.
+        /// a multiplayer session); the override forces it for testing the label
+        /// display without real multiplayer, mirroring how 'hsr flags raise'
+        /// forces validity flags. The override is session-only (cleared by
+        /// restart / 'auto').
+        /// </summary>
+        private static void CmdTagLabel(List<string> args)
+        {
+            if (args.Count < 2)
+            {
+                Print("Usage: hsr tag label <status|on|off|auto>");
+                return;
+            }
+            string mode = args[1].ToLowerInvariant();
+            switch (mode)
+            {
+                case "status":
+                {
+                    bool net = NetGame.isServer || NetGame.isClient;
+                    bool effective = TimerCore.CoopLabelOverride ?? net;
+                    Print($"Co-op label: effective={(effective ? "on" : "off")} net={(net ? "on" : "off")} override={(TimerCore.CoopLabelOverride.HasValue ? (TimerCore.CoopLabelOverride.Value ? "on" : "off") : "auto")}");
+                    return;
+                }
+                case "on":
+                    TimerCore.CoopLabelOverride = true;
+                    break;
+                case "off":
+                    TimerCore.CoopLabelOverride = false;
+                    break;
+                case "auto":
+                    TimerCore.CoopLabelOverride = null;
+                    break;
+                default:
+                    Print("Usage: hsr tag label <status|on|off|auto>");
+                    return;
+            }
+            Print($"Co-op label override = {(TimerCore.CoopLabelOverride.HasValue ? (TimerCore.CoopLabelOverride.Value ? "on" : "off") : "auto")}.");
+        }
+
+        /// <summary>
         /// Resolve a tag id case-insensitively (the game console lowercases all
-        /// input before our handler runs) to the canonical registered id, or
-        /// null when no registered tag matches.
+        /// input before our handler runs) to the canonical registered rule id or
+        /// label-tag id (see <see cref="TagLabels"/>), or null when nothing
+        /// matches.
         /// </summary>
         private static string CanonicalTagId(string id)
         {
             if (string.IsNullOrEmpty(id))
                 return null;
             var registry = TagRuleRegistry.Instance;
-            if (registry == null)
-                return null;
-            foreach (var rule in registry.All)
+            if (registry != null)
             {
-                if (rule != null && string.Equals(rule.Id, id, StringComparison.OrdinalIgnoreCase))
-                    return rule.Id;
+                foreach (var rule in registry.All)
+                {
+                    if (rule != null && string.Equals(rule.Id, id, StringComparison.OrdinalIgnoreCase))
+                        return rule.Id;
+                }
+            }
+            foreach (var label in TagLabels.All)
+            {
+                if (string.Equals(label, id, StringComparison.OrdinalIgnoreCase))
+                    return label;
             }
             return null;
         }
@@ -1005,6 +1092,10 @@ namespace HSRTimer
                 sb.Append("available:");
                 foreach (var rule in registry.All)
                     sb.Append(' ').Append(rule.Id).Append(cfg.EnabledTags.HasTag(rule.Id) ? " [on]" : " [off]");
+                sb.AppendLine();
+                sb.Append("labels (auto):");
+                foreach (var label in TagLabels.All)
+                    sb.Append(' ').Append(label).Append(cfg.EnabledTags.HasTag(label) ? " [on]" : " [off]");
             }
             Print(sb.ToString());
         }
@@ -1189,11 +1280,14 @@ namespace HSRTimer
                 case "status":
                     var opts = sub.Options;
                     var sb = new StringBuilder();
-                    sb.AppendLine($"enable={opts.Enable} multiRun={sub.InMultiRunActive} preserved={sub.InPreservedTransition}");
+                    sb.AppendLine($"enable={opts.Enable} userEnabled={sub.IsUserEnabled} autoDisabled={sub.IsAutoDisabled} autoReasons={FormatReasons(sub.AutoDisabledReasons)} active={sub.IsActiveNow} coopClientGate={sub.IsCoopClientDisabled} multiRun={sub.InMultiRunActive} preserved={sub.InPreservedTransition}");
                     sb.AppendLine($"title=\"{sub.LeaderboardTitle}\" entries={sub.Entries.Count}");
                     sb.AppendLine($"pbPath={opts.PBPath} loadPath={opts.LoadPath} multiProject={opts.MultiProject}");
                     sb.AppendLine($"samplesPerLevelCap={opts.MaxSamplesPerLevel} quietSettle={opts.QuietSettleSeconds} debug={opts.DebugLogging}");
                     Print(sb.ToString());
+                    break;
+                case "clientmode":
+                    CmdSubClientMode(sub, args);
                     break;
                 case "entries":
                     var entries = sub.Entries;
@@ -1214,9 +1308,50 @@ namespace HSRTimer
                     Print("Cleared subsegment runtime state (no PB written).");
                     break;
                 default:
-                    Print("Usage: hsr sub [status|entries|clear]");
+                    Print("Usage: hsr sub [status|entries|clear|clientmode <status|on|off|auto>]");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Inspect / override the co-op client gate (R8.9). Normally a
+        /// multiplayer client (NetGame.isClient) has the subsegment module
+        /// disabled entirely; the override forces the gate for testing without a
+        /// real client session ('on' = treat as client → module off, 'off' =
+        /// treat as host/single-player, 'auto' restores the net-driven state).
+        /// Session-only, mirroring 'hsr tag label' / 'hsr flags raise'.
+        /// </summary>
+        private static void CmdSubClientMode(SubsegmentManager sub, List<string> args)
+        {
+            if (args.Count < 2)
+            {
+                Print("Usage: hsr sub clientmode <status|on|off|auto>");
+                return;
+            }
+            string mode = args[1].ToLowerInvariant();
+            switch (mode)
+            {
+                case "status":
+                {
+                    bool net = NetGame.isClient;
+                    bool effective = SubsegmentManager.CoopClientOverride ?? net;
+                    Print($"subsegment client gate: effective={(effective ? "on" : "off")} net={(net ? "on" : "off")} override={(SubsegmentManager.CoopClientOverride.HasValue ? (SubsegmentManager.CoopClientOverride.Value ? "on" : "off") : "auto")} (on = treated as co-op client, subsegment disabled)");
+                    return;
+                }
+                case "on":
+                    SubsegmentManager.CoopClientOverride = true;
+                    break;
+                case "off":
+                    SubsegmentManager.CoopClientOverride = false;
+                    break;
+                case "auto":
+                    SubsegmentManager.CoopClientOverride = null;
+                    break;
+                default:
+                    Print("Usage: hsr sub clientmode <status|on|off|auto>");
+                    return;
+            }
+            Print($"subsegment client gate override = {(SubsegmentManager.CoopClientOverride.HasValue ? (SubsegmentManager.CoopClientOverride.Value ? "on" : "off") : "auto")}.");
         }
 
         // ── markers ────────────────────────────────────────────────────────
@@ -1233,6 +1368,7 @@ namespace HSRTimer
             var rest = args.GetRange(1, args.Count - 1);
             switch (action)
             {
+                case "status": CmdMarkerStatus(mgr); break;
                 case "list": CmdMarkerList(); break;
                 case "feed": CmdMarkerFeed(); break;
                 case "add": CmdMarkerAdd(mgr, rest); break;
@@ -1243,6 +1379,9 @@ namespace HSRTimer
                 case "toggle":
                     if (rest.Count < 1) { Print("Usage: hsr marker toggle <id>"); return; }
                     CmdMarkerToggle(mgr, rest[0]);
+                    break;
+                case "clientmode":
+                    CmdMarkerClientMode(mgr, rest);
                     break;
                 case "pb":
                     if (rest.Count < 1) { Print("Usage: hsr marker pb <total_ms>"); return; }
@@ -1263,9 +1402,63 @@ namespace HSRTimer
                     Print("Marker cache reloaded from disk.");
                     break;
                 default:
-                    Print("Usage: hsr marker [list|feed|add ...|remove <id>|toggle <id>|pb <total_ms>|pbclear|clear|save|reload]");
+                    Print("Usage: hsr marker [status|list|feed|add ...|remove <id>|toggle <id>|clientmode <status|on|off|auto>|pb <total_ms>|pbclear|clear|save|reload]");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Inspect / override the co-op client role for marker PB writes
+        /// (R10.10.2). Normally a co-op client never persists a marker PB
+        /// (host-only); the override forces the role for testing without a real
+        /// client session ('on' = treat as client → PB writes blocked, 'off' =
+        /// treat as host/single-player, 'auto' restores the net-driven state).
+        /// Session-only, mirroring 'hsr sub clientmode'.
+        /// </summary>
+        private static void CmdMarkerClientMode(MarkersManager mgr, List<string> args)
+        {
+            if (args.Count < 1)
+            {
+                Print("Usage: hsr marker clientmode <status|on|off|auto>");
+                return;
+            }
+            string mode = args[0].ToLowerInvariant();
+            switch (mode)
+            {
+                case "status":
+                {
+                    bool net = NetGame.isClient;
+                    bool effective = MarkersManager.PbClientOverride ?? net;
+                    Print($"marker PB gate: role={(effective ? "client" : "host/single")} pbWrite={(effective ? "disabled" : "enabled")} net={(net ? "client" : "host/single")} override={(MarkersManager.PbClientOverride.HasValue ? (MarkersManager.PbClientOverride.Value ? "client" : "host/single") : "auto")}");
+                    return;
+                }
+                case "on":
+                    MarkersManager.PbClientOverride = true;
+                    break;
+                case "off":
+                    MarkersManager.PbClientOverride = false;
+                    break;
+                case "auto":
+                    MarkersManager.PbClientOverride = null;
+                    break;
+                default:
+                    Print("Usage: hsr marker clientmode <status|on|off|auto>");
+                    return;
+            }
+            Print($"marker PB gate override = {(MarkersManager.PbClientOverride.HasValue ? (MarkersManager.PbClientOverride.Value ? "client (PB writes disabled)" : "host/single (PB writes enabled)") : "auto")}.");
+        }
+
+        /// <summary>
+        /// Print the markers module's enable/availability state: the user's
+        /// <c>Markers.Enable</c> setting, any active auto-disable sources, the
+        /// co-op PB role, and the current feed size. Mirrors 'hsr sub status'
+        /// (R8.5.1.2: user-enabled and auto-disabled are reported separately).
+        /// </summary>
+        private static void CmdMarkerStatus(MarkersManager mgr)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"enable={mgr.IsUserEnabled} userEnabled={mgr.IsUserEnabled} autoDisabled={mgr.IsAutoDisabled} autoReasons={FormatReasons(mgr.AutoDisabledReasons)} active={mgr.IsActiveNow} pbWrite={mgr.IsPbWriteEnabled} feed={mgr.Feed.Count}");
+            Print(sb.ToString());
         }
 
         private static void CmdMarkerList()
@@ -1278,6 +1471,7 @@ namespace HSRTimer
             }
             var sb = new StringBuilder();
             sb.AppendLine($"level=\"{set.level_id}\" category=\"{set.category_key}\" source={set.level_source} number={set.level_number}");
+            sb.AppendLine($"pbWrite={(MarkersManager.Instance != null && MarkersManager.Instance.IsPbWriteEnabled ? "enabled" : "disabled (co-op client, host-only)")}");
             sb.Append("PB: ");
             if (set.pb != null)
             {
@@ -1488,6 +1682,11 @@ namespace HSRTimer
 
         private static void CmdMarkerSetPb(MarkersManager mgr, string msText)
         {
+            if (mgr != null && !mgr.IsPbWriteEnabled)
+            {
+                Print("Marker PB writes are disabled on a co-op client (host-only, R10.10.2); use 'hsr marker clientmode off' to force for testing.");
+                return;
+            }
             if (!long.TryParse(msText, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ms))
             {
                 Print("PB total must be an integer number of milliseconds.");
@@ -1915,8 +2114,8 @@ namespace HSRTimer
             sb.AppendLine("  hsr tag [list|enable <id>|disable <id>|set <id> <on|off>]");
             sb.AppendLine("  hsr lang [list|set <code>|reload|current]");
             sb.AppendLine("  hsr preset [list|current|create <name>|apply [name]|save|delete <name>]");
-            sb.AppendLine("  hsr sub [status|entries|clear]");
-            sb.AppendLine("  hsr marker [list|feed|add ...|remove <id>|toggle <id>|pb <ms>|pbclear|clear|save|reload]");
+            sb.AppendLine("  hsr sub [status|entries|clear|clientmode <status|on|off|auto>]");
+            sb.AppendLine("  hsr marker [status|list|feed|add ...|remove <id>|toggle <id>|clientmode <status|on|off|auto>|pb <ms>|pbclear|clear|save|reload]");
             sb.AppendLine("  hsr flags [list|raise <Reason>|clear [forgivable|soft|all]]");
             sb.AppendLine("  hsr lc [status|restart] | hsr config [path|files]");
             sb.AppendLine("  hsr update [status|check|apply|cancel|base [url]] | hsr about");
@@ -1956,19 +2155,19 @@ namespace HSRTimer
                 case "panel":
                     return "hsr panel [open|close|toggle|status]\r\nOpen/close/toggle the IMGUI settings panel.";
                 case "leaderboard":
-                    return "hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]\r\nControl the shared leaderboard HUD.";
+                    return "hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]\r\nControl the shared leaderboard HUD. 'cycle' rotates hidden → available content modes → hidden; a mode whose module is disabled (user setting or an auto-disable mechanism, e.g. the co-op client gate) is skipped (R8.5.1.2). 'status' shows the current mode and which modes are available.";
                 case "layout":
                     return "hsr layout [status|row <list|add <type>|remove <index>|clear>|text <list|add <x> <y> <text...>|remove <index>|clear>|get <key>|set <key> <value>]\r\nInspect/edit the HUD layout.";
                 case "tag":
-                    return "hsr tag [list|enable <id>|disable <id>|set <id> <on|off>]\r\nList available tag rules and toggle which tags are enabled (tags.ini).";
+                    return "hsr tag [list|label <status|on|off|auto>|enable <id>|disable <id>|set <id> <on|off>]\r\nList available tag rules and toggle which tags are enabled (tags.ini). Auto label tags (e.g. Co-op, R3.10) are listed by 'hsr tag list' with their live state and cannot be toggled manually; 'hsr tag label' inspects the Co-op label and can force it on/off for testing ('auto' restores the multiplayer-driven state).";
                 case "lang":
                     return "hsr lang [list|set <code>|reload|current]\r\nList/change/reload the active language.";
                 case "preset":
                     return "hsr preset [list|current|create <name>|apply [name]|save|delete <name>]\r\nManage layout/marker presets (R11).";
                 case "sub":
-                    return "hsr sub [status|entries|clear]\r\nInspect the subsegment module: options, leaderboard entries, or clear runtime state.";
+                    return "hsr sub [status|entries|clear|clientmode <status|on|off|auto>]\r\nInspect the subsegment module: options, leaderboard entries, or clear runtime state. 'status' reports the user setting (enable/userEnabled) separately from any auto-disable sources (autoDisabled/autoReasons, e.g. the co-op client gate). 'clientmode' inspects/overrides the co-op client gate (R8.9): as a multiplayer client the module is disabled entirely ('on' forces that state for testing, 'auto' restores it).";
                 case "marker":
-                    return "hsr marker [list|feed|add <range|checkpoint|grab> ...|remove <id>|toggle <id>|pb <total_ms>|pbclear|clear|save|reload]\r\nInspect/edit the current level's marker set.";
+                    return "hsr marker [status|list|feed|add <range|checkpoint|grab> ...|remove <id>|toggle <id>|clientmode <status|on|off|auto>|pb <total_ms>|pbclear|clear|save|reload]\r\nInspect/edit the current level's marker set. 'status' reports the user setting separately from any auto-disable sources (none today). In co-op any player can trigger markers (R10.10.1) but PB writes are host-only (R10.10.2); 'clientmode' inspects/forces that role for testing ('on' = co-op client, PB writes blocked, 'auto' restores it).";
                 case "flags":
                     return "hsr flags [list|raise <Reason>|clear [forgivable|soft|all]]\r\nInspect or mutate validity flags for testing (R5).";
                 case "lc":
