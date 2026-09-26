@@ -20,9 +20,10 @@ Tags **stack**: enable any combination, and all their rules apply simultaneously
 | `Glitchless` | Perform no glitches | SSG (half-body): invalid when a hand keeps a phantom grab (`grabObject != null` with no `grabJoint`) after the game's reverse-wall-climb branch returns early. Prop Fly: invalid when jumping while standing on a movable object the player is also holding. Footsie: invalid when touching the Water (River) pass point inside the Footsie Spot range |
 | `NoEC` | Perform no extended climbing  | When the player leaves the ground (`onGround` becomes false), the first grab height of that airborne period is the baseline; if already holding something at takeoff, the higher of the two hands is used. Any new grab more than 0.2 m above that baseline while airborne is EC, debounced to at most one trigger per 0.2 s. The `Ec` violation is a **soft flag**: it is shown on its own HUD line with a trigger count (e.g. `EC x3`) in normal text color, flashes red on each new trigger, and is cleared by one-key retry and a full timer reset, but not by pause-menu restart |
 
-With no tags enabled (plain Any%), the run is constrained only by the generic
-validity checks (R5.1: cheats, speed change, drift) — the HUD shows a red
-banner when a run is flagged.
+With no rule tags enabled (plain Any%), the run is constrained only by the
+generic validity checks (R5.1: cheats, speed change, drift) — the HUD shows a
+red banner when a run is flagged. During a multiplayer session the auto
+`Co-op` label (below) is additionally active even when no rule tags are on.
 
 ## Enabling tags
 
@@ -34,6 +35,23 @@ on panel close / game exit. You can also edit `tags.ini` directly:
 [tags]
 enabled = Checkpoint, Jumpless
 ```
+
+## Auto label: Co-op (multiplayer)
+
+`Co-op` (R3.10) is a **label tag**, not a rule. Unlike the rule tags above it:
+
+- has **no judgment logic** — it is never registered as an `ITagRule`, so the
+  engine's rule loop ignores it and it can **never raise a validity flag**;
+- is **not shown on the Category page** (that page only lists registered
+  rules), so it cannot be toggled by hand;
+- is **enabled automatically** while a multiplayer session is active
+  (`NetGame.isServer` / `NetGame.isClient`, i.e. hosting or joining a co-op
+  game) and removed again as soon as you are back in single-player.
+
+While it is on, the label appears wherever the enabled tag set is shown — the
+HUD "Tags" line and the `{category}` template variable — and it is part of the
+category key used for subsegment/marker PB storage, so co-op runs are kept
+separate from single-player ones. It is never persisted to `tags.ini`.
 
 ## Adding custom tags
 

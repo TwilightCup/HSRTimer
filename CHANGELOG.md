@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - Added a "Co-op" category label (shown as "多人" in the Chinese UI) that is active automatically during multiplayer sessions: it has no rule or validity impact, is not listed on the Category page, and turns off again when you return to single-player.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.7.1

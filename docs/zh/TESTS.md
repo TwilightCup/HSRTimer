@@ -41,7 +41,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr panel [open\|close\|toggle\|status]` | 控制设置面板 |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | 控制排行榜 HUD |
 | `hsr layout [status\|row ...\|text ...\|get <key>\|set <key> <value>]` | 查看 / 编辑 HUD 布局 |
-| `hsr tag [list\|enable <id>\|disable <id>\|set <id> <on\|off>]` | 开关启用的标签规则 |
+| `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | 开关启用的标签规则;查看/强制自动 Co-op 标签 |
 | `hsr lang [list\|set <code>\|reload\|current]` | 管理本地化 |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | 管理预设(R11) |
 | `hsr sub [status\|entries\|clear]` | 查看 / 清空分段模块 |
@@ -138,6 +138,23 @@ hsr status          # 会列出已启用的标签
 ```
 
 标签改动会立即持久化到 `tags.ini`。
+
+**自动标签 `Co-op`(R3.10)。** `hsr tag list` 会在独立的 `labels (auto):` 行中列出标签型标签及其实时状态 —— 仅在多人会话期间(`hsr status` 中的 `server=` / `client=`)显示 `Co-op [on]`,单人模式下为 `[off]`。该标签无法像规则标签一样手动开关:
+
+```text
+hsr tag set Co-op on      # 会被拒绝:"is an auto label ... cannot be toggled manually"
+```
+
+无需真实多人会话即可测试标签显示,可用 `hsr tag label` 强制开关(仅本次会话有效;`auto` 恢复按多人模式自动):
+
+```text
+hsr tag label status      # effective / net / override
+hsr tag label on          # 强制开启(HUD"规则标签"行与 {category} 显示 "Co-op")
+hsr tag label off
+hsr tag label auto        # 恢复自动(仅在多人会话期间开启)
+```
+
+验证真实周期:主持或加入合作游戏 → `hsr tag list` 显示 `Co-op [on]`,且 HUD 的"规则标签"行 / `{category}` 模板变量包含 "多人"(中文界面;英文界面为 "Co-op");离开会话 → 变回 `[off]`。该标签从不持久化:`hsr get all`(tags 段)与 `tags.ini` 中永远不会有 `Co-op`。
 
 ### 4. HUD / 布局(R2)
 

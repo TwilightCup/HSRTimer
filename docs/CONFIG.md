@@ -82,6 +82,9 @@ enabled = Checkpoint, Jumpless
   `NoCheckpoint`, `Jumpless`, `Voiceline`, `Glitchless`, `NoEC`. Custom tags from
   third-party plugins use their own ids (see [EXTENDING.md](EXTENDING.md)).
   Leave empty for a plain run (generic validity checks only).
+- The auto `Co-op` label (R3.10) is managed at runtime by the engine and is
+  **never written** to `tags.ini`, so it cannot be enabled here. It turns on
+  automatically during a multiplayer session (see [CATEGORIES.md](CATEGORIES.md)).
 
 See [CATEGORIES.md](CATEGORIES.md).
 

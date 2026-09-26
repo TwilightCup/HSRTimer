@@ -63,6 +63,7 @@ enabled = Checkpoint, Jumpless
 ```
 
 - `enabled` —— 逗号分隔的标签 id。内置 id:`Checkpoint`、`NoCheckpoint`、`Jumpless`、`Voiceline`、`Glitchless`、`NoEC`。第三方插件的自定义标签用其自身的 id(见 [EXTENDING.md](EXTENDING.md))。留空即为纯任意%(仅受通用有效性约束)。
+- 自动的 `Co-op` 标签(R3.10)由引擎在运行时管理,**永远不会写入** `tags.ini`,因此无法在此处启用;它在多人会话期间自动开启(见 [CATEGORIES.md](CATEGORIES.md))。
 
 见 [CATEGORIES.md](CATEGORIES.md)。
 

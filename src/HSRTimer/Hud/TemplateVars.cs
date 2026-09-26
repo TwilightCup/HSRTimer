@@ -75,7 +75,10 @@ namespace HSRTimer
         /// <summary>
         /// There are no category presets; {category} renders the enabled tags
         /// (localized), or a fallback when none are enabled. Public so the HUD
-        /// can reuse it for its "current rule tags" line.
+        /// can reuse it for its "current rule tags" line. Rule tags resolve
+        /// their display name through their registered <see cref="ITagRule"/>;
+        /// label tags (see <see cref="TagLabels"/>, R3.10) resolve it through
+        /// their own display-name key.
         /// </summary>
         public static string CategoryName(ConfigService cfg)
         {
@@ -85,8 +88,11 @@ namespace HSRTimer
             foreach (var tagId in cfg.EnabledTags.Tags)
             {
                 var rule = TagRuleRegistry.Instance != null ? TagRuleRegistry.Instance.Find(tagId) : null;
-                string label = rule != null && !string.IsNullOrEmpty(rule.DisplayNameKey)
-                    ? cfg.Localization.Get(rule.DisplayNameKey)
+                string displayKey = rule != null
+                    ? rule.DisplayNameKey
+                    : TagLabels.DisplayNameKey(tagId);
+                string label = !string.IsNullOrEmpty(displayKey)
+                    ? cfg.Localization.Get(displayKey)
                     : tagId;
                 if (sb.Length > 0) sb.Append(", ");
                 sb.Append(label);

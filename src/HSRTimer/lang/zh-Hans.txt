@@ -104,6 +104,7 @@ TAG_JUMPLESS:禁跳
 TAG_VOICELINE:旁白
 TAG_GLITCHLESS:无Glitch
 TAG_NO_EC:无爬墙
+TAG_COOP:多人
 
 # ===== 无效原因 (R5) =====
 INVALID_RUN:成绩无效

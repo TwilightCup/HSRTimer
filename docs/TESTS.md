@@ -52,7 +52,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr panel [open\|close\|toggle\|status]` | Control the settings panel |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | Control the leaderboard HUD |
 | `hsr layout [status\|row ...\|text ...\|get <key>\|set <key> <value>]` | Inspect/edit the HUD layout |
-| `hsr tag [list\|enable <id>\|disable <id>\|set <id> <on\|off>]` | Toggle enabled tag rules |
+| `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | Toggle enabled tag rules; inspect/force the auto Co-op label |
 | `hsr lang [list\|set <code>\|reload\|current]` | Manage localization |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | Manage presets (R11) |
 | `hsr sub [status\|entries\|clear]` | Inspect/clear the subsegment module |
@@ -173,6 +173,31 @@ hsr status          # enabled tags are listed
 ```
 
 Tag changes persist to `tags.ini` immediately.
+
+**Auto label `Co-op` (R3.10).** `hsr tag list` shows label tags on their own
+`labels (auto):` line with their live state — `Co-op [on]` only while a
+multiplayer session is active (`server=` / `client=` in `hsr status`), `[off]`
+in single-player. The label cannot be toggled like a rule tag:
+
+```text
+hsr tag set Co-op on      # rejected: "is an auto label ... cannot be toggled manually"
+```
+
+To test the label's display without an actual multiplayer session, force it
+with `hsr tag label` (session-only; `auto` restores the multiplayer-driven
+state):
+
+```text
+hsr tag label status      # effective / net / override
+hsr tag label on          # force the label on (HUD tags line + {category} show "Co-op")
+hsr tag label off
+hsr tag label auto        # back to auto (on only while in multiplayer)
+```
+
+Verify the real cycle: host or join a co-op game → `hsr tag list` shows
+`Co-op [on]` and the HUD "Tags" line / `{category}` template include
+"Co-op" (English UI) / "多人" (Chinese UI); leave the session → it turns `[off]` again. The label is never
+persisted: `hsr get all` (tags section) and `tags.ini` never contain `Co-op`.
 
 ### 4. HUD / layout (R2)
 

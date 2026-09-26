@@ -934,6 +934,11 @@ namespace HSRTimer
                         Print($"Unknown tag: {args[1]}. Use 'hsr tag list'.");
                         return;
                     }
+                    if (TagLabels.IsLabel(enableId))
+                    {
+                        Print($"Tag {enableId} is an auto label (enabled only while in multiplayer); it cannot be toggled manually.");
+                        return;
+                    }
                     cfg.EnabledTags.Enable(enableId);
                     cfg.SaveSettings();
                     Print($"Tag {enableId} enabled.");
@@ -941,6 +946,11 @@ namespace HSRTimer
                 case "disable":
                     if (args.Count < 2) { Print("Usage: hsr tag disable <id>"); return; }
                     string disableId = CanonicalTagId(args[1]) ?? args[1];
+                    if (TagLabels.IsLabel(disableId))
+                    {
+                        Print($"Tag {disableId} is an auto label (enabled only while in multiplayer); it cannot be toggled manually.");
+                        return;
+                    }
                     cfg.EnabledTags.Disable(disableId);
                     cfg.SaveSettings();
                     Print($"Tag {disableId} disabled.");
@@ -953,6 +963,11 @@ namespace HSRTimer
                         Print($"Unknown tag: {args[1]}. Use 'hsr tag list'.");
                         return;
                     }
+                    if (TagLabels.IsLabel(setId))
+                    {
+                        Print($"Tag {setId} is an auto label (enabled only while in multiplayer); it cannot be toggled manually.");
+                        return;
+                    }
                     if (SettingsModel.ParseBool(args[2], false))
                         cfg.EnabledTags.Enable(setId);
                     else
@@ -960,28 +975,79 @@ namespace HSRTimer
                     cfg.SaveSettings();
                     Print($"Tag {setId} = {(cfg.EnabledTags.HasTag(setId) ? "on" : "off")}.");
                     break;
+                case "label":
+                    CmdTagLabel(args);
+                    break;
                 default:
-                    Print("Usage: hsr tag [list|enable <id>|disable <id>|set <id> <on|off>]");
+                    Print("Usage: hsr tag [list|label <status|on|off|auto>|enable <id>|disable <id>|set <id> <on|off>]");
                     break;
             }
         }
 
         /// <summary>
+        /// Inspect / override the auto Co-op label (R3.10). The label normally
+        /// follows the live game mode (on while NetGame.isServer/isClient, i.e.
+        /// a multiplayer session); the override forces it for testing the label
+        /// display without real multiplayer, mirroring how 'hsr flags raise'
+        /// forces validity flags. The override is session-only (cleared by
+        /// restart / 'auto').
+        /// </summary>
+        private static void CmdTagLabel(List<string> args)
+        {
+            if (args.Count < 2)
+            {
+                Print("Usage: hsr tag label <status|on|off|auto>");
+                return;
+            }
+            string mode = args[1].ToLowerInvariant();
+            switch (mode)
+            {
+                case "status":
+                {
+                    bool net = NetGame.isServer || NetGame.isClient;
+                    bool effective = TimerCore.CoopLabelOverride ?? net;
+                    Print($"Co-op label: effective={(effective ? "on" : "off")} net={(net ? "on" : "off")} override={(TimerCore.CoopLabelOverride.HasValue ? (TimerCore.CoopLabelOverride.Value ? "on" : "off") : "auto")}");
+                    return;
+                }
+                case "on":
+                    TimerCore.CoopLabelOverride = true;
+                    break;
+                case "off":
+                    TimerCore.CoopLabelOverride = false;
+                    break;
+                case "auto":
+                    TimerCore.CoopLabelOverride = null;
+                    break;
+                default:
+                    Print("Usage: hsr tag label <status|on|off|auto>");
+                    return;
+            }
+            Print($"Co-op label override = {(TimerCore.CoopLabelOverride.HasValue ? (TimerCore.CoopLabelOverride.Value ? "on" : "off") : "auto")}.");
+        }
+
+        /// <summary>
         /// Resolve a tag id case-insensitively (the game console lowercases all
-        /// input before our handler runs) to the canonical registered id, or
-        /// null when no registered tag matches.
+        /// input before our handler runs) to the canonical registered rule id or
+        /// label-tag id (see <see cref="TagLabels"/>), or null when nothing
+        /// matches.
         /// </summary>
         private static string CanonicalTagId(string id)
         {
             if (string.IsNullOrEmpty(id))
                 return null;
             var registry = TagRuleRegistry.Instance;
-            if (registry == null)
-                return null;
-            foreach (var rule in registry.All)
+            if (registry != null)
             {
-                if (rule != null && string.Equals(rule.Id, id, StringComparison.OrdinalIgnoreCase))
-                    return rule.Id;
+                foreach (var rule in registry.All)
+                {
+                    if (rule != null && string.Equals(rule.Id, id, StringComparison.OrdinalIgnoreCase))
+                        return rule.Id;
+                }
+            }
+            foreach (var label in TagLabels.All)
+            {
+                if (string.Equals(label, id, StringComparison.OrdinalIgnoreCase))
+                    return label;
             }
             return null;
         }
@@ -1005,6 +1071,10 @@ namespace HSRTimer
                 sb.Append("available:");
                 foreach (var rule in registry.All)
                     sb.Append(' ').Append(rule.Id).Append(cfg.EnabledTags.HasTag(rule.Id) ? " [on]" : " [off]");
+                sb.AppendLine();
+                sb.Append("labels (auto):");
+                foreach (var label in TagLabels.All)
+                    sb.Append(' ').Append(label).Append(cfg.EnabledTags.HasTag(label) ? " [on]" : " [off]");
             }
             Print(sb.ToString());
         }
@@ -1960,7 +2030,7 @@ namespace HSRTimer
                 case "layout":
                     return "hsr layout [status|row <list|add <type>|remove <index>|clear>|text <list|add <x> <y> <text...>|remove <index>|clear>|get <key>|set <key> <value>]\r\nInspect/edit the HUD layout.";
                 case "tag":
-                    return "hsr tag [list|enable <id>|disable <id>|set <id> <on|off>]\r\nList available tag rules and toggle which tags are enabled (tags.ini).";
+                    return "hsr tag [list|label <status|on|off|auto>|enable <id>|disable <id>|set <id> <on|off>]\r\nList available tag rules and toggle which tags are enabled (tags.ini). Auto label tags (e.g. Co-op, R3.10) are listed by 'hsr tag list' with their live state and cannot be toggled manually; 'hsr tag label' inspects the Co-op label and can force it on/off for testing ('auto' restores the multiplayer-driven state).";
                 case "lang":
                     return "hsr lang [list|set <code>|reload|current]\r\nList/change/reload the active language.";
                 case "preset":

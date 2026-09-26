@@ -104,6 +104,7 @@ TAG_JUMPLESS:Jumpless
 TAG_VOICELINE:Voiceline
 TAG_GLITCHLESS:Glitchless
 TAG_NO_EC:NoEC
+TAG_COOP:Co-op
 
 # ===== Validity reasons (R5) =====
 INVALID_RUN:RUN IS INVALID
