@@ -222,6 +222,8 @@ hsr marker clear
 
 当编辑模式开启(`hsr set markers_edit_mode true`)时,标记覆盖层 / feed 应响应这些改动。
 
+排行榜 feed 必须**按尝试**重置:`hsr pass` 过关后进入下一次尝试——即使下一关仍是同一关(剧情重复关卡)——`hsr marker feed` 应只列出新尝试的行。新尝试的首次触发会**替换**掉上一次尝试的残留行,而不是追加在其后。
+
 ### 9. 本地化(R7)
 
 ```text
