@@ -200,7 +200,7 @@ namespace HSRTimer
 
             var markers = MarkersManager.Instance;
             int markerCount = markers?.CurrentSet != null ? markers.CurrentSet.markers.Count : 0;
-            sb.AppendLine($"markers={(s.MarkersEnable ? "on" : "off")} currentLevel=\"{markers?.CurrentLevelKey}\" markers={markerCount} feed={markers?.Feed.Count ?? 0}");
+            sb.AppendLine($"markers={(s.MarkersEnable ? "on" : "off")} pbWrite={(markers != null && markers.IsPbWriteEnabled ? "on" : "off")} currentLevel=\"{markers?.CurrentLevelKey}\" markers={markerCount} feed={markers?.Feed.Count ?? 0}");
 
             var lb = LeaderboardHud.Instance;
             sb.AppendLine($"leaderboard={(lb != null && lb.Visible ? "visible" : "hidden")} mode={cfg.Layout.LeaderboardMode}");
@@ -1358,6 +1358,9 @@ namespace HSRTimer
                     if (rest.Count < 1) { Print("Usage: hsr marker toggle <id>"); return; }
                     CmdMarkerToggle(mgr, rest[0]);
                     break;
+                case "clientmode":
+                    CmdMarkerClientMode(mgr, rest);
+                    break;
                 case "pb":
                     if (rest.Count < 1) { Print("Usage: hsr marker pb <total_ms>"); return; }
                     CmdMarkerSetPb(mgr, rest[0]);
@@ -1377,9 +1380,50 @@ namespace HSRTimer
                     Print("Marker cache reloaded from disk.");
                     break;
                 default:
-                    Print("Usage: hsr marker [list|feed|add ...|remove <id>|toggle <id>|pb <total_ms>|pbclear|clear|save|reload]");
+                    Print("Usage: hsr marker [list|feed|add ...|remove <id>|toggle <id>|clientmode <status|on|off|auto>|pb <total_ms>|pbclear|clear|save|reload]");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Inspect / override the co-op client role for marker PB writes
+        /// (R10.10.2). Normally a co-op client never persists a marker PB
+        /// (host-only); the override forces the role for testing without a real
+        /// client session ('on' = treat as client → PB writes blocked, 'off' =
+        /// treat as host/single-player, 'auto' restores the net-driven state).
+        /// Session-only, mirroring 'hsr sub clientmode'.
+        /// </summary>
+        private static void CmdMarkerClientMode(MarkersManager mgr, List<string> args)
+        {
+            if (args.Count < 1)
+            {
+                Print("Usage: hsr marker clientmode <status|on|off|auto>");
+                return;
+            }
+            string mode = args[0].ToLowerInvariant();
+            switch (mode)
+            {
+                case "status":
+                {
+                    bool net = NetGame.isClient;
+                    bool effective = MarkersManager.PbClientOverride ?? net;
+                    Print($"marker PB gate: role={(effective ? "client" : "host/single")} pbWrite={(effective ? "disabled" : "enabled")} net={(net ? "client" : "host/single")} override={(MarkersManager.PbClientOverride.HasValue ? (MarkersManager.PbClientOverride.Value ? "client" : "host/single") : "auto")}");
+                    return;
+                }
+                case "on":
+                    MarkersManager.PbClientOverride = true;
+                    break;
+                case "off":
+                    MarkersManager.PbClientOverride = false;
+                    break;
+                case "auto":
+                    MarkersManager.PbClientOverride = null;
+                    break;
+                default:
+                    Print("Usage: hsr marker clientmode <status|on|off|auto>");
+                    return;
+            }
+            Print($"marker PB gate override = {(MarkersManager.PbClientOverride.HasValue ? (MarkersManager.PbClientOverride.Value ? "client (PB writes disabled)" : "host/single (PB writes enabled)") : "auto")}.");
         }
 
         private static void CmdMarkerList()
@@ -1392,6 +1436,7 @@ namespace HSRTimer
             }
             var sb = new StringBuilder();
             sb.AppendLine($"level=\"{set.level_id}\" category=\"{set.category_key}\" source={set.level_source} number={set.level_number}");
+            sb.AppendLine($"pbWrite={(MarkersManager.Instance != null && MarkersManager.Instance.IsPbWriteEnabled ? "enabled" : "disabled (co-op client, host-only)")}");
             sb.Append("PB: ");
             if (set.pb != null)
             {
@@ -1602,6 +1647,11 @@ namespace HSRTimer
 
         private static void CmdMarkerSetPb(MarkersManager mgr, string msText)
         {
+            if (mgr != null && !mgr.IsPbWriteEnabled)
+            {
+                Print("Marker PB writes are disabled on a co-op client (host-only, R10.10.2); use 'hsr marker clientmode off' to force for testing.");
+                return;
+            }
             if (!long.TryParse(msText, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ms))
             {
                 Print("PB total must be an integer number of milliseconds.");
@@ -2082,7 +2132,7 @@ namespace HSRTimer
                 case "sub":
                     return "hsr sub [status|entries|clear|clientmode <status|on|off|auto>]\r\nInspect the subsegment module: options, leaderboard entries, or clear runtime state. 'clientmode' inspects/overrides the co-op client gate (R8.9): as a multiplayer client the module is disabled entirely ('on' forces that state for testing, 'auto' restores it).";
                 case "marker":
-                    return "hsr marker [list|feed|add <range|checkpoint|grab> ...|remove <id>|toggle <id>|pb <total_ms>|pbclear|clear|save|reload]\r\nInspect/edit the current level's marker set.";
+                    return "hsr marker [list|feed|add <range|checkpoint|grab> ...|remove <id>|toggle <id>|clientmode <status|on|off|auto>|pb <total_ms>|pbclear|clear|save|reload]\r\nInspect/edit the current level's marker set. In co-op any player can trigger markers (R10.10.1) but PB writes are host-only (R10.10.2); 'clientmode' inspects/forces that role for testing ('on' = co-op client, PB writes blocked, 'auto' restores it).";
                 case "flags":
                     return "hsr flags [list|raise <Reason>|clear [forgivable|soft|all]]\r\nInspect or mutate validity flags for testing (R5).";
                 case "lc":

@@ -45,7 +45,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr lang [list\|set <code>\|reload\|current]` | 管理本地化 |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | 管理预设(R11) |
 | `hsr sub [status\|entries\|clear\|clientmode <status\|on\|off\|auto>]` | 查看 / 清空分段模块;查看 / 强制合作客机门控 |
-| `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|pb <ms>\|pbclear\|clear\|save\|reload]` | 查看 / 编辑标记(R10) |
+| `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|clientmode <status\|on\|off\|auto>\|pb <ms>\|pbclear\|clear\|save\|reload]` | 查看 / 编辑标记(R10);查看 / 强制合作 PB 角色 |
 | `hsr flags [list\|raise <Reason>\|clear [forgivable\|soft\|all]]` | 查看 / 修改有效性标记(R5) |
 | `hsr lc [status\|restart]` | 查看 LevelCollections 集成或触发 `lc restart` |
 | `hsr config [path\|files]` | 打印 HSRTimer 配置路径 |
@@ -251,6 +251,17 @@ hsr marker clear
 当编辑模式开启(`hsr set markers_edit_mode true`)时,标记覆盖层 / feed 应响应这些改动。
 
 排行榜 feed 必须**按尝试**重置:`hsr pass` 过关后进入下一次尝试——即使下一关仍是同一关(剧情重复关卡)——`hsr marker feed` 应只列出新尝试的行。新尝试的首次触发会**替换**掉上一次尝试的残留行,而不是追加在其后。
+
+**合作行为(R10.10)。** 多人会话中**任意玩家**都可以触发标记(主机与客机端都会遍历全部玩家判定);标记 PB 写入仅主机进行——客机从不持久化 PB(`hsr marker list` 显示 `pbWrite=disabled (co-op client, host-only)`,`hsr marker pb` 会被拒绝)。无需真实客机会话,可用 `hsr marker clientmode` 强制角色(仅本次会话有效;`auto` 恢复):
+
+```text
+hsr marker clientmode status   # role / pbWrite / net / override
+hsr marker clientmode on       # 模拟为合作客机 -> 禁止写 PB
+hsr marker clientmode off      # 模拟为主机 / 单人 -> 允许写 PB
+hsr marker clientmode auto     # 恢复自动(仅 NetGame.isClient 时禁止)
+```
+
+验证:`hsr marker clientmode on` 后 `hsr marker list` 显示 `pbWrite=disabled...`,`hsr marker pb 12345` 被拒绝;`hsr marker clientmode off` 恢复。**"任意玩家触发"**部分需要真实合作会话:两名玩家在同一关时,任一人进入范围盒 / 抓住目标物体都会触发标记,`hsr marker feed` 在两台机器上都会列出。
 
 ### 9. 本地化(R7)
 

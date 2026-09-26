@@ -22,10 +22,35 @@ namespace HSRTimer
     /// public game fields (poll, don't patch); the only event source outside the
     /// polling loop is the existing <c>PauseMenu.LoadClick</c> postfix, because
     /// FixedUpdate is halted while paused (R10.2.4).
+    ///
+    /// Co-op behavior (R10.10): during a multiplayer session any player can
+    /// trigger markers — evaluation probes every human (<c>Human.all</c>) on
+    /// both host and client. PB persistence is host-only: a co-op client never
+    /// writes a PB, because the official PB for the shared run lives with the
+    /// host's files.
     /// </summary>
     public sealed class MarkersManager : MonoBehaviour
     {
         public static MarkersManager Instance { get; private set; }
+
+        /// <summary>
+        /// Session-only override for the co-op client role used by PB writes,
+        /// set by the dev console ('hsr marker clientmode on|off|auto') so the
+        /// host-only PB rule can be tested without a real client session
+        /// (mirrors 'hsr sub clientmode'). Null = follow
+        /// <c>NetGame.isClient</c> (default).
+        /// </summary>
+        public static bool? PbClientOverride;
+
+        /// <summary>True during a multiplayer session (host or client).</summary>
+        private static bool IsCoop => NetGame.isServer || NetGame.isClient;
+
+        /// <summary>
+        /// Whether this machine may persist a marker PB (R10.10.2): always in
+        /// single-player; in co-op only the host writes — a co-op client never
+        /// does.
+        /// </summary>
+        public bool IsPbWriteEnabled => !(PbClientOverride ?? NetGame.isClient);
 
         // ── level context (current level being played) ──
         private string _currentLevelKey;
@@ -42,6 +67,10 @@ namespace HSRTimer
 
         // ── evaluation state: cleared whenever a new level/attempt starts ──
         private readonly Dictionary<string, long> _records = new Dictionary<string, long>();
+
+        // Reusable per-frame player probe list (one entry per human present),
+        // so the any-player co-op evaluation allocates nothing per tick.
+        private readonly List<PlayerProbe> _probes = new List<PlayerProbe>();
 
         // ── display feed: survives the level-end transition (R10.7.6) ──
         private readonly List<MarkerFeedRow> _feed = new List<MarkerFeedRow>();
@@ -112,6 +141,13 @@ namespace HSRTimer
         /// <summary>
         /// Per-frame trigger evaluation (R10.2). Called from
         /// <c>TimerCore.FixedUpdate</c> right after the subsegment tick.
+        ///
+        /// In co-op (R10.10.1) every player in the level can trigger a marker:
+        /// the evaluation probes all humans (<c>Human.all</c>) instead of just
+        /// the local player, on both the host and the client. In single-player
+        /// it probes only <c>Human.Localplayer</c> (unchanged behavior).
+        /// Checkpoint markers already follow the party's shared checkpoint
+        /// progress (<c>Game.currentCheckpointNumber</c>).
         /// </summary>
         public void OnPhysicsTick(Game game, GameState gState, RunState state)
         {
@@ -122,19 +158,9 @@ namespace HSRTimer
             if (CountEnabled(_currentSet) == 0)
                 return;
 
-            var human = Human.Localplayer;
-            Vector3? pos = human != null && human.transform != null
-                ? (Vector3?)human.transform.position
-                : null;
-            bool humanUsable = human != null && human.transform != null
-                && human.state != HumanState.Spawning
-                && human.state != HumanState.Unconscious
-                && human.state != HumanState.Dead;
-            var grab = human != null ? human.GetComponent<GrabManager>() : null;
-            bool anyGrabbed = grab != null && grab.grabbedObjects != null && grab.grabbedObjects.Count > 0;
-            bool jumping = human != null && human.jump;
-            int cp = game != null ? game.currentCheckpointNumber : -1;
             long nowMs = SegmentTimeMs(state);
+            int cp = game != null ? game.currentCheckpointNumber : -1;
+            ProbePlayers(_probes);
 
             foreach (var def in _currentSet.markers)
             {
@@ -147,20 +173,24 @@ namespace HSRTimer
                 switch (def.Kind)
                 {
                     case MarkerKind.Range:
-                        if (pos.HasValue && humanUsable
-                            && IsInsideBox(pos.Value, def)
-                            && (!def.requireGrab || anyGrabbed)
-                            && (!def.requireJump || jumping))
+                        // Any player inside the box, with that same player's own
+                        // grab/jump state satisfying the marker's requirements.
+                        if (AnyProbeMatches(_probes, p => p.Usable
+                                && IsInsideBox(p.Position, def)
+                                && (!def.requireGrab || p.Grabbing)
+                                && (!def.requireJump || p.Jumping)))
                         {
                             Record(def, nowMs);
                         }
                         break;
                     case MarkerKind.GrabObject:
-                        if (humanUsable && IsObjectGrabbed(def, grab))
+                        // Any player currently grabbing the captured object.
+                        if (AnyProbeMatches(_probes, p => p.Usable && IsObjectGrabbed(def, p.Grab)))
                             Record(def, nowMs);
                         break;
                     case MarkerKind.Checkpoint:
-                        // R10.2.3: touch/reach uses >= (non-linear checkpoint levels).
+                        // R10.2.3: touch/reach uses >= (non-linear checkpoint
+                        // levels). Checkpoint progress is shared by the party.
                         if (!def.triggerOnLoad && cp >= def.checkpointIndex)
                             Record(def, nowMs);
                         break;
@@ -209,9 +239,11 @@ namespace HSRTimer
             // TimerCore.EndSegment runs tag OnLevelExit before this hook, so
             // final-validity checks (R4.2 checkpoint-final / voiceline) have
             // already raised any invalid flag; an invalid run never gets a PB.
-            // A simulated test pass ('hsr pass') must not persist a PB either.
+            // A simulated test pass ('hsr pass') must not persist a PB either,
+            // and a co-op client never persists a PB (R10.10.2, host-only).
             if (Enabled && completed && !retrying && state != null && !state.Flags.IsInvalid
-                && !state.SuppressPbRecording && _currentSet != null && state.InSegment)
+                && !state.SuppressPbRecording && _currentSet != null && state.InSegment
+                && IsPbWriteEnabled)
             {
                 long levelMs = GameClock.ToMs(endTime - GameClock.SegmentStartSeconds(state));
                 TryWritePb(levelMs);
@@ -291,6 +323,73 @@ namespace HSRTimer
 
         private static long SegmentTimeMs(RunState state)
             => GameClock.SegmentMs(state);
+
+        /// <summary>
+        /// Snapshot of one human's trigger-relevant state for the co-op any-player
+        /// evaluation (R10.10.1). Grab/jump are per-player, so a range marker's
+        /// requireGrab/requireJump must be satisfied by the same player that is
+        /// inside the box.
+        /// </summary>
+        private struct PlayerProbe
+        {
+            public Vector3 Position;
+            public bool Usable;   // not spawning / unconscious / dead
+            public bool Grabbing; // holding at least one object
+            public bool Jumping;
+            public GrabManager Grab;
+        }
+
+        /// <summary>
+        /// Fill <paramref name="into"/> with one probe per present human. In
+        /// co-op this is every player (<c>Human.all</c>); in single-player it is
+        /// only <c>Human.Localplayer</c>, preserving the original behavior.
+        /// </summary>
+        private static void ProbePlayers(List<PlayerProbe> into)
+        {
+            into.Clear();
+            if (IsCoop)
+            {
+                var all = Human.all;
+                if (all != null)
+                {
+                    foreach (var h in all)
+                    {
+                        if (h == null || h.transform == null)
+                            continue;
+                        into.Add(ProbeOne(h));
+                    }
+                }
+            }
+            else
+            {
+                var h = Human.Localplayer;
+                if (h != null && h.transform != null)
+                    into.Add(ProbeOne(h));
+            }
+        }
+
+        private static PlayerProbe ProbeOne(Human h)
+        {
+            var grab = h.GetComponent<GrabManager>();
+            return new PlayerProbe
+            {
+                Position = h.transform.position,
+                Usable = h.state != HumanState.Spawning
+                    && h.state != HumanState.Unconscious
+                    && h.state != HumanState.Dead,
+                Grabbing = grab != null && grab.grabbedObjects != null && grab.grabbedObjects.Count > 0,
+                Jumping = h.jump,
+                Grab = grab,
+            };
+        }
+
+        /// <summary>True when at least one probed player satisfies the predicate.</summary>
+        private static bool AnyProbeMatches(List<PlayerProbe> probes, System.Func<PlayerProbe, bool> match)
+        {
+            foreach (var p in probes)
+                if (match(p)) return true;
+            return false;
+        }
 
         private static bool IsInsideBox(Vector3 pos, MarkerDef def)
         {

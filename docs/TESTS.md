@@ -56,7 +56,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr lang [list\|set <code>\|reload\|current]` | Manage localization |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | Manage presets (R11) |
 | `hsr sub [status\|entries\|clear\|clientmode <status\|on\|off\|auto>]` | Inspect/clear the subsegment module; inspect/force the co-op client gate |
-| `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|pb <ms>\|pbclear\|clear\|save\|reload]` | Inspect/edit markers (R10) |
+| `hsr marker [list\|feed\|add ...\|remove <id>\|toggle <id>\|clientmode <status\|on\|off\|auto>\|pb <ms>\|pbclear\|clear\|save\|reload]` | Inspect/edit markers (R10); inspect/force the co-op PB role |
 | `hsr flags [list\|raise <Reason>\|clear [forgivable\|soft\|all]]` | Inspect/mutate validity flags (R5) |
 | `hsr lc [status\|restart]` | Inspect LevelCollections integration or dispatch `lc restart` |
 | `hsr config [path\|files]` | Print HSRTimer config paths |
@@ -313,6 +313,27 @@ level and the next attempt starts — including when the next level is the same
 level again (a repeated campaign level) — `hsr marker feed` should list only the
 new attempt's rows. The new attempt's first trigger replaces the previous
 attempt's stale rows instead of appending to them.
+
+**Co-op behavior (R10.10).** In a multiplayer session any player can trigger a
+marker (both host and client evaluate all players), and marker PB writes are
+host-only: a co-op client never persists a PB (`hsr marker list` shows
+`pbWrite=disabled (co-op client, host-only)`, and `hsr marker pb` is
+rejected). Force the role without a real client session with `hsr marker
+clientmode` (session-only; `auto` restores):
+
+```text
+hsr marker clientmode status   # role / pbWrite / net / override
+hsr marker clientmode on       # treat as co-op client -> PB writes blocked
+hsr marker clientmode off      # treat as host/single-player -> PB writes allowed
+hsr marker clientmode auto     # back to auto (blocked only when NetGame.isClient)
+```
+
+Verify: `hsr marker clientmode on` then `hsr marker list` shows
+`pbWrite=disabled...` and `hsr marker pb 12345` is rejected; `hsr marker
+clientmode off` restores them. The "any player can trigger" part needs a real
+co-op session: with two players in the level, a marker triggers when either
+player enters its box / grabs its object, and `hsr marker feed` lists it on
+both machines.
 
 ### 9. Localization (R7)
 
