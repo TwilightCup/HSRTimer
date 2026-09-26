@@ -46,8 +46,15 @@ namespace HSRTimer
         // ── display feed: survives the level-end transition (R10.7.6) ──
         private readonly List<MarkerFeedRow> _feed = new List<MarkerFeedRow>();
         private string _feedTitle;
-        private string _feedLevelKey;
         private MarkerSet _feedSet;
+        // Attempt generation: incremented whenever a new attempt/level begins.
+        // The first trigger of a new attempt re-initializes the feed, so the
+        // previous attempt's rows are replaced even when the next level is the
+        // same level again (a repeated campaign level, R10.7.6).
+        private int _attemptSeq;
+        // The _attemptSeq value the current feed belongs to; -1 = unset, so
+        // the next trigger always re-initializes the feed.
+        private int _feedAttempt = -1;
 
         // ── dirty marker sets awaiting flush (R10.5.8) ──
         private readonly HashSet<MarkerSet> _dirtySets = new HashSet<MarkerSet>();
@@ -83,6 +90,7 @@ namespace HSRTimer
         public void OnLevelStart(Game game, RunState state)
         {
             ClearEvaluation();
+            _attemptSeq++; // every OnLevelStart begins a new attempt context
             _currentSet = null;
             _currentLevelKey = null;
             _currentCategory = MarkerStore.CategoryKey();
@@ -95,14 +103,10 @@ namespace HSRTimer
             Log($"level start: key='{_currentLevelKey}' category='{_currentCategory}' markers={CountEnabled(_currentSet)}");
 
             // R10.7.6: a new level with no markers clears the previous feed
-            // immediately; otherwise the old feed stays until the first trigger.
+            // immediately; otherwise the old feed stays until the first trigger
+            // of the new attempt replaces it.
             if (CountEnabled(_currentSet) == 0)
-            {
-                _feed.Clear();
-                _feedTitle = null;
-                _feedLevelKey = null;
-                _feedSet = null;
-            }
+                ClearFeed();
         }
 
         /// <summary>
@@ -191,10 +195,7 @@ namespace HSRTimer
         public void OnRestartLevel()
         {
             ClearEvaluation();
-            _feed.Clear();
-            _feedTitle = null;
-            _feedLevelKey = null;
-            _feedSet = null;
+            ClearFeed();
         }
 
         /// <summary>
@@ -227,10 +228,7 @@ namespace HSRTimer
         public void OnRetryStart()
         {
             ClearEvaluation();
-            _feed.Clear();
-            _feedTitle = null;
-            _feedLevelKey = null;
-            _feedSet = null;
+            ClearFeed();
         }
 
         private void ClearEvaluation()
@@ -247,10 +245,21 @@ namespace HSRTimer
             _currentSet = null;
             _currentLevelKey = null;
             _currentTitle = null;
+            ClearFeed();
+        }
+
+        /// <summary>
+        /// Drop the displayed feed (rows + title + set). The next trigger
+        /// re-initializes it (R10.7.6): resetting <c>_feedAttempt = -1</c>
+        /// guarantees the switch even when the attempt generation did not change
+        /// (pause-menu restart, preset load).
+        /// </summary>
+        private void ClearFeed()
+        {
             _feed.Clear();
             _feedTitle = null;
-            _feedLevelKey = null;
             _feedSet = null;
+            _feedAttempt = -1;
         }
 
         // ── PB (R10.3) ─────────────────────────────────────────────────────
@@ -314,14 +323,17 @@ namespace HSRTimer
 
         private void Record(MarkerDef def, long tMs)
         {
-            // First trigger of the current level switches the feed to this
-            // level (R10.7.6); later triggers just append.
-            if (_feedLevelKey != _currentLevelKey)
+            // First trigger of a new attempt switches the feed to this attempt's
+            // level (R10.7.6); later triggers just append. The switch is keyed on
+            // the attempt generation, not the level key: when the next level is
+            // the same level again (a repeated campaign level), the previous
+            // attempt's rows must still be replaced on the first trigger.
+            if (_feedAttempt != _attemptSeq)
             {
                 _feed.Clear();
                 _feedTitle = _currentTitle;
-                _feedLevelKey = _currentLevelKey;
                 _feedSet = _currentSet;
+                _feedAttempt = _attemptSeq;
             }
             _records[def.id] = tMs;
             _feed.Add(new MarkerFeedRow { MarkerId = def.id, Name = def.name ?? "", TMs = tMs });
@@ -428,10 +440,7 @@ namespace HSRTimer
             _setCache.Clear();
             _dirtySets.Clear();
             ClearEvaluation();
-            _feed.Clear();
-            _feedTitle = null;
-            _feedLevelKey = null;
-            _feedSet = null;
+            ClearFeed();
 
             if (_currentLevelKey != null && _currentSet != null)
             {

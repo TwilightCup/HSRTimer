@@ -144,8 +144,11 @@ In Markers mode:
 - The faster/slower/tie colors always apply: faster than PB = green, slower =
   red, tie/no PB = white, in both time modes.
 - The feed survives the level-end transition (the previous level's feed stays
-  on screen until the next level's first trigger replaces it) unless the next
-  level has no markers, in which case it clears immediately.
+  on screen until the new attempt's first trigger replaces it) unless the new
+  level has no markers, in which case it clears immediately. Replacement is
+  per attempt — it also applies when the next level is the same level again
+  (a repeated campaign level), so stale rows from the previous attempt never
+  linger next to the new ones.
 - Switching the mode does not affect subsegment recording or PB writes.
 
 ## Presets (R11)
