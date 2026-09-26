@@ -2,17 +2,18 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
-## 0.0.0
+## 1.8.0
 
-- **Release Date:** Unreleased
-- **Highlights:** _To be filled during version branch preparation._
+- **Release Date:** _26 Sep 2026_
+- **Highlights:**
+  - Added a **Co-op** category tag that is active only during multiplayer and cannot be toggled manually: as a co-op client Subsegment is disabled automatically, markers can be triggered by any player, and only the host writes marker PBs.
+  - Improved the leaderboard switching mechanism: the mode-cycle key now skips disabled modes.
 - **Details:**
   - The leaderboard mode-cycle key now skips modes whose module is disabled: when Subsegment or Markers is off (your setting, or auto-disabled — e.g. as a co-op client Subsegment is off), the cycle only rotates between hidden and the remaining available modes instead of always walking hidden → Subsegment → Markers → hidden.
   - Subsegment and Markers now report "disabled by your setting" separately from "auto-disabled by another mechanism" (e.g. the co-op client gate for Subsegment); `hsr status`, `hsr sub status`, `hsr marker status`, and `hsr leaderboard status` expose both axes and the active reasons.
   - Added a "Co-op" category label (shown as "多人" in the Chinese UI) that is active automatically during multiplayer sessions: it has no rule or validity impact, is not listed on the Category page, and turns off again when you return to single-player.
   - Subsegment now respects co-op roles: as a multiplayer client the module is disabled entirely (no sampling, leaderboard, or PB writes); as the host it runs normally and only uses your own (host) character for detection.
   - Markers now respect co-op roles: any player can trigger a marker during a multiplayer session, but only the host writes marker PBs — a co-op client never does.
-- **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.7.1
 
@@ -23,6 +24,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
   - Fixed the markers leaderboard keeping the previous attempt's rows when the next level is the same level again: the feed is now reset per attempt, so the first marker trigger of a new attempt replaces the stale rows instead of appending to them.
 
 ## 1.7.0
+
 - **Release Date:** _25 Sep 2026_
 - **Highlights:**
   - Fixed the timer gaining a random physics frame (≈16.7 ms) at level completion, times are now exact and repeatable.
