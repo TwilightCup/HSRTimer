@@ -2,13 +2,13 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
-## 0.0.0
+## 1.7.1
 
-- **Release Date:** Unreleased
-- **Highlights:** _To be filled during version branch preparation._
+- **Release Date:** _26 Sep 2026_
+- **Highlights:**
+  - Fixed the markers leaderboard not resetting when the next level is the same level again (a repeated campaign level).
 - **Details:**
-  - Fixed the markers leaderboard keeping the previous attempt's rows when the next level is the same level again (a repeated campaign level): the feed is now reset per attempt, so the first marker trigger of a new attempt replaces the stale rows instead of appending to them.
-- **Contributors:** _To be filled from PRs merged into dev._
+  - Fixed the markers leaderboard keeping the previous attempt's rows when the next level is the same level again: the feed is now reset per attempt, so the first marker trigger of a new attempt replaces the stale rows instead of appending to them.
 
 ## 1.7.0
 
