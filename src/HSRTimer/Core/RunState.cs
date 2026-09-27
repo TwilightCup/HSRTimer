@@ -47,10 +47,10 @@ namespace HSRTimer
 
         /// <summary>
         /// Exact end tick of the current segment, latched by the authoritative
-        /// pass-zone boundary hook (TB-3), or null when no pass has been
-        /// recorded. Once set, the poll freezes accumulation so the segment
-        /// ends on the hook's tick, not on the frame the state flip happens to
-        /// be observed.
+        /// leave hooks (<c>Game.AfterUnload</c> / <c>Game.BeginLoadLevel</c>),
+        /// or null when the leave has not been observed yet. Once set, the poll
+        /// freezes accumulation so the segment ends on the hooked tick rather
+        /// than on the frame the poll happens to notice the state flip.
         /// </summary>
         public ulong? PendingEndTicks;
 

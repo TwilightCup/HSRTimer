@@ -107,7 +107,7 @@
   - 停表(计时终点);
   - 复位本关分段状态,准备进入下一关。
 - **R1.4.1a** **仅当本关确为完成**(到达出口区 `PassZone`、`Game.passedLevel` 为真)时,才记录本关的**单段时间**(终点时刻 − 本关起点时刻)及"上段完成总时"。中途退出关卡(未通关即离开)**不**更新这两个值。Workshop/EditorPick 关卡的完成与中途退出都会让 `Game.state` 由 `PlayingLevel` 经 `PauseLeave` 切到 `Inactive`,故须用 `passedLevel` 这一通关标志区分(在游戏清掉该标志、状态翻转之前锁存)。
-- **R1.4.2** 游戏侧对应事件链:玩家到达出口 `PassZone` → `Game.EnterPassZone()` 置通关标志 → 角色离开/坠落 → `Game.Fall()` 检测到通关 → 启动 `PassLevel()` → 进入 `LoadingLevel`。即**通关那一刻起进入加载,本关分段终止**。
+- **R1.4.2** 游戏侧对应事件链:玩家到达出口 `PassZone` → `Game.EnterPassZone()` 置通关标志 → 角色离开/坠落 → `Game.Fall()` 检测到通关 → 启动 `PassLevel()` → 卸载/加载流程把 `Game.state` 由 `PlayingLevel` 切到 `LoadingLevel`(或本地 `Inactive`)。**分段终点取 R1.4.1 的 `Game.state` 离开 `PlayingLevel` 的权威时刻**(由 `Game.BeginLoadLevel` / `Game.AfterUnload` 挂钩锁存,见 R1.11.3),而非 `Game.Fall()` 检测到通关的瞬间;`EnterPassZone` / `Game.Fall` 只用于锁存"本关完成"标志(R1.4.1a)。该口径与 plcc Timer 一致。
 
 #### R1.5 个人最佳与最佳分段(已移除)
 
@@ -164,12 +164,12 @@
 
 - **R1.11.1 核心整数 tick(TB-1)** `RunState` 的游戏时间一律以整数 tick 表示(`PlayableTicks`、`SegmentStartTicks`、`LastSegmentTicks`、`TotalAtLastSegmentTicks`、`LastRunTicks`、`WakeUpTicks` 等);核心(`TimerCore`/`RunState`/`SegmentLogic`)不引用 `Time.fixedDeltaTime`。
 - **R1.11.2 换算唯一化(TB-2)** `Time.fixedDeltaTime` 仅存在于 `GameClock` 外观;所有显示/持久化(subsegment `t_ms`、marker `t_ms`、PB 比较、HUD)经其换算。引擎每 tick 回填只读缓存 `GameTimeSeconds` 供只读消费方使用。
-- **R1.11.3 边界精确取点(TB-3)** 分段起点/终点 tick 以权威翻转路径的挂钩为准:起点为 `Game.AfterLoad()`(置 `PlayingLevel` 的权威时刻,R1.2.2),终点为 `Game.Fall()` 检测到通关并进入加载的瞬间(R1.4.2);不再以“轮询首次观察到新状态的那一帧”为准。挂钩只记录 tick 与置标志,转换判定与分段记账仍走轮询。
-- **R1.11.4 起点含第一帧 / 终点含最后一帧(TB-4)** R1.2 / R1.4 的口径不变:分段 tick 数 = 终点 tick − 起点 tick,首帧与末帧均计入。
-- **R1.11.5 确定性(TB-5)** 同一操作序列重复进行,边界 tick 完全一致;同一 tick 数经 `GameClock` 永远换算成同一秒值(单次乘法,无逐帧浮点累积漂移)。
+- **R1.11.3 边界取点(TB-3)** 分段**起点** tick 以权威翻转路径的挂钩为准:为 `Game.AfterLoad()` 置 `PlayingLevel` 的权威时刻(R1.2.2)。分段**终点** tick 同样以权威翻转路径的挂钩为准:为游戏把 `Game.state` 置离 `PlayingLevel` 的权威时刻——`Game.BeginLoadLevel()`(`LoadLevel` 协程在首个 `yield` 前同步置 `LoadingLevel`,用于战役推进/控制台换关)与 `Game.AfterUnload()`(置 `Inactive`,用于 Workshop/EditorPick 通关、退出与重试)。挂钩只记录 tick 与置标志,转换判定与分段记账仍走轮询。该终点口径与 plcc Timer("游戏离开 `PlayingLevel`")一致。`Game.Fall()` / `Game.EnterPassZone()` 只锁存"本关完成"标志,不再决定终点 tick。
+- **R1.11.4 起点含第一帧 / 终点含最后一帧(TB-4)** R1.2 / R1.4 的口径不变:分段 tick 数 = 终点 tick − 起点 tick,`PlayingLevel` 进入后的第一个物理帧与离开前的最后一个物理帧均计入。
+- **R1.11.5 确定性(TB-5)** 起点与终点边界均由权威翻转路径的挂钩记录,不依赖轮询的观测时机,也不受 Unity 脚本执行顺序影响;同一 tick 数经 `GameClock` 永远换算成同一秒值(单次乘法,无逐帧浮点累积漂移)。
 - **R1.11.6 暂停不变(TB-6)** 暂停补时(R1.8.3)继续以墙钟 `Time.unscaledDeltaTime` 累计到 `PauseAccum`,由 `GameClock` 合并进总时间与分段时间;暂停期间无物理帧,故不产生 tick。
 - **R1.11.7 重试/重置不变(TB-7)** R6 重试与 R1.7 重置期间不记录被放弃分段的终点边界;重试后的新分段按权威起点正常计时。
-- **R1.11.8 全链路一致(TB-8)** 分段记录、HUD 显示、subsegment `t_ms`、marker `t_ms`、PB 比较的口径与改动前一致,仅边界从“±1 随机”变为“确定”。
+- **R1.11.8 全链路一致(TB-8)** 分段记录、HUD 显示、subsegment `t_ms`、marker `t_ms`、PB 比较共用同一 tick→秒换算与同一分段起止口径;计时的**终点口径与 plcc Timer 对齐**(R1.4.2/R1.11.3),其余行为不变。
 - **R1.11.9 精度边界(TB-9)** 不追求亚帧精度;一帧 = 一次 `FixedUpdate` 调用。
 
 ---

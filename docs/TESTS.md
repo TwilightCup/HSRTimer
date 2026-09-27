@@ -128,19 +128,20 @@ latched, the level's pass trigger could not be entered (collider/tag/layout).
 
 **Boundary determinism (R1.11).** `hsr clock` prints the raw integer tick clock
 (`playableTicks`, `segmentStartTicks`, `pendingEndTicks`, …). `hsr clock
-history` lists each segment start/end tick: load + finish a level 50 times and
-the `dur=` (end tick − start tick) for the same level and same inputs must be
-**identical** every time (zero ±1 jitter). `hsr clock clear` resets the history
-before a measurement run.
+history` lists each segment start/end tick. Both boundaries are latched by
+authoritative hooks, so they do not depend on the polling loop's cadence or on
+Unity script execution order: `load` is the `Game.AfterLoad` start tick, and
+`leave` is the `Game.BeginLoadLevel` / `Game.AfterUnload` end tick — the moment
+the game leaves `PlayingLevel`, the same criterion the plcc Timer uses. `hsr
+clock clear` resets the history before a measurement run.
 
-Each history `end` line carries two diagnostics: `src=hook|poll` says whether
-the precise `Game.Fall` boundary hook fixed the end tick (a genuine completion)
-or the polling loop recorded it (a mid-level quit), and `step=` is the global
-physics step it was observed on. A `pass` line marks the authoritative pass
-tick. Together they show that physics steps between the pass and the observed
-state flip are **not** counted into the segment — the source of the old ±1.
+Each history `end` line carries `src=hook` when the latched leave tick was used
+and `step=`, the global physics step on which the poll consumed it; the segment
+value therefore matches the plcc Timer while staying independent of poll timing.
+A `zone` / `pass` line marks the exit-zone / `Game.Fall` events that latch the
+completion flag; they do not decide the end tick.
 
-The same pair exists on the start side: `load` is the `Game.AfterLoad` hook frame
+The start side works the same way: `load` is the `Game.AfterLoad` hook frame
 (the authoritative segment start) and the following `start` line is the polling
 loop consuming that latch. A `start tick` equal to `load tick` with a larger
 `step=` proves the start boundary no longer depends on when the poll noticed it.

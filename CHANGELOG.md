@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - The level timer now uses the same start/stop standard as the plcc Timer: a segment still starts when the level becomes playable, but it now **ends when the game leaves the level** (`Game.state` leaves `PlayingLevel`) instead of when the game detects the pass. The end tick is recorded from the game's authoritative state-leave code path, so segment and total times agree with the plcc Timer without any polling jitter.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.8.0

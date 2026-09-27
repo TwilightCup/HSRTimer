@@ -29,8 +29,9 @@ hooks (`NarrativeBlock.Play` and `SubtitleManager.PlayNarrative`, see
 [VOICELINE.md](VOICELINE.md)), the pause-menu restart hook
 (`PauseMenu.RestartClick`, which fires the `restart_clears_forgivable` option),
 the Jumpless jump-key suppression (`HumanControls.HandleInput`, R3.5.3), and
-the precise timing-boundary hooks (`Game.AfterLoad`, `Game.EnterPassZone`,
-`Game.Fall` — R1.11/TB-3).
+the timing-boundary hooks (`Game.AfterLoad` for the start tick;
+`Game.BeginLoadLevel` / `Game.AfterUnload` for the end tick;
+`Game.EnterPassZone` / `Game.Fall` only to latch the completion flag — R1.11/TB-3).
 The last one is a deliberate exception: a pollable field *does* exist
 (`HumanControls.jump`), but enforcement is a *write* into a chain the game both
 writes and consumes within one physics frame (`NetPlayer.PreFixedUpdate` →
@@ -74,7 +75,7 @@ Patches/
   NarrativeBlockPatches.cs    postfix on NarrativeBlock.Play
   SubtitleManagerPatches.cs   postfix on SubtitleManager.PlayNarrative
   PauseMenuPatches.cs         postfix on PauseMenu.RestartClick / LoadClick
-  TimingBoundaryPatches.cs    precise segment start/end ticks (Game.AfterLoad / EnterPassZone / Fall, R1.11)
+  TimingBoundaryPatches.cs    precise segment start/end ticks + completion-flag latches (Game.AfterLoad / BeginLoadLevel / AfterUnload / EnterPassZone / Fall, R1.11)
   HumanControlsPatches.cs     postfix on HumanControls.HandleInput (Jumpless enforcement)
 Hud/
   TimerHud.cs             IMGUI panel (R2)
@@ -152,26 +153,32 @@ The engine's game clock is an **integer physics-tick counter**, not a
   also writes the `RunState.GameTimeSeconds` cache each tick for cheap
   read-only consumers.
 
-**Why the boundary hooks exist.** The game flips `Game.state` to
-`PlayingLevel` inside `Game.AfterLoad`, and detects a level pass inside
-`Game.Fall` — both while the game's own physics step is executing. A polling
-loop can only observe those flips on a later tick, and *which* tick depends on
-Unity script execution order, which is why the old code showed a random ±1 tick
-at load and at the finish. `Patches/TimingBoundaryPatches.cs` therefore records
-the exact tick at the authoritative methods:
+**Why the boundary hooks exist.** Both segment boundaries are `Game.state`
+flips that the polling loop can only observe a step late, so
+`Patches/TimingBoundaryPatches.cs` records the exact tick at the authoritative
+assignment:
+
+- **Start** — `Game.AfterLoad` sets `state = PlayingLevel`; its postfix latches
+  `SegmentStartTicks`.
+- **End** — `Game.BeginLoadLevel` (whose `LoadLevel` coroutine sets
+  `state = LoadingLevel` before its first yield) and `Game.AfterUnload` (sets
+  `state = Inactive`) latch `PendingEndTicks` at the moment the game leaves
+  `PlayingLevel` — the same event the plcc Timer uses. Because
+  `Game.AfterUnload` can run synchronously inside `Game.Fall` (the Workshop /
+  EditorPick path), the latch also counts the current physics step when this
+  plugin's `FixedUpdate` has not processed it yet.
+
+The `Game.EnterPassZone` / `Game.Fall` hooks only latch the `LevelPassed`
+completion flag, because `Game.Fall` may clear `passedLevel` for
+Workshop/EditorPick before the poll can read it. The hooks only record ticks and
+set flags — every transition, segment, reset, and validity decision still goes
+through the single polling loop.
 
 | Boundary | Hook | Recorded value |
 |---|---|---|
 | Segment start (R1.2.2) | `Game.AfterLoad` postfix | `SegmentStartTicks` (consumed by `StartSegment`) |
-| Pass flag (R1.4.2) | `Game.EnterPassZone` postfix | `LevelPassed` latch |
-| Segment end (R1.4.2) | `Game.Fall` prefix/postfix | `PendingEndTicks` — the exact pass tick |
-
-The `Game.Fall` prefix snapshots whether the call took the pass branch (the
-method itself clears `passedLevel` for Workshop/EditorPick before returning);
-the postfix latches `PendingEndTicks` and the poll freezes accumulation there.
-The hooks only record ticks and set flags — every transition, segment, reset,
-and validity decision still goes through the single polling loop, consistent
-with the rest of the engine.
+| Segment end (R1.4.1) | `Game.BeginLoadLevel` / `Game.AfterUnload` postfix | `PendingEndTicks` — "the game left `PlayingLevel`", the plcc Timer criterion |
+| Pass flag (R1.4.2) | `Game.EnterPassZone` postfix / `Game.Fall` prefix+postfix | `LevelPassed` latch (completion flag only) |
 
 ### Real Time clock (R1.10)
 

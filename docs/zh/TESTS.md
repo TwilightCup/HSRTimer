@@ -105,11 +105,11 @@ hsr pass real              # 传送到判定箱,让游戏自身完成过关
 默认模式一致。若命令报告 `LevelPassed` 未锁定,说明玩家未能进入判定箱
 (检查触发器的 collider / tag / 关卡布局)。
 
-**边界确定性(R1.11)。** `hsr clock` 打印原始整数 tick 时钟(`playableTicks`、`segmentStartTicks`、`pendingEndTicks` 等)。`hsr clock history` 列出每次分段起止 tick:连续载入 + 通关同一关卡 50 次,相同操作下的 `dur=`(终点 tick − 起点 tick)必须**完全一致**(零 ±1 抖动)。测量前用 `hsr clock clear` 清空历史。
+**边界确定性(R1.11)。** `hsr clock` 打印原始整数 tick 时钟(`playableTicks`、`segmentStartTicks`、`pendingEndTicks` 等)。`hsr clock history` 列出每次分段起止 tick。两个边界都由权威 hook 锁存,不依赖轮询节奏或 Unity 脚本执行顺序:`load` 是 `Game.AfterLoad` 起点 tick,`leave` 是 `Game.BeginLoadLevel` / `Game.AfterUnload` 终点 tick —— 即游戏离开 `PlayingLevel` 的时刻,与 plcc Timer 相同口径。测量前用 `hsr clock clear` 清空历史。
 
-每条 `end` 记录带两个诊断字段:`src=hook|poll` 表示终点 tick 是由精确的 `Game.Fall` 边界 hook 锁定(真实通关)还是由轮询记录(中途退出);`step=` 是观察到该边界的全局物理帧。另有一条 `pass` 行标记权威过关 tick。二者合起来说明:**过关到状态翻转之间的物理帧没有被计入分段** —— 这正是旧版 ±1 抖动的来源。
+每条 `end` 记录在使用锁存 tick 时带 `src=hook`,`step=` 是轮询消费该边界的全局物理帧;因此分段时间与 plcc Timer 一致,同时不依赖轮询时机。`zone` / `pass` 行标记出口区 / `Game.Fall` 事件(它们只锁存完成标志,不决定终点 tick)。
 
-起点侧同样成对出现:`load` 是 `Game.AfterLoad` hook 帧(权威分段起点),紧随其后的 `start` 行是轮询消费该闩锁的结果。`start` 的 tick 等于 `load` 的 tick 而 `step=` 更大,即证明起点边界不再取决于轮询何时发现它。
+起点侧同理:`load` 是 `Game.AfterLoad` hook 帧(权威分段起点),紧随其后的 `start` 行是轮询消费该闩锁的结果。`start` 的 tick 等于 `load` 的 tick 而 `step=` 更大,即证明起点边界不再取决于轮询何时发现它。
 
 ### 2. 有效性标记(R5)
 

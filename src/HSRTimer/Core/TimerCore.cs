@@ -160,9 +160,9 @@ namespace HSRTimer
 
             // B.2 pause supplement (always on; runs here because FixedUpdate is
             // paused when timeScale=0). Pause time is wall-clock, the one
-            // non-tick game-time component (R1.8.3/TB-6). Once a pass boundary
+            // non-tick game-time component (R1.8.3/TB-6). Once the leave tick
             // has been latched the run's game clock is already frozen, so a
-            // pause in the short post-pass window must not extend it either.
+            // pause in the short post-leave window must not extend it either.
             if (!State.PendingEndTicks.HasValue
                 && SegmentLogic.ShouldAccumulatePause(gState, State.TimingActive))
             {
@@ -362,9 +362,10 @@ namespace HSRTimer
             if (!State.InSegment)
                 return;
 
-            // TB-3: use the pass-zone hook's exact end tick when one was
-            // latched; otherwise (a mid-level quit, which records nothing) fall
-            // back to the polled tick.
+            // Use the exact leave tick latched by the authoritative leave hooks
+            // (Game.AfterUnload / Game.BeginLoadLevel) when one was recorded;
+            // otherwise fall back to the polled tick (e.g. a path that does not
+            // go through those methods).
             ulong endTicks = State.PendingEndTicks ?? State.PlayableTicks;
             double endPause = State.PendingEndTicks.HasValue ? State.PendingEndPause : State.PauseAccum;
             double end = GameClock.Seconds(endTicks, endPause);
@@ -493,10 +494,9 @@ namespace HSRTimer
         // ── Accumulation (B.1) ─────────────────────────────────────────────
         private void Accumulate(Game game, GameState gState, AppSate aState)
         {
-            // Once the pass hook has latched the segment's exact end tick the
-            // game clock is frozen at it, even though the state may stay
-            // PlayingLevel for a few more physics steps while the game starts
-            // the load (TB-3).
+            // Once the authoritative leave hook has latched the segment's exact
+            // end tick the game clock is frozen at it, even though the state may
+            // stay PlayingLevel for the rest of the physics step.
             if (State.PendingEndTicks.HasValue)
                 return;
             if (SegmentLogic.ShouldAccumulateFixed(gState, aState, State.TimingActive))
@@ -723,56 +723,88 @@ namespace HSRTimer
         }
 
         /// <summary>
-        /// Latch the authoritative segment-end tick after the game has detected
-        /// a genuine level pass (<c>Game.Fall</c> taking the <c>passedLevel</c>
-        /// branch, R1.4.2). The tick is the step's exact index, including the
-        /// pass step itself ("终点含最后一帧", TB-4); the poll then freezes
-        /// accumulation at it and records the segment on the observed state
-        /// flip. Suppressed under <c>Retrying</c> (R6) and outside a segment, so
-        /// an abandoned attempt never ends a segment (TB-7).
+        /// Latch the completion flag when the game detects a genuine level pass
+        /// (<c>Game.Fall</c> taking the <c>passedLevel</c> branch, R1.4.2) and
+        /// log the pass step for diagnostics. It only sets the completion flag;
+        /// the segment end tick is latched separately by
+        /// <see cref="RecordLevelLeave"/> from the authoritative leave hooks.
+        /// Suppressed under <c>Retrying</c> (R6) and outside a segment, so an
+        /// abandoned attempt never ends a segment (TB-7).
         /// </summary>
         public static void RecordLevelPass()
         {
-            var core = Instance;
             var st = State;
-            if (core == null || st == null)
+            if (st == null)
                 return;
             if (!st.InSegment || st.Retrying)
                 return;
-            if (st.PendingEndTicks.HasValue)
+            if (st.LevelPassed)
                 return;
 
             st.LevelPassed = true;
-            // The hook can run before or after this plugin's FixedUpdate within
-            // the same physics step. When it runs first, the pass step has not
-            // been counted yet — include it explicitly (but only if this step is
-            // actually a playable one, so a boundary in a non-accumulating
-            // context cannot over-count). Accumulation is frozen from here so it
-            // is never double-counted.
-            ulong endTicks = st.PlayableTicks;
-            if (!HasProcessedCurrentPhysicsStep
-                && Game.instance != null
-                && SegmentLogic.ShouldAccumulateFixed(Game.instance.state, App.state, st.TimingActive))
-            {
-                endTicks++;
-            }
-            st.PlayableTicks = endTicks;
-            st.PendingEndTicks = endTicks;
-            st.PendingEndPause = st.PauseAccum;
-            st.GameTimeSeconds = GameClock.Seconds(st.PlayableTicks, st.PauseAccum);
-            LogBoundary($"pass  level={st.CurrentLevelNumber} tick={endTicks} step={GameClock.CurrentTick}");
+            LogBoundary($"pass  level={st.CurrentLevelNumber} tick={st.PlayableTicks} step={GameClock.CurrentTick}");
         }
 
         /// <summary>
         /// Latch only the completion flag (used by the <c>Game.EnterPassZone</c>
-        /// postfix, R1.4.2). The segment's end tick is recorded later, at the
-        /// authoritative <c>Game.Fall</c> pass detection.
+        /// postfix, R1.4.2).
         /// </summary>
         public static void LatchLevelPassed()
         {
             var st = State;
-            if (st != null && st.InSegment)
-                st.LevelPassed = true;
+            if (st == null || !st.InSegment || st.LevelPassed)
+                return;
+            st.LevelPassed = true;
+            LogBoundary($"zone  level={st.CurrentLevelNumber} tick={st.PlayableTicks} step={GameClock.CurrentTick}");
+        }
+
+        /// <summary>
+        /// Latch the exact segment-end tick at the authoritative moment the game
+        /// runs <c>state = LoadingLevel</c> / <c>state = Inactive</c>
+        /// (<c>Game.BeginLoadLevel</c>, whose <c>LoadLevel</c> coroutine assigns
+        /// the state before its first yield, and <c>Game.AfterUnload</c>), i.e.
+        /// the same "the game left <c>PlayingLevel</c>" event the plcc Timer
+        /// uses. Recording the tick from these methods — rather than from the
+        /// physics step that later observes the state flip — makes the end
+        /// boundary independent of Unity script execution order and of the poll
+        /// cadence. Suppressed under <c>Retrying</c> (R6) and outside a segment
+        /// so an abandoned attempt never ends a segment (TB-7).
+        /// </summary>
+        public static void RecordLevelLeave()
+        {
+            var st = State;
+            if (st == null || !st.InSegment || st.Retrying)
+                return;
+            if (st.PendingEndTicks.HasValue)
+                return;
+
+            var game = Game.instance;
+            if (game == null)
+                return;
+
+            GameState now = game.state;
+            // Mirror SegmentLogic.IsSegmentEnd: the segment ends when the game
+            // leaves PlayingLevel for a load, or for Inactive while playing
+            // locally.
+            bool leavesPlaying = now == GameState.LoadingLevel
+                || (now == GameState.Inactive && NetGame.isLocal);
+            if (!leavesPlaying)
+                return;
+
+            ulong endTicks = st.PlayableTicks;
+            // Game.AfterUnload can run synchronously inside Game.Fall, i.e.
+            // inside the very physics step that is ending (the Workshop /
+            // EditorPick path). When this plugin's FixedUpdate has not yet
+            // processed that step, it was still a playable PlayingLevel frame,
+            // so count it explicitly; accumulation is frozen from here.
+            if (!HasProcessedCurrentPhysicsStep)
+                endTicks++;
+
+            st.PlayableTicks = endTicks;
+            st.PendingEndTicks = endTicks;
+            st.PendingEndPause = st.PauseAccum;
+            st.GameTimeSeconds = GameClock.Seconds(st.PlayableTicks, st.PauseAccum);
+            LogBoundary($"leave level={st.CurrentLevelNumber} tick={endTicks} state={now} step={GameClock.CurrentTick} processed={HasProcessedCurrentPhysicsStep}");
         }
 
         private void DoFullReset(bool keepLastValues, bool keepLastRun = false)
