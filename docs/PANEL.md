@@ -45,7 +45,11 @@ HSRTimer saves.
 
 ## General
 
-- **Timing** — `auto_reset`,
+- **Timing** — the first row is the timing standard toggle
+  (`use_plcc_timing_standard`, "Use plcc timing standard"): off by default,
+  keeping the previous timing (the segment ends at the game's pass detection);
+  on switches to the plcc Timer standard (the segment ends when the game leaves
+  the level). Then `auto_reset`,
   `restart_clears_forgivable` (clears forgivable flags on a pause-menu
   restart; see [CONFIG.md](CONFIG.md)), and the retry target override
   (`retry_level_override_enabled` + `retry_level_override`). When the override

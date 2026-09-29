@@ -56,7 +56,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 
 命令使用 `SettingsModel` 与 `LayoutModel` 公共字段的 snake_case 形式。常见示例:
 
-- `auto_reset`、`restart_clears_forgivable`、`retry_min_dwell`
+- `auto_reset`、`use_plcc_timing_standard`、`restart_clears_forgivable`、`retry_min_dwell`
 - `retry_level_override_enabled`、`retry_level_override`
 - `show_hud`、`show_real_time`、`show_wake_up_time`
 - `only_record_first_wake_up_time`、`center_loading_saving`、`language`
@@ -105,11 +105,17 @@ hsr pass real              # 传送到判定箱,让游戏自身完成过关
 默认模式一致。若命令报告 `LevelPassed` 未锁定,说明玩家未能进入判定箱
 (检查触发器的 collider / tag / 关卡布局)。
 
-**边界确定性(R1.11)。** `hsr clock` 打印原始整数 tick 时钟(`playableTicks`、`segmentStartTicks`、`pendingEndTicks` 等)。`hsr clock history` 列出每次分段起止 tick。两个边界都由权威 hook 锁存,不依赖轮询节奏或 Unity 脚本执行顺序:`load` 是 `Game.AfterLoad` 起点 tick,`leave` 是 `Game.BeginLoadLevel` / `Game.AfterUnload` 终点 tick —— 即游戏离开 `PlayingLevel` 的时刻,与 plcc Timer 相同口径。测量前用 `hsr clock clear` 清空历史。
+**边界确定性(R1.11)。** `hsr clock` 打印原始整数 tick 时钟(`playableTicks`、`segmentStartTicks`、`pendingEndTicks` 等)。`hsr clock history` 列出每次分段起止 tick。两个边界都由权威 hook 锁存,不依赖轮询节奏或 Unity 脚本执行顺序:`load` 是 `Game.AfterLoad` 起点 tick。**终点** tick 的取点取决于 `use_plcc_timing_standard` 开关(默认关闭):
+- **关闭(默认,既有机制)** —— `pass` 行(`Game.Fall` 通关检测)携带锁存的终点 tick,含通过帧本身。
+- **开启(plcc 计时标准)** —— `leave` 行(`Game.BeginLoadLevel` / `Game.AfterUnload`)携带终点 tick —— 即游戏离开 `PlayingLevel` 的时刻,与 plcc Timer 相同口径。
 
-每条 `end` 记录在使用锁存 tick 时带 `src=hook`,`step=` 是轮询消费该边界的全局物理帧;因此分段时间与 plcc Timer 一致,同时不依赖轮询时机。`zone` / `pass` 行标记出口区 / `Game.Fall` 事件(它们只锁存完成标志,不决定终点 tick)。
+测量前用 `hsr clock clear` 清空历史。每条 `end` 记录在使用锁存 tick 时带 `src=hook`,`step=` 是轮询消费该边界的全局物理帧;因此分段时间不依赖轮询时机。
+
+`pass` 行在**两种模式下都会记录**:它是 `Game.Fall` 通关检测的 tick(`processed=` 表示本插件的 `FixedUpdate` 是否已处理该物理帧)。plcc 模式下它在"完成标志已锁存"的提前返回之前输出,因此不决定终点 tick —— 但正因为它是 `Game.Fall` 帧的纯观测,plcc 标准下 `hsr clock history` 会依次出现 `pass`(通关检测)→ `leave`(游戏离开 `PlayingLevel`)→ `end`,而 `leave tick − pass tick` 正是 plcc 口径多出的那一个渲染帧延迟。`zone` 行标记 `Game.EnterPassZone`(它通常在 `Game.Fall` 之前就锁存 `LevelPassed`,所以 plcc 模式下真正输出的是这行观测性的 `pass`,而不是锁存完成标志的那行)。既有模式下 `pass` **就是**终点 tick;plcc 标准下终点是 `leave`。
 
 起点侧同理:`load` 是 `Game.AfterLoad` hook 帧(权威分段起点),紧随其后的 `start` 行是轮询消费该闩锁的结果。`start` 的 tick 等于 `load` 的 tick 而 `step=` 更大,即证明起点边界不再取决于轮询何时发现它。
+
+**计时标准开关。** 该设置位于设置面板 **常规 → 计时** 部分最上方("使用 plcc 计时标准"),也存在于 `settings.ini` 的 `use_plcc_timing_standard`。用控制台切换并确认 `hsr status` 报告当前模式:`hsr set use_plcc_timing_standard true` / `false`,然后 `hsr status` → `plccTiming=True|False`。改动即时生效(引擎每 tick 重新读取),无需重置或重试。关闭时重复通关在 `pass` tick 结束;开启时在 `leave` tick 结束 —— 两种模式下 `hsr clock history` 对相同的重复操作都必须记录到一致的 `dur=`(R1.11.8)。开启期间,计时器 HUD 在时间行正下方显示一行 `plcc计时模式`(英文:`plcc timing mode`);关闭后该行消失(R2.6.1)。
 
 ### 2. 有效性标记(R5)
 
@@ -345,6 +351,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] 关卡内 `hsr status` 显示合理的实时值。
 - [ ] `hsr reset` 将计时器归零并清除标记。
 - [ ] `hsr clock` 显示整数 tick,且 `hsr clock history` 对重复的相同操作记录到一致的 `dur=`(R1.11)。
+- [ ] 计时标准开关:关闭 `use_plcc_timing_standard`(默认)时,`hsr clock history` 由 `pass` 行携带终点 tick;`hsr set use_plcc_timing_standard true` 后(`hsr status` 显示 `plccTiming=True`)会同时出现 `pass` 行(`Game.Fall` 帧,仅观测)与携带终点 tick 的 `leave` 行,且 `leave tick − pass tick` ≈ 1 个物理帧(渲染帧延迟),两种模式下相同操作的 `dur=` 均一致。开启期间计时器 HUD 在时间行下方显示 `plcc计时模式` 一行;关闭后该行消失(R2.6.1)。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
 - [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
 - [ ] `hsr pass real` 把玩家传送到判定箱,由游戏自身的触发器链路完成过关(且 `LevelPassed` 已锁定);PB 同样不写入。

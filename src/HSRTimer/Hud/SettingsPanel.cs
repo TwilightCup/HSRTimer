@@ -359,6 +359,12 @@ namespace HSRTimer
         private void DrawGeneral(ConfigService cfg, SettingsModel s, LocalizationService loc)
         {
             Section(loc.Get("PANEL_TIMING"));
+            // Top of the timing section: the timing standard picker. Default
+            // off keeps the legacy boundary (segment ends at the Game.Fall pass
+            // detection); on switches to the plcc Timer standard (segment ends
+            // when the game leaves PlayingLevel).
+            s.UsePlccTimingStandard = Toggle(loc.Get("SETTINGS_USE_PLCC_TIMING_STANDARD"), s.UsePlccTimingStandard);
+            GUILayout.Label(loc.Get("SETTINGS_USE_PLCC_TIMING_STANDARD_NOTE"), _small);
             s.AutoReset = Toggle(loc.Get("SETTINGS_AUTO_RESET"), s.AutoReset);
             s.RestartClearsForgivable = Toggle(loc.Get("SETTINGS_RESTART_CLEARS_FORGIVABLE"), s.RestartClearsForgivable);
             // Free-form input (clamped ≥0 on apply); the slider's 5s cap was

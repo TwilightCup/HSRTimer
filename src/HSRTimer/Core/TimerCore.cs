@@ -8,10 +8,13 @@ namespace HSRTimer
     /// The timer engine. A single polling MonoBehaviour drives all timing,
     /// segment, reset, validity, and tag logic each frame by reading public
     /// game fields. The only exceptions are the precise start/end boundary
-    /// hooks (see <see cref="RecordSegmentStart"/>/<see cref="RecordLevelPass"/>
-    /// and docs/ARCHITECTURE.md): they record the exact tick where the game
-    /// flips state inside its own physics step, which a poll can only observe
-    /// a tick late.
+    /// hooks (see <see cref="RecordSegmentStart"/> / <see cref="RecordLevelPass"/>
+    /// / <see cref="RecordLevelLeave"/> and docs/ARCHITECTURE.md): they record
+    /// the exact tick where the game flips state inside its own physics step,
+    /// which a poll can only observe a tick late. The segment-end tick is
+    /// latched either at the <c>Game.Fall</c> pass detection (legacy, the
+    /// default) or — under the "Use plcc timing standard" setting — when the
+    /// game leaves <c>PlayingLevel</c>.
     ///
     /// <see cref="FixedUpdate"/>: accumulation + state-transition detection
     /// (Appendix B) + per-tick tag rules on segment end.
@@ -70,6 +73,25 @@ namespace HSRTimer
         /// </summary>
         public static bool HasProcessedCurrentPhysicsStep
             => Instance != null && Instance._lastFixedTime == Time.fixedTime;
+
+        /// <summary>
+        /// Whether the plcc timing standard is active (the "Use plcc timing
+        /// standard" setting): the segment-end tick is latched when the game
+        /// leaves <c>PlayingLevel</c> (<c>Game.BeginLoadLevel</c> /
+        /// <c>Game.AfterUnload</c>), matching the plcc Timer. When off (the
+        /// default), the legacy mechanism is used instead: the end tick is
+        /// latched at the <c>Game.Fall</c> pass detection. Reads the live
+        /// settings model so a panel/console toggle applies immediately,
+        /// without a reset or retry.
+        /// </summary>
+        private static bool UsePlccTimingStandard
+        {
+            get
+            {
+                var cfg = ConfigService.Instance;
+                return cfg != null && cfg.Settings != null && cfg.Settings.UsePlccTimingStandard;
+            }
+        }
 
         private void Awake()
         {
@@ -725,9 +747,24 @@ namespace HSRTimer
         /// <summary>
         /// Latch the completion flag when the game detects a genuine level pass
         /// (<c>Game.Fall</c> taking the <c>passedLevel</c> branch, R1.4.2) and
-        /// log the pass step for diagnostics. It only sets the completion flag;
-        /// the segment end tick is latched separately by
-        /// <see cref="RecordLevelLeave"/> from the authoritative leave hooks.
+        /// log the pass step for diagnostics.
+        /// <para>
+        /// Under the plcc timing standard it only sets the completion flag; the
+        /// segment end tick is latched separately by <see cref="RecordLevelLeave"/>
+        /// from the authoritative leave hooks. In the legacy mode (the default,
+        /// plcc standard off) it is the authoritative segment end: the exact
+        /// end tick is latched here, at the <c>Game.Fall</c> pass detection.
+        /// </para>
+        /// <para>
+        /// Both modes still log a <c>pass</c> boundary line at the
+        /// <c>Game.Fall</c> tick (under the plcc standard it is emitted before
+        /// the already-latched early return, i.e. it is pure observation). Only
+        /// in the legacy mode is that tick the segment end; under the plcc
+        /// standard the end is the later <c>leave</c> tick, so the
+        /// <c>pass</c> → <c>leave</c> delta is the render-frame delay documented
+        /// in docs/ARCHITECTURE.md and can be read from
+        /// <c>hsr clock history</c>.
+        /// </para>
         /// Suppressed under <c>Retrying</c> (R6) and outside a segment, so an
         /// abandoned attempt never ends a segment (TB-7).
         /// </summary>
@@ -738,11 +775,53 @@ namespace HSRTimer
                 return;
             if (!st.InSegment || st.Retrying)
                 return;
-            if (st.LevelPassed)
-                return;
 
+            if (UsePlccTimingStandard)
+            {
+                // plcc standard: only the completion flag; the end tick is
+                // latched by the authoritative leave hooks (RecordLevelLeave).
+                // The Game.Fall tick is recorded unconditionally (before the
+                // already-latched early return) as a pure observation: it does
+                // not decide the segment end, but 'hsr clock history' then
+                // shows pass (Game.Fall) -> leave (left PlayingLevel) -> end, so
+                // the render-frame delay between the pass detection and the game
+                // leaving PlayingLevel is directly visible and measurable.
+                // The completion flag is normally already latched here by
+                // Game.EnterPassZone (LatchLevelPassed), so this line, not the
+                // one below, is the one that actually fires.
+                LogBoundary($"pass  level={st.CurrentLevelNumber} tick={st.PlayableTicks} step={GameClock.CurrentTick} processed={HasProcessedCurrentPhysicsStep}");
+                if (st.LevelPassed)
+                    return;
+                st.LevelPassed = true;
+                return;
+            }
+
+            // Legacy timing (default): Game.Fall is the authoritative segment
+            // end. The tick is the step's exact index, including the pass step
+            // itself ("终点含最后一帧", TB-4); the poll then freezes
+            // accumulation at it and records the segment on the observed state
+            // flip.
+            if (st.PendingEndTicks.HasValue)
+                return;
             st.LevelPassed = true;
-            LogBoundary($"pass  level={st.CurrentLevelNumber} tick={st.PlayableTicks} step={GameClock.CurrentTick}");
+            // The hook can run before or after this plugin's FixedUpdate within
+            // the same physics step. When it runs first, the pass step has not
+            // been counted yet — include it explicitly (but only if this step is
+            // actually a playable one, so a boundary in a non-accumulating
+            // context cannot over-count). Accumulation is frozen from here so it
+            // is never double-counted.
+            ulong endTicks = st.PlayableTicks;
+            if (!HasProcessedCurrentPhysicsStep
+                && Game.instance != null
+                && SegmentLogic.ShouldAccumulateFixed(Game.instance.state, App.state, st.TimingActive))
+            {
+                endTicks++;
+            }
+            st.PlayableTicks = endTicks;
+            st.PendingEndTicks = endTicks;
+            st.PendingEndPause = st.PauseAccum;
+            st.GameTimeSeconds = GameClock.Seconds(st.PlayableTicks, st.PauseAccum);
+            LogBoundary($"pass  level={st.CurrentLevelNumber} tick={endTicks} step={GameClock.CurrentTick}");
         }
 
         /// <summary>
@@ -767,11 +846,21 @@ namespace HSRTimer
         /// uses. Recording the tick from these methods — rather than from the
         /// physics step that later observes the state flip — makes the end
         /// boundary independent of Unity script execution order and of the poll
-        /// cadence. Suppressed under <c>Retrying</c> (R6) and outside a segment
-        /// so an abandoned attempt never ends a segment (TB-7).
+        /// cadence. This is only authoritative under the plcc timing standard
+        /// (the "Use plcc timing standard" setting); in the legacy mode it is a
+        /// no-op because <see cref="RecordLevelPass"/> latches the end tick at
+        /// the <c>Game.Fall</c> pass detection instead. Suppressed under
+        /// <c>Retrying</c> (R6) and outside a segment so an abandoned attempt
+        /// never ends a segment (TB-7).
         /// </summary>
         public static void RecordLevelLeave()
         {
+            // Legacy timing (default) latches the segment end at the Game.Fall
+            // pass detection (RecordLevelPass); the leave hooks are only
+            // authoritative under the plcc timing standard.
+            if (!UsePlccTimingStandard)
+                return;
+
             var st = State;
             if (st == null || !st.InSegment || st.Retrying)
                 return;

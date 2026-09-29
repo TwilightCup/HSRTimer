@@ -19,9 +19,9 @@ HSRTimer 所需的几乎所有信号都是游戏类的**公共字段或属性**:
 
 由于计时 / 分段 / 重置 / 检查点 / 有效性的规则都定义在这些字段的*转换*上,单个轮询循环(`TimerCore.FixedUpdate`)通过比较当前帧与缓存上一帧即可算出一切 —— 既廉价,又对游戏更新中重命名或内联私有方法具有鲁棒性。
 
-**Harmony 仅用于没有字段能直接暴露事件的地方**:两个旁白 hook(`NarrativeBlock.Play` 与 `SubtitleManager.PlayNarrative`,见 [VOICELINE.md](VOICELINE.md))、暂停菜单重启 hook(`PauseMenu.RestartClick`,触发 `restart_clears_forgivable` 选项)、禁跳跳跃键抑制 hook(`HumanControls.HandleInput`,R3.5.3),以及计时边界 hook(`Game.AfterLoad` 记录起点 tick;`Game.BeginLoadLevel` / `Game.AfterUnload` 记录终点 tick;`Game.EnterPassZone` / `Game.Fall` 仅锁存完成标志 —— R1.11/TB-3)。最后一个是有意为之的例外:虽然存在可轮询的字段(`HumanControls.jump`),但强制执行是对游戏**同一物理帧内写入并消费**的链路(`NetPlayer.PreFixedUpdate` → `Human.FixedUpdate`)的*写入*;从插件自身的 `FixedUpdate` 写该字段会陷入未定义的脚本执行顺序竞态。轮询覆盖的是*观察*——抑制一个游戏同帧消费的输入,必须挂钩进链路内部。
+**Harmony 仅用于没有字段能直接暴露事件的地方**:两个旁白 hook(`NarrativeBlock.Play` 与 `SubtitleManager.PlayNarrative`,见 [VOICELINE.md](VOICELINE.md))、暂停菜单重启 hook(`PauseMenu.RestartClick`,触发 `restart_clears_forgivable` 选项)、禁跳跳跃键抑制 hook(`HumanControls.HandleInput`,R3.5.3),以及计时边界 hook(`Game.AfterLoad` 记录起点 tick;终点 tick 在 plcc 计时标准下由 `Game.BeginLoadLevel` / `Game.AfterUnload` 记录、在默认的既有模式下由 `Game.Fall` 记录;`Game.EnterPassZone` / `Game.Fall` 锁存完成标志 —— R1.11/TB-3)。最后一个是有意为之的例外:虽然存在可轮询的字段(`HumanControls.jump`),但强制执行是对游戏**同一物理帧内写入并消费**的链路(`NetPlayer.PreFixedUpdate` → `Human.FixedUpdate`)的*写入*;从插件自身的 `FixedUpdate` 写该字段会陷入未定义的脚本执行顺序竞态。轮询覆盖的是*观察*——抑制一个游戏同帧消费的输入,必须挂钩进链路内部。
 
-计时边界 hook 则是另一类同源例外:分段的**起点**由 `Game.AfterLoad`(协程 / `Update` 阶段)把 `Game.state` 置为 `PlayingLevel`,其后缀精确记录 `SegmentStartTicks`;**终点**由 `Game.BeginLoadLevel`(同步置 `LoadingLevel`)与 `Game.AfterUnload`(置 `Inactive`)在游戏离开 `PlayingLevel` 的权威时刻锁存 `PendingEndTicks`,与 plcc Timer 同口径,且不依赖轮询的观测时机或脚本执行顺序。所有转换 / 分段 / 重置判定仍由轮询循环负责 —— 见[纯 tick 时钟与精确边界](#纯-tick-时钟与精确边界r111)。
+计时边界 hook 则是另一类同源例外:分段的**起点**由 `Game.AfterLoad`(协程 / `Update` 阶段)把 `Game.state` 置为 `PlayingLevel`,其后缀精确记录 `SegmentStartTicks`;**终点**的取点取决于 `use_plcc_timing_standard` 开关(默认关闭,见 R1.4.2):关闭时由 `Game.Fall` 在检测到通关的瞬间锁存 `PendingEndTicks`(含通过帧本身);开启(plcc 计时标准)时由 `Game.BeginLoadLevel`(同步置 `LoadingLevel`)与 `Game.AfterUnload`(置 `Inactive`)在游戏离开 `PlayingLevel` 的权威时刻锁存,与 plcc Timer 同口径,且不依赖轮询的观测时机或脚本执行顺序。所有转换 / 分段 / 重置判定仍由轮询循环负责 —— 见[纯 tick 时钟与精确边界](#纯-tick-时钟与精确边界r111)。
 
 ## 模块布局
 
@@ -111,15 +111,20 @@ LcIntegration.cs          可选的 LevelCollections 软集成
 **为什么需要边界 hook。** 分段的两个边界都是轮询只能晚一帧观察到的 `Game.state` 翻转,因此 `Patches/TimingBoundaryPatches.cs` 在权威赋值处精确记录 tick:
 
 - **起点** —— `Game.AfterLoad` 置 `state = PlayingLevel`;其后缀锁存 `SegmentStartTicks`。
-- **终点** —— `Game.BeginLoadLevel`(`LoadLevel` 协程在首个 `yield` 前置 `state = LoadingLevel`)与 `Game.AfterUnload`(置 `state = Inactive`)在游戏离开 `PlayingLevel` 的那一刻锁存 `PendingEndTicks` —— 即 plcc Timer 使用的同一事件。由于 `Game.AfterUnload` 可能在 `Game.Fall` 内同步执行(Workshop/EditorPick 路径),当本插件的 `FixedUpdate` 尚未处理当前物理帧时,锁存会显式把该帧计入。
+- **终点** —— 取点取决于 `use_plcc_timing_standard` 开关(默认关闭,R1.4.2):
+  - **既有模式(默认)** —— `Game.Fall` 在检测到通关的瞬间锁存 `PendingEndTicks`,含通过帧本身(4cb5672 之前的行为;与 plcc Timer 相差卸载延迟,可能差一两个 tick)。
+  - **plcc 计时标准(开启)** —— `Game.BeginLoadLevel`(`LoadLevel` 协程在首个 `yield` 前置 `state = LoadingLevel`)与 `Game.AfterUnload`(置 `state = Inactive`)在游戏离开 `PlayingLevel` 的那一刻锁存 `PendingEndTicks`,即 plcc Timer 使用的同一事件。由于 `Game.AfterUnload` 可能在 `Game.Fall` 内同步执行(Workshop/EditorPick 路径),当本插件的 `FixedUpdate` 尚未处理当前物理帧时,锁存会显式把该帧计入。
 
-`Game.EnterPassZone` / `Game.Fall` hook 仅锁存 `LevelPassed` 完成标志(因为 `Game.Fall` 可能在被轮询读到之前就为 Workshop/EditorPick 清掉 `passedLevel`)。hook 只记录 tick 与置标志 —— 所有转换 / 分段 / 重置 / 有效性判定仍走单一轮询循环。
+plcc 标准下 `Game.EnterPassZone` / `Game.Fall` hook 仅锁存 `LevelPassed` 完成标志(因为 `Game.Fall` 可能在被轮询读到之前就为 Workshop/EditorPick 清掉 `passedLevel`;既有模式下 `Game.Fall` 还会额外锁存终点 tick)。hook 只记录 tick 与置标志 —— 所有转换 / 分段 / 重置 / 有效性判定仍走单一轮询循环。
+
+**`pass` 边界行在两种模式下都会记录。** `RecordLevelPass` 总是在 `Game.Fall` 的 tick 处输出一行 `pass` 边界;plcc 标准下这行在"完成标志已锁存"的提前返回**之前**输出,因此它纯属观测、绝不决定终点。于是 plcc 标准下 `hsr clock history` 会依次出现 `pass`(`Game.Fall` 检测)→ `leave`(游戏离开 `PlayingLevel`)→ `end`,而 `pass` → `leave` 的 tick 差正是 plcc 口径相对既有边界多出的那一个渲染帧延迟(`Game.PassLevel` 会先 `yield return null` 等一帧,才 `StartNextLevel` → `Game.BeginLoadLevel` 置 `state = LoadingLevel`;实测值见 [TESTS.md](TESTS.md))。若完成标志已被 `Game.EnterPassZone` 锁存,这行观测就是唯一会输出的 `pass` 行。
 
 | 边界 | Hook | 记录值 |
 |---|---|---|
 | 分段起点(R1.2.2) | `Game.AfterLoad` 后缀 | `SegmentStartTicks`(由 `StartSegment` 消费) |
-| 分段终点(R1.4.1) | `Game.BeginLoadLevel` / `Game.AfterUnload` 后缀 | `PendingEndTicks` —— "游戏离开 `PlayingLevel`",plcc Timer 的口径 |
-| 通关标志(R1.4.2) | `Game.EnterPassZone` 后缀 / `Game.Fall` 前缀+后缀 | `LevelPassed` 锁存(仅完成标志) |
+| 分段终点(R1.4.1),既有模式(默认) | `Game.Fall` 后缀 | `PendingEndTicks` —— 通过帧的精确 tick,含通过帧本身 |
+| 分段终点(R1.4.1),plcc 标准 | `Game.BeginLoadLevel` / `Game.AfterUnload` 后缀 | `PendingEndTicks` —— "游戏离开 `PlayingLevel`",plcc Timer 的口径 |
+| 通关标志 + `pass` tick(R1.4.2) | `Game.EnterPassZone` 后缀 / `Game.Fall` 前缀+后缀 | `LevelPassed` 锁存,以及 `Game.Fall` tick 处的诊断性 `pass` 边界行(plcc 标准下仅完成标志;该行只作观测,不是终点) |
 
 ### 现实时间计时器(R1.10)
 

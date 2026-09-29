@@ -7,7 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
-  - The level timer now uses the same start/stop standard as the plcc Timer: a segment still starts when the level becomes playable, but it now **ends when the game leaves the level** (`Game.state` leaves `PlayingLevel`) instead of when the game detects the pass. The end tick is recorded from the game's authoritative state-leave code path, so segment and total times agree with the plcc Timer without any polling jitter.
+  - Added a **"Use plcc timing standard"** option at the top of **General → Timing** (default off). Off (the default) keeps the previous timing: a segment ends when the game detects the pass. On switches to the plcc Timer standard: a segment ends when the game leaves the level (`Game.state` leaves `PlayingLevel`). Both modes record the end tick from the game's authoritative code path, so segment and total times stay jitter-free; your recorded times change only when you enable the option. While the option is on, the timer HUD shows a `plcc timing mode` line (Chinese: `plcc计时模式`) under the time rows so the active timing mode is always visible.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.8.0

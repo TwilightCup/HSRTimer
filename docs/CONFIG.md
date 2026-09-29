@@ -17,6 +17,7 @@ defaults.
 ```ini
 [settings]
 auto_reset = true
+use_plcc_timing_standard = false
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
 retry_level_override_enabled = false
@@ -36,6 +37,7 @@ menu_key = Home
 | Key | Values | Default | Notes |
 |-----|--------|---------|-------|
 | `auto_reset` | true/false | true | R1.7.2 — reset the live timers and last-segment snapshots when leaving to the menu/lobby; keeps the last completed run total |
+| `use_plcc_timing_standard` | true/false | false | R1.4.2 — which authoritative event ends a segment. Default off keeps the legacy boundary (the segment ends at the `Game.Fall` pass detection); on switches to the plcc Timer standard (the segment ends when the game leaves `PlayingLevel`). Toggled at the top of **General → Timing** in the settings panel |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 — clear forgivable validity flags when the level is restarted from the in-level **pause menu** (the run's timers keep running). The one-key retry clears them unconditionally (fixed behavior), and a full-run reset clears all flags. |
 | `retry_min_dwell` | seconds (≥0) | 0.5 | R6 — minimum time held in the empty scene on retry, measured from the key press. If the level reloads faster, the empty scene is held until this elapses; `0` disables the hold. |
 | `retry_level_override_enabled` | true/false | false | R6.5 — use a fixed retry target instead of the current/campaign-start level. Disabled keeps the normal one-key retry behavior. |
