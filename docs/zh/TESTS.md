@@ -126,12 +126,15 @@ hsr flags list
 hsr flags raise CheatCode            # 不可原谅
 hsr flags raise CheckpointSkip       # 可原谅
 hsr flags raise Ec                   # 软标记,计数递增
+hsr flags raise Ssg                  # 软标记(Glitchless),计数递增
+hsr flags raise PropFly              # 软标记(Glitchless),计数递增
+hsr flags raise Footsie              # 软标记(Glitchless),计数递增
 hsr flags clear forgivable
 hsr flags clear soft
 hsr flags clear all
 ```
 
-`hsr status` 的 `flags:` 行应显示硬性原因,软标记显示为 `Ec xN`。
+`hsr status` 的 `flags:` 行应显示硬性原因,软标记显示为 `Ec xN` / `Ssg xN` 等。
 
 ### 3. 标签 / 类别(R3)
 

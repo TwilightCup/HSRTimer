@@ -195,13 +195,16 @@ hsr flags list
 hsr flags raise CheatCode            # unforgivable
 hsr flags raise CheckpointSkip       # forgivable
 hsr flags raise Ec                   # soft, increments count
+hsr flags raise Ssg                  # soft (Glitchless), increments count
+hsr flags raise PropFly              # soft (Glitchless), increments count
+hsr flags raise Footsie              # soft (Glitchless), increments count
 hsr flags clear forgivable
 hsr flags clear soft
 hsr flags clear all
 ```
 
 `hsr status` should show the hard reasons in the `flags:` line and soft flags
-as `Ec xN`.
+as `Ec xN` / `Ssg xN` etc.
 
 ### 3. Tags / category (R3)
 

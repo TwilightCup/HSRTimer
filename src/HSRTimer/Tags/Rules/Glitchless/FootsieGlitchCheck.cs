@@ -12,7 +12,9 @@ namespace HSRTimer
     /// The pass point can set <c>Game.passedLevel</c> without ending the level
     /// immediately (the player may leave the spot and finish by drowning later),
     /// so the detection watches the false→true edge of <c>passedLevel</c> while
-    /// the player is inside the spot.
+    /// the player is inside the spot. The game clears <c>passedLevel</c> when
+    /// the player leaves the pass zone, so re-entering the spot raises the flag
+    /// again — every Footsie touch is counted, not just the first per level.
     /// </summary>
     internal sealed class FootsieGlitchCheck : IGlitchCheck
     {
@@ -22,31 +24,28 @@ namespace HSRTimer
         private static readonly Vector3 FootsieCenter = new Vector3(-23.823f, 2.5f, 0.988f);
         private static readonly Vector3 FootsieSize = new Vector3(3f, 2f, 3f);
 
-        private bool _raised;
         private bool _wasPassed;
 
         public void OnLevelEnter(ValidationContext ctx)
         {
-            _raised = false;
             _wasPassed = false;
         }
 
         public void OnTick(ValidationContext ctx)
         {
             var game = ctx.Game;
-            if (_raised || !IsWaterLevel(game))
+            if (!IsWaterLevel(game))
                 return;
 
             var human = Human.Localplayer;
             if (human == null || human.transform == null)
                 return;
 
+            // The passedLevel false→true edge already de-duplicates per touch;
+            // each re-entry into the pass zone inside the spot counts once.
             bool passed = game.passedLevel;
             if (passed && !_wasPassed && IsInsideFootsieSpot(human.transform.position))
-            {
                 ctx.Flags.Raise(InvalidReason.Footsie);
-                _raised = true;
-            }
 
             _wasPassed = passed;
         }

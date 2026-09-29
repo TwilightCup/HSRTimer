@@ -63,7 +63,7 @@ Core/
   LevelIdentity.cs        shared level id / English-name helpers (R8.2.3, R10.1.2)
 Validation/
   InvalidReason.cs        enum + severity map
-  ValidityFlags.cs        unforgivable/forgivable flag sets
+  ValidityFlags.cs        unforgivable/forgivable/soft flag sets
   GenericValidators.cs    cheat-code detector
 Tags/
   ITagRule.cs             tag rule interface + ValidationContext

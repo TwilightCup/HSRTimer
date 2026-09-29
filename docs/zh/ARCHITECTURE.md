@@ -38,7 +38,7 @@ Core/
   LevelIdentity.cs        共享的关卡 id / 英文名助手(R8.2.3, R10.1.2)
 Validation/
   InvalidReason.cs        枚举 + 严重度映射
-  ValidityFlags.cs        不可原谅 / 可原谅标记集合
+  ValidityFlags.cs        不可原谅 / 可原谅 / 软标记集合
   GenericValidators.cs    作弊码检测
 Tags/
   ITagRule.cs             标签规则接口 + ValidationContext
