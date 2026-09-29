@@ -791,7 +791,6 @@ namespace HSRTimer
                 dx = 0f,
                 dy = 0f,
                 dz = 0f,
-                plane_radius = _options.PlaneRadius,
             });
         }
 
@@ -821,7 +820,6 @@ namespace HSRTimer
                 dx = dx,
                 dy = dy,
                 dz = dz,
-                plane_radius = _options.PlaneRadius,
             });
             _lastSamplePosition = pos;
             _lastSampleGameTime = gameTime;
@@ -855,7 +853,6 @@ namespace HSRTimer
                 dx = dx,
                 dy = dy,
                 dz = dz,
-                plane_radius = _options.PlaneRadius,
             });
             _lastSamplePosition = pos;
             _lastSampleGameTime = endTime;
@@ -1034,7 +1031,9 @@ namespace HSRTimer
                 Vector3 d = sample.Displacement;
                 if (d.magnitude < _options.MinMove) continue;
                 Vector3 normal = d.normalized;
-                float radius = sample.plane_radius > 0f ? sample.plane_radius : _options.PlaneRadius;
+                // The plane radius comes from the live config at load time (R8.4.1.3);
+                // legacy samples that still carry a plane_radius field are ignored.
+                float radius = _options.PlaneRadius;
                 reference.Planes.Add(new SubsegmentPlane
                 {
                     Seq = sample.seq,
@@ -1183,7 +1182,6 @@ namespace HSRTimer
                     dx = s.dx,
                     dy = s.dy,
                     dz = s.dz,
-                    plane_radius = s.plane_radius,
                 });
             }
 

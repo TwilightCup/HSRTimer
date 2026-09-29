@@ -181,7 +181,7 @@ DisabledLeaderboardSources =
 | `LoadPath` | `subsegment/load` | Manually-placed reference samples. The directory is created automatically when the plugin loads, so it is ready for dropping reference samples into it. |
 | `ToggleKey` | `Tab` | Cycle the shared leaderboard: hidden → available content modes → hidden. A mode whose module is disabled — by the user's setting or by an auto-disable mechanism (e.g. the co-op client gate) — is skipped, so e.g. with subsegment off the cycle is only hidden ↔ Markers. |
 | `MultiProject` | `Any%` | Initial multi-run project used for live ML comparisons (`Aztec%`/`Dark%`/`Steam%`/`Any%`). Within a session it can auto-upgrade along the containment chain (Aztec% → Dark% → Steam% → Any%) without writing back to config; if the chosen project has no data at all, it falls back to the smallest project that has data (session-only). PB writes still use the actual last-completed endpoint. |
-| `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. |
+| `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. Applied when references are loaded and their planes are built, so it also governs existing PB/load samples (their files no longer carry a per-sample radius). |
 | `MinMove` | `0.5` | Minimum sampled move distance; smaller moves become zero-displacement samples and do not build planes. |
 | `SampleInterval` | `1.0` | Game-time seconds between subsegment samples. |
 | `QuietSettleSeconds` | `0.5` | Quiet settle window for crossing candidates. |

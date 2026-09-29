@@ -5,6 +5,16 @@ using UnityEngine;
 namespace HSRTimer
 {
     /// <summary>A single HSRTimer subsegment sample (R8.1.3).</summary>
+    /// <remarks>
+    /// Legacy samples (written before the plane-radius change) also carried a
+    /// <c>plane_radius</c> field. That field is deliberately absent here: the
+    /// radius is no longer recorded with the sample (R8.1.3) and is no longer
+    /// read from a loaded sample (R8.4.1.3). The current
+    /// <c>Subsegment.PlaneRadius</c> setting is applied when the loader builds
+    /// the detection planes, so old files keep loading unchanged (the now
+    /// unknown JSON key is ignored) and are naturally replaced the next time a
+    /// PB is written.
+    /// </remarks>
     [Serializable]
     public sealed class SubsegmentSample
     {
@@ -17,7 +27,6 @@ namespace HSRTimer
         public float dx;
         public float dy;
         public float dz;
-        public float plane_radius;
 
         public Vector3 Position => new Vector3(px, py, pz);
         public Vector3 Displacement => new Vector3(dx, dy, dz);
