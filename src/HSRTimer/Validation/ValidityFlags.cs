@@ -9,9 +9,10 @@ namespace HSRTimer
     /// three groups:
     ///   - unforgivable (permanent until game restart),
     ///   - forgivable (clearable on retry),
-    ///   - soft (counted, shown in normal HUD text, only flashing red on the
-    ///     triggering frame; cleared on one-key retry, but not by pause-menu
-    ///     restart; removed by a full timer reset).
+    ///   - soft (counted, shown on one shared HUD line in normal HUD text, with
+    ///     only the newly triggered flag's own segment flashing red; cleared on
+    ///     one-key retry, but not by pause-menu restart; removed by a full timer
+    ///     reset).
     /// Reasons only accumulate; they never auto-clear except via
     /// <see cref="ClearForgivable"/> / <see cref="ClearAll"/>.
     /// </summary>
@@ -64,7 +65,7 @@ namespace HSRTimer
         /// <summary>
         /// Record a reason. Hard reasons are idempotent; soft reasons instead
         /// increment their trigger count and stamp the flash time so the HUD can
-        /// flash the line once per new trigger.
+        /// flash that flag's segment once per new trigger.
         /// </summary>
         public void Raise(InvalidReason reason)
         {

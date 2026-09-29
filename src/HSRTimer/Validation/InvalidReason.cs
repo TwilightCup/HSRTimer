@@ -59,9 +59,10 @@ namespace HSRTimer
         Forgivable,
 
         /// <summary>
-        /// A soft flag: shown on its own HUD line in normal text color with a
-        /// trigger count. It flashes red when a new trigger occurs, is cleared
-        /// by one-key retry and a full timer reset, but not by pause-menu
+        /// A soft flag: shown on the HUD's single soft-flag line in normal text
+        /// color with a trigger count. Its own segment flashes red when a new
+        /// trigger occurs, independently of any other active soft flag; it is
+        /// cleared by one-key retry and a full timer reset, but not by pause-menu
         /// restart (R3.8.3, R3.9.3).
         /// </summary>
         Soft,
@@ -72,7 +73,7 @@ namespace HSRTimer
     {
         // Soft flags: EC (NoEC, R3.9.3) and all Glitchless glitches
         // SSG / Prop Fly / Footsie (R3.8.3). They never turn the run's red
-        // "invalid" banner on; the HUD shows each on its own line with a
+        // "invalid" banner on; the HUD lists them on one shared line with a
         // trigger count instead.
         private static readonly HashSet<InvalidReason> SoftReasons = new HashSet<InvalidReason>
         {
