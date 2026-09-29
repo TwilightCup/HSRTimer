@@ -39,7 +39,6 @@ SETTINGS_RETRY_KEY:Retry Key
 SETTINGS_MENU_KEY:Settings Panel Key
 SETTINGS_AUTO_RESET:Auto-reset run
 SETTINGS_USE_PLCC_TIMING_STANDARD:Use plcc timing standard
-SETTINGS_USE_PLCC_TIMING_STANDARD_NOTE:End the segment when the game leaves the level, matching the plcc Timer. Default off: keep the previous timing.
 SETTINGS_USE_PLCC_TIMING_STANDARD_LOCKED:Locked while a run is in progress. Reset the run or leave the level to change it.
 SETTINGS_RESTART_CLEARS_FORGIVABLE:Clear forgivable flags on pause-menu restart
 SETTINGS_RETRY_MIN_DWELL:Retry empty-scene dwell (s)
