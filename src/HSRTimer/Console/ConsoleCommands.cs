@@ -358,6 +358,17 @@ namespace HSRTimer
                 return;
             }
 
+            // The timing standard picks which event ends a segment, so changing
+            // it mid-run would let one run straddle two standards; it is locked
+            // for the whole run (the settings panel disables the same toggle).
+            if (ReferenceEquals(owner, cfg.Settings)
+                && Normalize(field.Name) == "useplcctimingstandard"
+                && TimerCore.IsTimingStandardLocked)
+            {
+                Print("Cannot change use_plcc_timing_standard while a run is in progress. Reset the run or leave the level first.");
+                return;
+            }
+
             if (!TrySetField(field, owner, value, out string error))
             {
                 Print($"Cannot set {FieldName(field.Name)}: {error}");

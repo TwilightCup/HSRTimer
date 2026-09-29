@@ -93,6 +93,27 @@ namespace HSRTimer
             }
         }
 
+        /// <summary>
+        /// True while a run is in progress, i.e. the timer is running. The
+        /// "Use plcc timing standard" option selects which event ends a segment,
+        /// so changing it mid-run would let one run straddle two standards; it
+        /// is therefore locked for the whole run: the settings panel disables
+        /// the toggle and the dev console rejects
+        /// <c>hsr set use_plcc_timing_standard</c>.
+        /// <para>
+        /// The whole-run window is <see cref="RunState.RealTimeActive"/>: it
+        /// starts with the run's first playable segment, stays true across
+        /// level-loading transitions and pauses (so a mid-campaign run cannot be
+        /// switched between levels either), and only clears when the run
+        /// completes or the player returns to the menu/lobby. A manual reset
+        /// also ends the run and releases the lock. This is only a guard against
+        /// switching the standard mid-run — the engine still re-reads the
+        /// setting every tick.
+        /// </para>
+        /// </summary>
+        public static bool IsTimingStandardLocked
+            => State != null && State.RealTimeActive;
+
         private void Awake()
         {
             Instance = this;

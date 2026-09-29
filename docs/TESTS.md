@@ -175,6 +175,19 @@ identical repeated runs (R1.11.8). While the setting is on, the timer HUD shows
 a `plcc timing mode` line (Chinese: `plcc计时模式`) directly under the time
 rows; it disappears again when the setting is turned off (R2.6.1).
 
+**Locked for the whole run (R1.4.2a).** A run in progress pins the standard, so
+the option cannot be switched anywhere inside it — including between levels and
+while paused: while `hsr status` shows `realTimeActive=True` the settings
+panel's toggle is greyed out and its note reads "Locked while a run is in
+progress…", and `hsr set use_plcc_timing_standard` prints `Cannot change
+use_plcc_timing_standard while a run is in progress. Reset the run or leave the
+level first.` without changing the value (verify with
+`hsr get use_plcc_timing_standard`). The lock spans the run's first playable
+segment through all cross-level loading and pauses; it clears when the run
+completes, when the player returns to the menu/lobby
+(`realTimeActive=False`), or after `hsr reset`. The lock is a guard only — the
+engine still re-reads the setting every tick.
+
 ### 2. Validity flags (R5)
 
 ```text
@@ -483,6 +496,7 @@ Notes:
 - [ ] `hsr reset` zeroes timers and clears flags.
 - [ ] `hsr clock` shows integer ticks and `hsr clock history` records identical `dur=` for repeated identical runs (R1.11).
 - [ ] Timing standard toggle: with `use_plcc_timing_standard` off (default), `hsr clock history` shows the `pass` line carrying the end tick; after `hsr set use_plcc_timing_standard true` (`hsr status` shows `plccTiming=True`) it shows both a `pass` line (the `Game.Fall` frame, observation only) and a `leave` line carrying the end tick, with `leave tick − pass tick` ≈ 1 physics tick (the render-frame delay), and both modes record identical `dur=` for identical runs. With the setting on, the timer HUD shows the `plcc timing mode` line under the time rows; it hides again when the setting is off (R2.6.1).
+- [ ] Timing standard lock (R1.4.2a): while a run is in progress (`realTimeActive=True`, including between levels and paused) `hsr set use_plcc_timing_standard true|false` is refused with the locked message and `hsr get` is unchanged; after the run ends (`realTimeActive=False`, e.g. back at the main menu) or after `hsr reset` the same `hsr set` succeeds. In the settings panel the toggle is greyed out and its note reads "Locked while a run is in progress…" during a run, and interactive again outside one.
 - [ ] `hsr retry` reloads the current level (or the configured override).
 - [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
 - [ ] `hsr pass real` teleports the player into the pass zone and the game's own trigger flow completes the level (with `LevelPassed` latched); PBs still not written.

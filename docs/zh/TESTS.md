@@ -117,6 +117,8 @@ hsr pass real              # 传送到判定箱,让游戏自身完成过关
 
 **计时标准开关。** 该设置位于设置面板 **常规 → 计时** 部分最上方("使用 plcc 计时标准"),也存在于 `settings.ini` 的 `use_plcc_timing_standard`。用控制台切换并确认 `hsr status` 报告当前模式:`hsr set use_plcc_timing_standard true` / `false`,然后 `hsr status` → `plccTiming=True|False`。改动即时生效(引擎每 tick 重新读取),无需重置或重试。关闭时重复通关在 `pass` tick 结束;开启时在 `leave` tick 结束 —— 两种模式下 `hsr clock history` 对相同的重复操作都必须记录到一致的 `dur=`(R1.11.8)。开启期间,计时器 HUD 在时间行正下方显示一行 `plcc计时模式`(英文:`plcc timing mode`);关闭后该行消失(R2.6.1)。
 
+**整局运行中锁定(R1.4.2a)。** 一局运行进行中会钉住当前口径,整局内都不能切换 —— 包括两关之间的加载与暂停:`hsr status` 显示 `realTimeActive=True` 时,设置面板的该开关变灰、提示文字变为"整局运行中不可切换";`hsr set use_plcc_timing_standard` 会打印 `Cannot change use_plcc_timing_standard while a run is in progress. Reset the run or leave the level first.` 且不改变取值(用 `hsr get use_plcc_timing_standard` 复核)。锁定窗口从本局第一个可游玩分段开始,跨越全部关卡加载与暂停,直到本局完成、玩家返回菜单/大厅(`realTimeActive=False`)或执行 `hsr reset` 才解除。该锁定只是防护 —— 引擎仍每 tick 读取该设置。
+
 ### 2. 有效性标记(R5)
 
 ```text
@@ -352,6 +354,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr reset` 将计时器归零并清除标记。
 - [ ] `hsr clock` 显示整数 tick,且 `hsr clock history` 对重复的相同操作记录到一致的 `dur=`(R1.11)。
 - [ ] 计时标准开关:关闭 `use_plcc_timing_standard`(默认)时,`hsr clock history` 由 `pass` 行携带终点 tick;`hsr set use_plcc_timing_standard true` 后(`hsr status` 显示 `plccTiming=True`)会同时出现 `pass` 行(`Game.Fall` 帧,仅观测)与携带终点 tick 的 `leave` 行,且 `leave tick − pass tick` ≈ 1 个物理帧(渲染帧延迟),两种模式下相同操作的 `dur=` 均一致。开启期间计时器 HUD 在时间行下方显示 `plcc计时模式` 一行;关闭后该行消失(R2.6.1)。
+- [ ] 计时标准开关整局锁定(R1.4.2a):本局运行中(`realTimeActive=True`,含两关之间与暂停)`hsr set use_plcc_timing_standard true|false` 会被拒绝并打印锁定说明,`hsr get` 取值不变;本局结束后(`realTimeActive=False`,例如回到主菜单)或执行 `hsr reset` 后同一条 `hsr set` 成功。设置面板中该开关在本局期间变灰、提示文字为"整局运行中不可切换",离开本局后恢复可交互。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
 - [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
 - [ ] `hsr pass real` 把玩家传送到判定箱,由游戏自身的触发器链路完成过关(且 `LevelPassed` 已锁定);PB 同样不写入。

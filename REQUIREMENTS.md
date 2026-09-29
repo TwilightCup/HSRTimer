@@ -110,6 +110,7 @@
 - **R1.4.2** 游戏侧对应事件链:玩家到达出口 `PassZone` → `Game.EnterPassZone()` 置通关标志 → 角色离开/坠落 → `Game.Fall()` 检测到通关 → 启动 `PassLevel()` → 卸载/加载流程把 `Game.state` 由 `PlayingLevel` 切到 `LoadingLevel`(或本地 `Inactive`)。**分段终点取哪个权威时刻由设置开关 `use_plcc_timing_standard` 决定(默认关闭)**:
   - **关闭(默认,4cb5672 之前的既有机制)**:分段终点取 `Game.Fall()` 检测到通关的瞬间,由 `Game.Fall` 挂钩锁存精确 tick(含通过帧本身,"终点含最后一帧",TB-4);`EnterPassZone` 只锁存"本关完成"标志(R1.4.1a)。该口径与 plcc Timer 相差卸载延迟,可能差一两个 tick。
   - **开启(plcc 计时标准)**:分段终点取 R1.4.1 的 `Game.state` 离开 `PlayingLevel` 的权威时刻,由 `Game.BeginLoadLevel` / `Game.AfterUnload` 挂钩锁存(见 R1.11.3);`EnterPassZone` / `Game.Fall` 只用于锁存"本关完成"标志(R1.4.1a)。该口径与 plcc Timer 一致。开启时,计时器 HUD 在时间行正下方显示一行指示文本(`plcc计时模式` / `plcc timing mode`,见 R2.6.1)。
+  - **整局运行中锁定(R1.4.2a)**:该开关决定"分段"由哪个事件结束,若中途切换会让同一局跨越两种口径,因此**整局运行期间禁止切换**:运行窗口取 `RunState.RealTimeActive`(从本局第一个可游玩分段开始,跨关卡加载与暂停持续为真,直到本局完成或玩家返回菜单/大厅;手动重置同样结束本局),而非仅"当前分段进行中"。锁定期间设置面板中该选项禁用并显示"整局运行中不可切换"提示;控制台 `hsr set use_plcc_timing_standard` 被拒绝并打印同样含义的说明。本局结束(通关、返回菜单/大厅或重置)后可自由切换。该锁定只是防止同一局跨用两种口径,引擎仍每 tick 读取该设置。
 
 #### R1.5 个人最佳与最佳分段(已移除)
 
