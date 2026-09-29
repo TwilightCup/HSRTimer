@@ -17,6 +17,7 @@ defaults.
 ```ini
 [settings]
 auto_reset = true
+use_plcc_timing_standard = false
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
 retry_level_override_enabled = false
@@ -36,6 +37,7 @@ menu_key = Home
 | Key | Values | Default | Notes |
 |-----|--------|---------|-------|
 | `auto_reset` | true/false | true | R1.7.2 — reset the live timers and last-segment snapshots when leaving to the menu/lobby; keeps the last completed run total |
+| `use_plcc_timing_standard` | true/false | false | R1.4.2 — which authoritative event ends a segment. Default off keeps the legacy boundary (the segment ends at the `Game.Fall` pass detection); on switches to the plcc Timer standard (the segment ends when the game leaves `PlayingLevel`). Toggled at the top of **General → Timing** in the settings panel. R1.4.2a: locked for the whole run in progress (`RunState.RealTimeActive`, including level loads and pauses) — the panel toggle is disabled and `hsr set use_plcc_timing_standard` is refused until the run ends (complete it, return to the menu/lobby, or reset) |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 — clear forgivable validity flags when the level is restarted from the in-level **pause menu** (the run's timers keep running). The one-key retry clears them unconditionally (fixed behavior), and a full-run reset clears all flags. |
 | `retry_min_dwell` | seconds (≥0) | 0.5 | R6 — minimum time held in the empty scene on retry, measured from the key press. If the level reloads faster, the empty scene is held until this elapses; `0` disables the hold. |
 | `retry_level_override_enabled` | true/false | false | R6.5 — use a fixed retry target instead of the current/campaign-start level. Disabled keeps the normal one-key retry behavior. |
@@ -179,7 +181,7 @@ DisabledLeaderboardSources =
 | `LoadPath` | `subsegment/load` | Manually-placed reference samples. The directory is created automatically when the plugin loads, so it is ready for dropping reference samples into it. |
 | `ToggleKey` | `Tab` | Cycle the shared leaderboard: hidden → available content modes → hidden. A mode whose module is disabled — by the user's setting or by an auto-disable mechanism (e.g. the co-op client gate) — is skipped, so e.g. with subsegment off the cycle is only hidden ↔ Markers. |
 | `MultiProject` | `Any%` | Initial multi-run project used for live ML comparisons (`Aztec%`/`Dark%`/`Steam%`/`Any%`). Within a session it can auto-upgrade along the containment chain (Aztec% → Dark% → Steam% → Any%) without writing back to config; if the chosen project has no data at all, it falls back to the smallest project that has data (session-only). PB writes still use the actual last-completed endpoint. |
-| `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. |
+| `PlaneRadius` | `50.0` | Virtual detection-plane radius in meters. Applied when references are loaded and their planes are built, so it also governs existing PB/load samples (their files no longer carry a per-sample radius). |
 | `MinMove` | `0.5` | Minimum sampled move distance; smaller moves become zero-displacement samples and do not build planes. |
 | `SampleInterval` | `1.0` | Game-time seconds between subsegment samples. |
 | `QuietSettleSeconds` | `0.5` | Quiet settle window for crossing candidates. |

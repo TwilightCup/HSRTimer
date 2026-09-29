@@ -12,16 +12,17 @@ namespace HSRTimer
     /// Only the local player is checked, and only real grabs are considered via
     /// <see cref="GrabManager.grabbedObjects"/> so a phantom SSG grab does not
     /// satisfy this rule.
+    ///
+    /// Detection is per jump press: the jump false→true edge raises the flag
+    /// every time the player prop-flys again, not just the first time in a
+    /// level.
     /// </summary>
     internal sealed class PropFlyGlitchCheck : IGlitchCheck
     {
-        private bool _raised;
         private bool _wasJumping;
 
         public void OnLevelEnter(ValidationContext ctx)
         {
-            _raised = false;
-
             var human = Human.Localplayer;
             _wasJumping = human != null && human.jump;
         }
@@ -32,9 +33,6 @@ namespace HSRTimer
 
         private void Check(ValidationContext ctx)
         {
-            if (_raised)
-                return;
-
             var human = Human.Localplayer;
             if (human == null)
             {
@@ -42,12 +40,11 @@ namespace HSRTimer
                 return;
             }
 
+            // The jump false→true edge already de-duplicates per jump press,
+            // so every prop-fly jump raises the soft flag (counted per press).
             bool jumping = human.jump;
             if (jumping && !_wasJumping && IsStandingOnGrabbedMovableProp(human))
-            {
                 ctx.Flags.Raise(InvalidReason.PropFly);
-                _raised = true;
-            }
 
             _wasJumping = jumping;
         }

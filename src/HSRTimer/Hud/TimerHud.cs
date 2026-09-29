@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace HSRTimer
@@ -15,8 +17,11 @@ namespace HSRTimer
     {
         private const float MarkerAxisIndicatorHeight = 38f;
 
-        /// <summary>How long a soft-flag line stays red after a new trigger.</summary>
+        /// <summary>How long a soft flag stays red after a new trigger.</summary>
         private const float SoftFlagFlashSeconds = 0.6f;
+
+        /// <summary>Separator between two soft flags sharing the single HUD line.</summary>
+        private const string SoftFlagSeparator = "  ";
 
         private GUIStyle _rowStyle;
         private GUIStyle _bannerStyle;
@@ -203,6 +208,11 @@ namespace HSRTimer
                 y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
             }
 
+            // Timing-standard indicator (R1.4.2): one line directly under the
+            // time rows while the plcc timing standard is enabled, so the active
+            // timing mode is visible on the HUD.
+            y += DrawPlccModeLine(cfg, loc, layout, x, y);
+
             // Current rule tags: one line right under the timer rows listing the
             // enabled tags (localized). Skipped when none are enabled. Rendered
             // before the tag extras and the invalid banner; the marker-edit-mode
@@ -224,8 +234,8 @@ namespace HSRTimer
                 y += _bannerStyle.CalcSize(content).y + 2f;
             }
 
-            // Soft flags: normal HUD text with a trigger count, each on its own
-            // line. A newly triggered flag flashes red for a short moment.
+            // Soft flags: normal HUD text with a trigger count, all on one line.
+            // Only the individual flag that was newly triggered flashes red.
             y += DrawSoftFlags(cfg, state, loc, x, y);
 
             // R6.5: show the retry-target-resolution failure in the same red
@@ -256,6 +266,21 @@ namespace HSRTimer
             if (cfg == null || cfg.EnabledTags == null || cfg.EnabledTags.Tags.Count == 0)
                 return 0f;
             string line = loc.Get("HUD_TAGS_LABEL") + ":  " + TemplateVars.CategoryName(cfg);
+            DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
+            return _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+        }
+
+        /// <summary>
+        /// One line directly under the time rows shown only while the plcc timing
+        /// standard is enabled ("Use plcc timing standard", R1.4.2), so the HUD
+        /// reflects the active timing mode. Returns the vertical space consumed
+        /// (0 when the option is off, so the line is omitted entirely).
+        /// </summary>
+        private float DrawPlccModeLine(ConfigService cfg, LocalizationService loc, LayoutModel layout, float x, float y)
+        {
+            if (cfg.Settings == null || !cfg.Settings.UsePlccTimingStandard)
+                return 0f;
+            string line = loc.Get("HUD_PLCC_TIMING_MODE");
             DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
             return _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
         }
@@ -337,25 +362,42 @@ namespace HSRTimer
         }
 
         /// <summary>
-        /// Draw one line per active soft flag in the normal HUD text colors,
-        /// appending its trigger count ("name x3"). When a flag was triggered
-        /// within <see cref="SoftFlagFlashSeconds"/>, the whole line flashes red.
-        /// Returns the vertical space consumed.
+        /// Draw every active soft flag on a single line in the normal HUD text
+        /// gradient, each segment followed by its trigger count ("name x3").
+        /// Only the individual flag whose trigger is within
+        /// <see cref="SoftFlagFlashSeconds"/> flashes red, so co-occurring flags
+        /// flash independently of each other. Returns the vertical space consumed.
         /// </summary>
         private float DrawSoftFlags(ConfigService cfg, RunState state, LocalizationService loc, float x, float y)
         {
-            float added = 0f;
-            foreach (var soft in state.Flags.SoftFlags)
+            var flags = new List<ValidityFlags.SoftFlagInfo>(state.Flags.SoftFlags);
+            if (flags.Count == 0) return 0f;
+
+            // Stable left→right order independent of dictionary iteration order.
+            flags.Sort((l, r) => l.Reason.CompareTo(r.Reason));
+
+            float now = Time.realtimeSinceStartup;
+            var sb = new StringBuilder();
+            var flashMask = new List<bool>();
+            for (int f = 0; f < flags.Count; f++)
             {
-                string line = loc.Get(InvalidReasons.LocalKey(soft.Reason)) + " x" + soft.Count;
-                bool flashing = Time.realtimeSinceStartup - soft.LastTriggerTime <= SoftFlagFlashSeconds;
-                if (flashing)
-                    DrawGradientLine(line, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, y + added, _rowStyle);
-                else
-                    DrawGradientLine(line, cfg.Layout.ColorA, cfg.Layout.ColorB, x, y + added, _rowStyle);
-                added += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+                if (f > 0)
+                {
+                    sb.Append(SoftFlagSeparator);
+                    for (int i = 0; i < SoftFlagSeparator.Length; i++)
+                        flashMask.Add(false);
+                }
+                string segment = loc.Get(InvalidReasons.LocalKey(flags[f].Reason)) + " x" + flags[f].Count;
+                bool flash = now - flags[f].LastTriggerTime <= SoftFlagFlashSeconds;
+                sb.Append(segment);
+                for (int i = 0; i < segment.Length; i++)
+                    flashMask.Add(flash);
             }
-            return added;
+
+            string line = sb.ToString();
+            DrawPerCharacterLine(line, flashMask, Color.red, new Color(1f, 0.4f, 0.4f, 1f),
+                cfg.Layout.ColorA, cfg.Layout.ColorB, x, y, _rowStyle);
+            return _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
         }
 
         private float DrawTagExtras(ConfigService cfg, RunState state, LocalizationService loc, float x, float y)
@@ -455,6 +497,40 @@ namespace HSRTimer
             {
                 char ch = text[i];
                 Color c = GradientText.Gradient(a, b, i, len);
+                var content = new GUIContent(ch.ToString());
+                Vector2 size = style.CalcSize(content);
+                Color prev = GUI.color;
+                GUI.color = c;
+                var rect = new Rect(cx, y, size.x, fullSize.y);
+                GUI.Label(rect, content, style);
+                GUI.color = prev;
+                cx += size.x;
+            }
+        }
+
+        /// <summary>
+        /// Draw one line per character with a left→right two-color gradient,
+        /// letting a per-character mask override individual characters with an
+        /// alternate (flash) gradient. Used so the single soft-flag line can
+        /// flash only the segments that were newly triggered.
+        /// </summary>
+        private static void DrawPerCharacterLine(string text, IList<bool> flashMask,
+            Color flashA, Color flashB, Color a, Color b, float x, float y, GUIStyle style)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            style.alignment = TextAnchor.UpperLeft;
+
+            var fullSize = style.CalcSize(new GUIContent(text));
+            int len = text.Length;
+
+            float cx = x;
+            for (int i = 0; i < len; i++)
+            {
+                char ch = text[i];
+                bool flash = flashMask != null && i < flashMask.Count && flashMask[i];
+                Color c = flash
+                    ? GradientText.Gradient(flashA, flashB, i, len)
+                    : GradientText.Gradient(a, b, i, len);
                 var content = new GUIContent(ch.ToString());
                 Vector2 size = style.CalcSize(content);
                 Color prev = GUI.color;

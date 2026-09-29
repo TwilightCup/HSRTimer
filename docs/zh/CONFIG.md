@@ -13,6 +13,7 @@
 ```ini
 [settings]
 auto_reset = true
+use_plcc_timing_standard = false
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
 retry_level_override_enabled = false
@@ -31,6 +32,7 @@ menu_key = Home
 | 键 | 取值 | 默认 | 说明 |
 |----|------|------|------|
 | `auto_reset` | true/false | true | R1.7.2 —— 退出到菜单 / 大厅时清零实时计时器与上一段快照,并保留上一局总时间 |
+| `use_plcc_timing_standard` | true/false | false | R1.4.2 —— 决定分段终点取哪个权威事件。默认关闭保留既有边界(分段在 `Game.Fall` 通关检测时结束);开启切换到 plcc 计时器标准(分段在游戏离开 `PlayingLevel` 时结束)。在设置面板 **常规 → 计时** 部分最上方切换。R1.4.2a:整局运行期间锁定(`RunState.RealTimeActive`,含关卡加载与暂停)—— 面板选项禁用,`hsr set use_plcc_timing_standard` 被拒绝,直到本局结束(通关、返回菜单/大厅或重置) |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 —— 在关卡内**暂停菜单**点击"重新开始"时清除可原谅的有效性标记(计时器继续计时,不重置)。一键重试则无条件清除(固定行为);整局重置会清除全部标记。 |
 | `retry_min_dwell` | 秒(≥0) | 0.5 | R6 重试时在空场景强制停留的最短时间,从按下重试键开始计。若关卡重载快于该值,则在空场景内等待到该时间后再重载;`0` 表示不强制停留。 |
 | `retry_level_override_enabled` | true/false | false | R6.5 —— 使用固定的重试关卡,而不是当前关卡 / 从菜单进入的战役起点关。关闭时保持现有的一键重试行为。 |
@@ -142,7 +144,7 @@ DisabledLeaderboardSources =
 | `LoadPath` | `subsegment/load` | 玩家手动放置的采样目录。插件加载时会自动创建该目录，以便直接放入参考采样。 |
 | `ToggleKey` | `Tab` | 共享排行榜循环切换键：关闭 → 可用内容模式 → 关闭。模块被禁用（用户设置或自动禁用机制，如客机门控）时对应模式自动跳过，例如 subsegment 关闭后仅在关闭 ↔ 标记之间轮换。 |
 | `MultiProject` | `Any%` | 多关实时对比的初始子项目（`Aztec%`/`Dark%`/`Steam%`/`Any%`）。当前局内可沿包含关系自动升级（`Aztec%`→`Dark%`→`Steam%`→`Any%`），不写回配置；若所选项目完全没有数据，则回退到有数据的最小项目（仅当前局内）。PB 写入仍按实际最后完成关卡判定。 |
-| `PlaneRadius` | `50.0` | 虚拟检测平面半径（米）。 |
+| `PlaneRadius` | `50.0` | 虚拟检测平面半径（米）。在加载参考采样、构建平面时应用，因此同样作用于既有 PB / 手动加载采样（其文件不再携带逐采样半径）。 |
 | `MinMove` | `0.5` | 最小采样位移；低于该值的位移置零，且不建平面。 |
 | `SampleInterval` | `1.0` | 游戏时间采样间隔（秒）。 |
 | `QuietSettleSeconds` | `0.5` | 穿越候选的静默结算窗（秒）。 |

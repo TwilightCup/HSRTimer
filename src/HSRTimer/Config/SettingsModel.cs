@@ -13,6 +13,13 @@ namespace HSRTimer
         // ── Timing toggles ──
         // Pause time is always counted and menu/lobby time is never counted;
         // those are no longer user settings.
+        //
+        // R1.4.2 timing standard (default off): when off, the segment ends at
+        // the Game.Fall pass detection (the legacy boundary, which can be off
+        // by one or two ticks from the plcc Timer). When on, the segment ends
+        // when the game leaves PlayingLevel (Game.BeginLoadLevel /
+        // Game.AfterUnload), matching the plcc Timer.
+        public bool UsePlccTimingStandard = false;
         public bool AutoReset = true;             // R1.7.2 (default on)
         public bool RestartClearsForgivable = false; // R5.4.3 — pause-menu Restart clears forgivable flags (default off); the one-key retry always clears them (R5.4.2, fixed)
         public float RetryMinDwell = 0.5f;        // R6 minimum empty-scene dwell (seconds)
@@ -137,6 +144,7 @@ namespace HSRTimer
                 switch (key)
                 {
                     case "auto_reset": AutoReset = ParseBool(value, AutoReset); break;
+                    case "use_plcc_timing_standard": UsePlccTimingStandard = ParseBool(value, UsePlccTimingStandard); break;
                     case "restart_clears_forgivable": RestartClearsForgivable = ParseBool(value, RestartClearsForgivable); break;
                     case "retry_min_dwell": RetryMinDwell = ParseFloat(value, RetryMinDwell); break;
                     case "retry_level_override_enabled": RetryLevelOverrideEnable = ParseBool(value, RetryLevelOverrideEnable); break;
@@ -251,6 +259,7 @@ namespace HSRTimer
             var kv = new Dictionary<string, string>
             {
                 ["auto_reset"] = AutoReset ? "true" : "false",
+                ["use_plcc_timing_standard"] = UsePlccTimingStandard ? "true" : "false",
                 ["restart_clears_forgivable"] = RestartClearsForgivable ? "true" : "false",
                 ["retry_min_dwell"] = RetryMinDwell.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                 ["retry_level_override_enabled"] = RetryLevelOverrideEnable ? "true" : "false",

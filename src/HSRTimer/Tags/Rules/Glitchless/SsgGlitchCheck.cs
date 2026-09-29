@@ -12,14 +12,23 @@ namespace HSRTimer
     /// <c>!Human.hasGrabbed</c> on their own: a normal climb release can keep
     /// the game in Climb until landing (the allowed "pseudo half-body" state)
     /// while both grab fields are already null.
+    ///
+    /// The phantom-grab state persists for as long as it exists, so the check
+    /// is edge-tracked: it raises on the false→true edge and counts each new
+    /// occurrence (e.g. again after a respawn rebuilds the ragdoll) exactly
+    /// once, instead of counting every tick while the glitch is active.
     /// </summary>
     internal sealed class SsgGlitchCheck : IGlitchCheck
     {
-        private bool _raised;
+        // Edge-tracked instead of one-shot-per-level: the phantom grab persists
+        // for as long as it exists, so counting every tick would inflate the
+        // soft count. Raising on the false→true edge counts each new occurrence
+        // (e.g. again after a respawn rebuilds the ragdoll) exactly once.
+        private bool _wasBad;
 
         public void OnLevelEnter(ValidationContext ctx)
         {
-            _raised = false;
+            _wasBad = false;
         }
 
         public void OnTick(ValidationContext ctx) => Check(ctx);
@@ -28,20 +37,20 @@ namespace HSRTimer
 
         private void Check(ValidationContext ctx)
         {
-            if (_raised)
-                return;
-
             var human = Human.Localplayer;
             if (human == null || human.ragdoll == null)
+            {
+                // Ragdoll rebuilt / level unloading: any ongoing phantom grab
+                // is gone, so the next occurrence is a fresh false→true edge.
+                _wasBad = false;
                 return;
+            }
 
-            bool leftBad = HasPhantomGrab(human.ragdoll.partLeftHand);
-            bool rightBad = HasPhantomGrab(human.ragdoll.partRightHand);
-            if (!leftBad && !rightBad)
-                return;
-
-            ctx.Flags.Raise(InvalidReason.Ssg);
-            _raised = true;
+            bool bad = HasPhantomGrab(human.ragdoll.partLeftHand)
+                || HasPhantomGrab(human.ragdoll.partRightHand);
+            if (bad && !_wasBad)
+                ctx.Flags.Raise(InvalidReason.Ssg);
+            _wasBad = bad;
         }
 
         private static bool HasPhantomGrab(HumanSegment hand)

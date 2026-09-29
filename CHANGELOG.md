@@ -2,6 +2,19 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
+## 1.9.0
+
+- **Release Date:** _29 Sep 2026_
+- **Highlights:**
+  - Added a **"Use plcc timing standard"** option in **General → Timing** that ends each segment when the game leaves the level, matching the plcc Timer standard.
+  - Glitchless glitches (SSG / Prop Fly / Footsie) are now **soft flags** with a per-trigger count instead of turning the run's red "invalid" banner on.
+  - The subsegment **Plane radius** setting now applies to loaded reference data, so changing it also affects your existing PB and manually-loaded reference samples.
+- **Details:**
+  - Added a **"Use plcc timing standard"** option at the top of **General → Timing** (default off). Off (the default) keeps the previous timing: a segment ends when the game detects the pass. On switches to the plcc Timer standard: a segment ends when the game leaves the level (`Game.state` leaves `PlayingLevel`). Both modes record the end tick from the game's authoritative code path, so segment and total times stay jitter-free; your recorded times change only when you enable the option. While the option is on, the timer HUD shows a `plcc timing mode` line (Chinese: `plcc计时模式`) under the time rows so the active timing mode is always visible.
+  - The **"Use plcc timing standard"** option is now locked for the whole run in progress: the settings panel disables the toggle (its note explains why) and the `hsr set use_plcc_timing_standard` console command refuses the change, so a run can never straddle two timing standards. Complete the run, return to the menu, or reset the run to switch it.
+  - Glitchless glitches (SSG / Prop Fly / Footsie) are now **soft flags** just like the NoEC `EC` violation: they no longer turn the run's red "invalid" banner on. Instead all active soft flags share a single HUD line in normal text color, each with its own trigger count (e.g. `SSG x2`), and **every** occurrence in a level is counted — not just the first per level. When one flag triggers again, only that flag's own segment on the line flashes red, so several co-occurring flags flash independently; the flags are cleared by a one-key retry and a full timer reset, but not by a pause-menu restart.
+  - The subsegment **Plane radius** setting now applies when reference data is loaded instead of being frozen into each recorded sample, so changing it also affects your existing PB and manually-loaded reference samples (no need to re-record them). Sample files written from now on no longer contain a per-sample radius; existing files keep loading as before and are replaced the next time a PB is written.
+
 ## 1.8.0
 
 - **Release Date:** _26 Sep 2026_

@@ -63,6 +63,14 @@ settings panel's Interface tab (or set `show_real_time = false` in
 but leave the setting enabled, it appears below your configured timer rows as a
 convenient fallback.
 
+## Timing-standard indicator
+
+While the **"Use plcc timing standard"** option (R1.4.2) is enabled, the HUD
+shows one line **`plcc timing mode`** (Chinese: `plcc计时模式`) directly under
+the time rows, so the active timing mode is visible on screen. The line is
+drawn in the same two-color gradient as the timer rows and is omitted entirely
+when the option is off (the default).
+
 ## Colors & gradient
 
 The default text gradient is a two-color left→-right blend. Specify each color

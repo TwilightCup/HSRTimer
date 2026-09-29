@@ -23,6 +23,7 @@ TIMER_LAST_SEGMENT:Last Segment
 TIMER_LAST_RUN:Last Run
 TIMER_WAKE_UP_TIME:Wake Up Time
 TIMER_CURRENT_STATE:State
+HUD_PLCC_TIMING_MODE:plcc timing mode
 
 # ===== Current-state display (R2.1.1, debug) =====
 STATE_INACTIVE:Inactive
@@ -37,6 +38,8 @@ SETTINGS_RESET_KEY:Reset Key
 SETTINGS_RETRY_KEY:Retry Key
 SETTINGS_MENU_KEY:Settings Panel Key
 SETTINGS_AUTO_RESET:Auto-reset run
+SETTINGS_USE_PLCC_TIMING_STANDARD:Use plcc timing standard
+SETTINGS_USE_PLCC_TIMING_STANDARD_LOCKED:Locked while a run is in progress. Reset the run or leave the level to change it.
 SETTINGS_RESTART_CLEARS_FORGIVABLE:Clear forgivable flags on pause-menu restart
 SETTINGS_RETRY_MIN_DWELL:Retry empty-scene dwell (s)
 SETTINGS_RETRY_LEVEL_OVERRIDE_ENABLE:Specify retry level

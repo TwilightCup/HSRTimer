@@ -35,14 +35,14 @@ namespace HSRTimer
         /// <summary>
         /// The SSG (half-body) glitch under Glitchless: a hand kept a phantom
         /// grab (<c>grabObject != null</c>) after the reverse-wall-climb branch
-        /// returned without creating <c>grabJoint</c>.
+        /// returned without creating <c>grabJoint</c>. A soft flag (R3.8.3).
         /// </summary>
         Ssg,
 
-        /// <summary>The Prop Fly glitch under Glitchless: jumping while standing on a grabbed movable object.</summary>
+        /// <summary>The Prop Fly glitch under Glitchless: jumping while standing on a grabbed movable object. A soft flag (R3.8.3).</summary>
         PropFly,
 
-        /// <summary>The Footsie glitch under Glitchless: touching the Water (River) pass point inside the Footsie Spot range.</summary>
+        /// <summary>The Footsie glitch under Glitchless: touching the Water (River) pass point inside the Footsie Spot range. A soft flag (R3.8.3).</summary>
         Footsie,
 
         /// <summary>The EC (wall-climb) violation under NoEC: while airborne (onGround false), a new grab point rose more than 0.2 m above the first grab height recorded for that airborne period.</summary>
@@ -59,10 +59,11 @@ namespace HSRTimer
         Forgivable,
 
         /// <summary>
-        /// A soft flag: shown on its own HUD line in normal text color with a
-        /// trigger count. It flashes red when a new trigger occurs, is not
-        /// cleared by pause-menu restart or one-key retry, and is removed only
-        /// by a full timer reset.
+        /// A soft flag: shown on the HUD's single soft-flag line in normal text
+        /// color with a trigger count. Its own segment flashes red when a new
+        /// trigger occurs, independently of any other active soft flag; it is
+        /// cleared by one-key retry and a full timer reset, but not by pause-menu
+        /// restart (R3.8.3, R3.9.3).
         /// </summary>
         Soft,
     }
@@ -70,9 +71,16 @@ namespace HSRTimer
     /// <summary>Static classification of each invalid reason.</summary>
     public static class InvalidReasons
     {
+        // Soft flags: EC (NoEC, R3.9.3) and all Glitchless glitches
+        // SSG / Prop Fly / Footsie (R3.8.3). They never turn the run's red
+        // "invalid" banner on; the HUD lists them on one shared line with a
+        // trigger count instead.
         private static readonly HashSet<InvalidReason> SoftReasons = new HashSet<InvalidReason>
         {
             InvalidReason.Ec,
+            InvalidReason.Ssg,
+            InvalidReason.PropFly,
+            InvalidReason.Footsie,
         };
 
         public static bool IsSoft(InvalidReason r) => SoftReasons.Contains(r);

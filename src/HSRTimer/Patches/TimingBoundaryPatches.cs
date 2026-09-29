@@ -32,8 +32,10 @@ namespace HSRTimer
     /// zone sets <c>passedLevel</c> (R1.4.2). It latches the pass flag
     /// immediately so later checks see the completion even before the polling
     /// loop next reads <c>game.passedLevel</c>. The segment's end tick is
-    /// recorded by <see cref="GameFallBoundaryPatch"/>, where the game actually
-    /// detects the pass and starts the load.
+    /// recorded by the authoritative boundary hook: under the plcc timing
+    /// standard that is <see cref="GameAfterUnloadBoundaryPatch"/> / <see
+    /// cref="GameBeginLoadLevelBoundaryPatch"/>, and in the legacy mode (the
+    /// default) it is <see cref="GameFallBoundaryPatch"/>.
     /// </summary>
     [HarmonyPatch(typeof(Game), nameof(Game.EnterPassZone))]
     internal static class GameEnterPassZoneBoundaryPatch
@@ -53,17 +55,74 @@ namespace HSRTimer
     }
 
     /// <summary>
+    /// Harmony postfix on <c>Game.AfterUnload()</c>: the authoritative moment
+    /// the game assigns <c>state = Inactive</c> while tearing a level down
+    /// (the Workshop/EditorPick completion path via <c>Game.Fall</c> →
+    /// <c>PauseLeave</c> → <c>UnloadLevel</c>, a pause-menu quit, or a retry).
+    /// The tick latched there is the segment end (R1.4.1) under the plcc timing
+    /// standard ("Use plcc timing standard" on): it matches the plcc Timer's
+    /// "the game left PlayingLevel" criterion without depending on when the
+    /// polling loop notices the flip. In the legacy mode (the default)
+    /// <see cref="TimerCore.RecordLevelLeave"/> is a no-op — the end tick is
+    /// latched at the <c>Game.Fall</c> pass detection instead.
+    /// </summary>
+    [HarmonyPatch(typeof(Game), nameof(Game.AfterUnload))]
+    internal static class GameAfterUnloadBoundaryPatch
+    {
+        private static void Postfix()
+        {
+            try
+            {
+                TimerCore.RecordLevelLeave();
+            }
+            catch (System.Exception ex)
+            {
+                Plugin.Logger.LogWarning($"HSRTimer: Game.AfterUnload postfix failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Harmony postfix on <c>Game.BeginLoadLevel(...)</c>: its <c>LoadLevel</c>
+    /// coroutine assigns <c>state = LoadingLevel</c> synchronously before its
+    /// first yield, so this is the authoritative moment a playing level leaves
+    /// <c>PlayingLevel</c> for the next one (campaign advance, console level
+    /// change, menu launch). The tick latched there is the segment end
+    /// (R1.4.1) under the plcc timing standard ("Use plcc timing standard" on);
+    /// in the legacy mode (the default) <see cref="TimerCore.RecordLevelLeave"/>
+    /// is a no-op — the end tick is latched at the <c>Game.Fall</c> pass
+    /// detection instead.
+    /// </summary>
+    [HarmonyPatch(typeof(Game), nameof(Game.BeginLoadLevel))]
+    internal static class GameBeginLoadLevelBoundaryPatch
+    {
+        private static void Postfix()
+        {
+            try
+            {
+                TimerCore.RecordLevelLeave();
+            }
+            catch (System.Exception ex)
+            {
+                Plugin.Logger.LogWarning($"HSRTimer: Game.BeginLoadLevel postfix failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
     /// Harmony prefix/postfix on <c>Game.Fall(HumanBase, bool, bool)</c>: the
-    /// point where the game detects a genuine level completion and enters the
-    /// loading/leave path (R1.4.2). The prefix snapshots whether this call took
-    /// the pass branch (the method itself may clear <c>passedLevel</c> for
-    /// Workshop/EditorPick before returning); the postfix then latches the exact
-    /// end tick via <see cref="TimerCore.RecordLevelPass"/>.
-    /// <para>
-    /// This is the deliberate exception to "poll, don't patch" documented in
+    /// point where the game detects a genuine level completion (R1.4.2). The
+    /// prefix snapshots whether this call took the pass branch (the method
+    /// itself may clear <c>passedLevel</c> for Workshop/EditorPick before
+    /// returning); the postfix then calls <see cref="TimerCore.RecordLevelPass"/>,
+    /// which in the legacy mode (the default) latches the exact end tick here —
+    /// this is the deliberate exception to "poll, don't patch" documented in
     /// ARCHITECTURE.md: the pass is evaluated inside the game's physics step, so
-    /// a later poll can only observe it one or more ticks late.
-    /// </para>
+    /// a later poll can only observe it one or more ticks late. Under the plcc
+    /// timing standard it only latches the completion flag; the end tick is
+    /// latched by the authoritative leave hooks (<see
+    /// cref="GameAfterUnloadBoundaryPatch"/> / <see
+    /// cref="GameBeginLoadLevelBoundaryPatch"/>).
     /// </summary>
     [HarmonyPatch(typeof(Game), nameof(Game.Fall))]
     internal static class GameFallBoundaryPatch
