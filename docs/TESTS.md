@@ -293,7 +293,10 @@ Offset, Font size, Color, and Only-record-first-wake-up) and one collapsible
 **Column N** dropdown per column listing every row type with an integer
 **position** field (`0` = hidden, `N > 0` = the N-th line), a per-column
 **Delete** button (with confirmation), and a **New column** button at the
-bottom.
+bottom. The same page also has a **Leaderboard** button that opens the shared
+leaderboard HUD sub-page (content mode, HUD size/offset, entry colors, marker
+time display, and the subsegment source toggles), each with a **Back** button at
+the top.
 
 ### 5. Settings panel / general settings
 

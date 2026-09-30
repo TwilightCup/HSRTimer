@@ -110,6 +110,25 @@ HSRTimer saves.
     Real Time and Wake Up Time are regular rows here — they show wherever you
     place them, so the old `show_real_time` / `show_wake_up_time` toggles are
     gone (the Real Time clock itself always runs in the background).
+- **Leaderboard** — a button that opens the shared leaderboard HUD sub-page
+  (same marker-style drill-down with a **Back** button at the top):
+  - **Content** — choose what the shared leaderboard HUD shows: **Subsegment**
+    (reference time comparison) or **Markers** (the current level's marker
+    feed). The mode-cycle key (in **General → Keybinds**) and the appearance
+    settings below apply to both modes.
+  - **HUD** — the leaderboard font size, X offset, and Y offset (relative to
+    the fixed top anchor at the screen center; content extends downward).
+  - **Entry colors** — three user-configurable colors for the three leaderboard
+    entry states: faster/ahead (default green), slower/behind (default red), and
+    tie/no-data (default white, shown as `--`). In Markers mode the colors still
+    reflect ahead/behind vs the marker's PB even when absolute times are shown.
+  - **Marker time display** — (Markers mode only) whether each triggered marker
+    row shows its absolute segment time or the signed difference to that marker's
+    PB.
+  - **Displayed sources** — (Subsegment mode only) at the bottom, a toggle for
+    every subsegment source: **PB** and each top-level folder under the load
+    directory. Only checked sources appear on the leaderboard. The list is still
+    truncated to `MaxLeaderboardEntries` after filtering and sorting.
 
 ## Category
 
@@ -129,26 +148,7 @@ HSRTimer saves.
   the selected project has no data at all, it falls back to the smallest
   project that has data (session-only). The leaderboard mode-cycle key is in
   **General → Keybinds**; the leaderboard appearance settings live on the
-  **Leaderboard** tab below.
-
-## Leaderboard
-
-- **Content** — choose what the shared leaderboard HUD shows: **Subsegment**
-  (reference time comparison) or **Markers** (the current level's marker feed).
-  The mode-cycle key and the appearance settings below apply to both modes.
-- **HUD** — the leaderboard font size, X offset, and Y offset (relative to
-  the fixed top anchor at the screen center; content extends downward).
-- **Entry colors** — three user-configurable colors for the three leaderboard
-  entry states: faster/ahead (default green), slower/behind (default red), and
-  tie/no-data (default white, shown as `--`). In Markers mode the colors still
-  reflect ahead/behind vs the marker's PB even when absolute times are shown.
-- **Marker time display** — (Markers mode only) whether each triggered marker
-  row shows its absolute segment time or the signed difference to that marker's
-  PB.
-- **Displayed sources** — (Subsegment mode only) at the bottom, a toggle for
-  every subsegment source: **PB** and each top-level folder under the load
-  directory. Only checked sources appear on the leaderboard. The list is still
-  truncated to `MaxLeaderboardEntries` after filtering and sorting.
+  **Interface → Leaderboard** sub-page.
 
 ## Markers
 

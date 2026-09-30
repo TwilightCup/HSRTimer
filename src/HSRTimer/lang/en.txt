@@ -185,7 +185,6 @@ SETTINGS_SUBSEGMENT_HUD_OFFSET_X:Leaderboard X offset
 SETTINGS_SUBSEGMENT_HUD_OFFSET_Y:Leaderboard Y offset (from fixed top anchor)
 
 # ===== Leaderboard (R8.5) =====
-PANEL_TAB_LEADERBOARD:Leaderboard
 PANEL_LEADERBOARD:Leaderboard
 SETTINGS_LEADERBOARD_COLORS:Entry colors
 SETTINGS_LEADERBOARD_COLOR_FASTER:Faster (ahead) color

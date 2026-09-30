@@ -7,7 +7,7 @@ namespace HSRTimer
 {
     /// <summary>
     /// An IMGUI settings panel, organized into tabbed pages (About, General,
-    /// Interface, Category, Subsegment, Leaderboard, Markers, plus any tabs
+    /// Interface, Category, Subsegment, Markers, plus any tabs
     /// registered by other plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
     /// option and applies it live (the HUD/engine read from the shared models
     /// each frame, so changes take effect immediately). Changes are written to
@@ -39,7 +39,7 @@ namespace HSRTimer
         private const int GeneralTabIndex = 1;
         private int _tab = GeneralTabIndex;
         private string[] _tabDisplays;
-        private static readonly string[] _tabKeys = { "PANEL_TAB_ABOUT", "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD", "PANEL_TAB_MARKERS" };
+        private static readonly string[] _tabKeys = { "PANEL_TAB_ABOUT", "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_MARKERS" };
 
         // Keybind rebind state: which logical action is awaiting a keypress.
         private string _pendingRebind;
@@ -71,6 +71,11 @@ namespace HSRTimer
         private bool _timerHudOpen;
         private int _expandedColumn;
         private int _confirmDeleteColumn;
+
+        // Interface → Leaderboard sub-page state (marker-style drill-down):
+        // whether the shared leaderboard sub-page is open. Only one Interface
+        // sub-page can be open at a time; both are closed when the tab changes.
+        private bool _leaderboardOpen;
 
         // Per-row position text buffers for the Timer HUD column editor, keyed
         // by "<column>:<row>". IMGUI text fields are stateless, so we own the
@@ -136,6 +141,7 @@ namespace HSRTimer
                 _timerHudOpen = false;
                 _expandedColumn = 0;
                 _confirmDeleteColumn = 0;
+                _leaderboardOpen = false;
                 _columnPosBuf.Clear();
                 RefreshLanguageList();
                 RefreshPresetList();
@@ -243,6 +249,7 @@ namespace HSRTimer
                 _timerHudOpen = false;
                 _expandedColumn = 0;
                 _confirmDeleteColumn = 0;
+                _leaderboardOpen = false;
             }
             GUILayout.Space(4);
 
@@ -255,8 +262,7 @@ namespace HSRTimer
                 case 2: DrawInterface(cfg, loc); break;
                 case 3: DrawCategory(cfg, loc); break;
                 case 4: DrawSubsegment(cfg, s, loc); break;
-                case 5: DrawLeaderboard(cfg, s, loc); break;
-                case 6: DrawMarkers(cfg, loc); break;
+                case 5: DrawMarkers(cfg, loc); break;
                 default: DrawExternalTab(_tab - _tabKeys.Length); break;
             }
 
@@ -445,9 +451,10 @@ namespace HSRTimer
         }
 
         // ── Page: Interface (HUD appearance) ──
-        // The root page holds Center Loading/Saving and a "Timer HUD" button
-        // that drills into a marker-style sub-page with the HUD general
-        // settings and the per-column row editor.
+        // The root page holds Center Loading/Saving and two buttons that each
+        // drill into a marker-style sub-page: "Timer HUD" (timer HUD general
+        // settings + per-column row editor) and "Leaderboard" (the shared
+        // leaderboard HUD content mode, appearance, colors, and sources).
         private void DrawInterface(ConfigService cfg, LocalizationService loc)
         {
             cfg.Settings.CenterLoadingSaving = Toggle(loc.Get("SETTINGS_CENTER_LOADING_SAVING"), cfg.Settings.CenterLoadingSaving);
@@ -455,6 +462,11 @@ namespace HSRTimer
             if (_timerHudOpen)
             {
                 DrawTimerHudPage(cfg, loc);
+                return;
+            }
+            if (_leaderboardOpen)
+            {
+                DrawLeaderboardPage(cfg, loc);
                 return;
             }
 
@@ -465,6 +477,8 @@ namespace HSRTimer
                 _expandedColumn = 0;
                 _confirmDeleteColumn = 0;
             }
+            if (GUILayout.Button(loc.Get("PANEL_LEADERBOARD"), _button))
+                _leaderboardOpen = true;
         }
 
         // ── Interface → Timer HUD sub-page ──
@@ -694,11 +708,21 @@ namespace HSRTimer
             s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
         }
 
-        // ── Page: Leaderboard (R8.5 HUD appearance + entry state colors + content mode) ──
-        private void DrawLeaderboard(ConfigService cfg, SettingsModel s, LocalizationService loc)
+        // ── Interface → Leaderboard sub-page (R8.5 HUD appearance + entry
+        //    state colors + content mode) ──
+        private void DrawLeaderboardPage(ConfigService cfg, LocalizationService loc)
         {
+            var s = cfg.Settings;
             var layout = cfg.Layout;
-            Section(loc.Get("PANEL_LEADERBOARD"));
+            GUILayout.Space(6);
+
+            // Marker-style drill-down: the Back button at the top returns to
+            // the root Interface page.
+            if (GUILayout.Button(loc.Get("PANEL_BACK"), _button))
+            {
+                _leaderboardOpen = false;
+                return;
+            }
 
             // R10.7.1: the shared leaderboard shows either the subsegment
             // references or the current level's marker feed.
