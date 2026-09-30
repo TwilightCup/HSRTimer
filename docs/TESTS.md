@@ -51,7 +51,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr hud [on\|off\|toggle\|status]` | Control timer HUD visibility |
 | `hsr panel [open\|close\|toggle\|status]` | Control the settings panel |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | Control the leaderboard HUD |
-| `hsr layout [status\|row ...\|text ...\|get <key>\|set <key> <value>]` | Inspect/edit the HUD layout |
+| `hsr layout [status\|row ...\|column ...\|text ...\|get <key>\|set <key> <value>]` | Inspect/edit the HUD layout (columns use 1-based row positions) |
 | `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | Toggle enabled tag rules; inspect/force the auto Co-op label |
 | `hsr lang [list\|set <code>\|reload\|current]` | Manage localization |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | Manage presets (R11) |
@@ -70,7 +70,7 @@ and `LayoutModel`. Common examples:
 
 - `auto_reset`, `use_plcc_timing_standard`, `restart_clears_forgivable`, `retry_min_dwell`
 - `retry_level_override_enabled`, `retry_level_override`
-- `show_hud`, `show_real_time`, `show_wake_up_time`
+- `show_hud`
 - `only_record_first_wake_up_time`, `center_loading_saving`, `language`
 - `reset_key`, `retry_key`, `menu_key`
 - `subsegment_enable`, `subsegment_pb_path`, `subsegment_load_path`,
@@ -260,10 +260,15 @@ hsr hud on
 hsr layout status
 hsr layout row list
 hsr layout row add 1 CurrentState
-hsr layout row remove 1 5
+hsr layout row add 1 CurrentState 2
+hsr layout row remove 1 2
 hsr layout row add 2 RealTime
 hsr layout row add 2 PrevRt
 hsr layout row clear 2
+hsr layout column list
+hsr layout column new
+hsr layout row add 4 WakeUpTime
+hsr layout column remove 4
 hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
 hsr layout set font_size 24
@@ -272,9 +277,23 @@ hsr layout set color_a FF0000FF
 ```
 
 The HUD should update on the next frame and the changes should persist to
-`layout.ini`. `PrevRt` is a valid row type for `hsr layout row add` (the
-previous level's Real Time snapshot; it shows `--:--` until the first level is
-completed).
+`layout.ini`. `layout.ini` `[column.N]` keys are 1-based row positions.
+`PrevRt` is a valid row type for `hsr layout row add` (the previous level's
+Real Time snapshot; it shows `--:--` until the first level is completed), as
+are `LastRun` and `WakeUpTime` — every row type is a regular column row now, and
+`show_real_time` / `show_wake_up_time` are no longer settings (`hsr set` no
+longer lists them). `hsr layout row add <column> <type> [position]` appends at
+the end when the position is omitted; `hsr layout column new` appends an empty
+column and `hsr layout column remove <n>` deletes one.
+
+The settings panel's **Interface** page mirrors this editor: **Center
+Loading/Saving** at the top, then the **Timer HUD** button (Chinese:
+`计时器HUD`) opens the sub-page with **HUD general settings** (Show timer HUD,
+Offset, Font size, Color, and Only-record-first-wake-up) and one collapsible
+**Column N** dropdown per column listing every row type with an integer
+**position** field (`0` = hidden, `N > 0` = the N-th line), a per-column
+**Delete** button (with confirmation), and a **New column** button at the
+bottom.
 
 ### 5. Settings panel / general settings
 
@@ -521,7 +540,8 @@ Notes:
 - [ ] `hsr update check` reports up to date / shows a newer release / shows a one-line error (offline), and `hsr update apply` installs the DLL (R13).
 - [ ] `hsr tag enable/disable` changes the enabled tags and persists them.
 - [ ] `hsr set language zh-Hans` switches UI language.
-- [ ] `hsr layout row list/add/remove/clear` changes the HUD rows (per column), including adding `PrevRt`.
+- [ ] `hsr layout row list/add/remove/clear` changes the HUD rows (per 1-based position), including adding `PrevRt`, `LastRun` and `WakeUpTime`.
+- [ ] `hsr layout column new/remove` appends/deletes columns, and `hsr set show_real_time` / `show_wake_up_time` are no longer accepted (the rows are column positions now).
 - [ ] `hsr preset create/save/apply` round-trips layout + markers.
 - [ ] `hsr sub status/entries` works with subsegment data present.
 - [ ] `hsr marker add/list/toggle/pb` works while in a level.

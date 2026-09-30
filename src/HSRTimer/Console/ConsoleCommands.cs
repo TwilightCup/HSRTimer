@@ -808,6 +808,7 @@ namespace HSRTimer
             {
                 case "status": CmdLayoutStatus(cfg); break;
                 case "row": CmdLayoutRow(cfg, rest); break;
+                case "column": CmdLayoutColumn(cfg, rest); break;
                 case "text": CmdLayoutText(cfg, rest); break;
                 case "set":
                     if (rest.Count < 2) { Print("Usage: hsr layout set <key> <value>"); return; }
@@ -818,9 +819,18 @@ namespace HSRTimer
                     CmdGet(new List<string> { rest[0] });
                     break;
                 default:
-                    Print("Usage: hsr layout [status|row ...|text ...|get <key>|set <key> <value>]");
+                    Print("Usage: hsr layout [status|row ...|column ...|text ...|get <key>|set <key> <value>]");
                     break;
             }
+        }
+
+        /// <summary>Append a column's rows as " pos=RowType" pairs, sorted by 1-based position.</summary>
+        private static void AppendColumnRows(StringBuilder sb, Dictionary<int, RowType> rows)
+        {
+            var positions = new List<int>(rows.Keys);
+            positions.Sort();
+            foreach (var pos in positions)
+                sb.Append(' ').Append(pos).Append('=').Append(rows[pos]);
         }
 
         private static void CmdLayoutStatus(ConfigService cfg)
@@ -834,8 +844,7 @@ namespace HSRTimer
             foreach (var col in colIndices)
             {
                 sb.Append(" [").Append(col).Append(']');
-                for (int i = 0; i < l.Columns[col].Count; i++)
-                    sb.Append(' ').Append(i).Append('=').Append(l.Columns[col][i]);
+                AppendColumnRows(sb, l.Columns[col]);
             }
             sb.AppendLine();
             sb.Append("customTexts:");
@@ -852,7 +861,7 @@ namespace HSRTimer
         private static void CmdLayoutRow(ConfigService cfg, List<string> args)
         {
             var l = cfg.Layout;
-            if (args.Count == 0) { Print("Usage: hsr layout row <list|add <column> <type>|remove <column> <index>|clear <column>>"); return; }
+            if (args.Count == 0) { Print("Usage: hsr layout row <list|add <column> <type> [position]|remove <column> <position>|clear <column>>"); return; }
             string sub = args[0].ToLowerInvariant();
             switch (sub)
             {
@@ -863,8 +872,7 @@ namespace HSRTimer
                     foreach (var col in cols)
                     {
                         sb.Append("column ").Append(col).Append(':');
-                        for (int i = 0; i < l.Columns[col].Count; i++)
-                            sb.Append(' ').Append(i).Append('=').Append(l.Columns[col][i]);
+                        AppendColumnRows(sb, l.Columns[col]);
                         sb.AppendLine();
                     }
                     Print(sb.Length == 0 ? "No columns configured." : sb.ToString());
@@ -874,50 +882,65 @@ namespace HSRTimer
                     int col;
                     if (args.Count < 3 || !int.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out col) || col < 1)
                     {
-                        Print("Usage: hsr layout row add <column> <RowType>");
+                        Print("Usage: hsr layout row add <column> <RowType> [position]");
                         return;
                     }
-                    if (Enum.TryParse(args[2], true, out RowType rt))
-                    {
-                        List<RowType> rows;
-                        if (!l.Columns.TryGetValue(col, out rows))
-                        {
-                            rows = new List<RowType>();
-                            l.Columns[col] = rows;
-                        }
-                        rows.Add(rt);
-                        cfg.SaveSettings();
-                        Print($"Added row {rt} to column {col} at index {rows.Count - 1}.");
-                    }
-                    else
+                    if (!Enum.TryParse(args[2], true, out RowType rt))
                     {
                         Print($"Unknown RowType: {args[2]}. Valid: {string.Join(", ", Enum.GetNames(typeof(RowType)))}");
+                        return;
                     }
+                    int pos = 0;
+                    if (args.Count >= 4 && !int.TryParse(args[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out pos))
+                    {
+                        Print("Usage: hsr layout row add <column> <RowType> [position]");
+                        return;
+                    }
+                    Dictionary<int, RowType> rows;
+                    if (!l.Columns.TryGetValue(col, out rows))
+                    {
+                        rows = new Dictionary<int, RowType>();
+                        l.Columns[col] = rows;
+                    }
+                    if (pos <= 0)
+                    {
+                        // No explicit position: append after the current last one.
+                        int max = 0;
+                        foreach (var k in rows.Keys)
+                            if (k > max) max = k;
+                        pos = max + 1;
+                    }
+                    int existing = LayoutModel.PositionOf(rows, rt);
+                    if (existing > 0) rows.Remove(existing);
+                    rows.Remove(pos);   // displace any other row already at this position
+                    rows[pos] = rt;
+                    cfg.SaveSettings();
+                    Print($"Set row {rt} at column {col} position {pos}.");
                     return;
                 }
                 case "remove":
                 {
                     int col;
-                    int idx;
-                    List<RowType> rows;
+                    int pos;
+                    Dictionary<int, RowType> rows;
                     if (args.Count < 3 || !int.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out col) || col < 1
-                        || !int.TryParse(args[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out idx)
+                        || !int.TryParse(args[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out pos)
                         || !l.Columns.TryGetValue(col, out rows)
-                        || idx < 0 || idx >= rows.Count)
+                        || pos < 1 || !rows.ContainsKey(pos))
                     {
-                        Print("Usage: hsr layout row remove <column> <index>");
+                        Print("Usage: hsr layout row remove <column> <position>");
                         return;
                     }
-                    var removed = rows[idx];
-                    rows.RemoveAt(idx);
+                    var removed = rows[pos];
+                    rows.Remove(pos);
                     cfg.SaveSettings();
-                    Print($"Removed row {idx} ({removed}) from column {col}.");
+                    Print($"Removed row at column {col} position {pos} ({removed}).");
                     return;
                 }
                 case "clear":
                 {
                     int col;
-                    List<RowType> rows;
+                    Dictionary<int, RowType> rows;
                     if (args.Count < 2 || !int.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out col) || col < 1
                         || !l.Columns.TryGetValue(col, out rows))
                     {
@@ -930,7 +953,55 @@ namespace HSRTimer
                     return;
                 }
                 default:
-                    Print("Usage: hsr layout row <list|add <column> <type>|remove <column> <index>|clear <column>>");
+                    Print("Usage: hsr layout row <list|add <column> <type> [position]|remove <column> <position>|clear <column>>");
+                    return;
+            }
+        }
+
+        private static void CmdLayoutColumn(ConfigService cfg, List<string> args)
+        {
+            var l = cfg.Layout;
+            if (args.Count == 0) { Print("Usage: hsr layout column <list|new|remove <column>>"); return; }
+            string sub = args[0].ToLowerInvariant();
+            switch (sub)
+            {
+                case "list":
+                {
+                    var cols = new List<int>(l.Columns.Keys);
+                    cols.Sort();
+                    if (cols.Count == 0)
+                        Print("No columns configured.");
+                    else
+                        Print("columns: " + string.Join(", ", cols.ConvertAll(c => c.ToString(CultureInfo.InvariantCulture)).ToArray()));
+                    return;
+                }
+                case "new":
+                {
+                    int max = 0;
+                    foreach (var k in l.Columns.Keys)
+                        if (k > max) max = k;
+                    int next = max + 1;
+                    l.Columns[next] = new Dictionary<int, RowType>();
+                    cfg.SaveSettings();
+                    Print($"Created column {next} (empty; use 'hsr layout row add {next} <RowType> [position]' to fill it).");
+                    return;
+                }
+                case "remove":
+                {
+                    int col;
+                    if (args.Count < 2 || !int.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out col) || col < 1
+                        || !l.Columns.ContainsKey(col))
+                    {
+                        Print("Usage: hsr layout column remove <column>");
+                        return;
+                    }
+                    l.Columns.Remove(col);
+                    cfg.SaveSettings();
+                    Print($"Removed column {col}.");
+                    return;
+                }
+                default:
+                    Print("Usage: hsr layout column <list|new|remove <column>>");
                     return;
             }
         }
@@ -2176,7 +2247,7 @@ namespace HSRTimer
             sb.AppendLine("  hsr reset | retry | pass [real]");
             sb.AppendLine("  hsr hud [on|off|toggle|status] | panel [open|close|toggle|status]");
             sb.AppendLine("  hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]");
-            sb.AppendLine("  hsr layout [status|row ...|text ...]");
+            sb.AppendLine("  hsr layout [status|row ...|column ...|text ...]");
             sb.AppendLine("  hsr tag [list|enable <id>|disable <id>|set <id> <on|off>]");
             sb.AppendLine("  hsr lang [list|set <code>|reload|current]");
             sb.AppendLine("  hsr preset [list|current|create <name>|apply [name]|save|delete <name>]");
@@ -2223,7 +2294,7 @@ namespace HSRTimer
                 case "leaderboard":
                     return "hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]\r\nControl the shared leaderboard HUD. 'cycle' rotates hidden → available content modes → hidden; a mode whose module is disabled (user setting or an auto-disable mechanism, e.g. the co-op client gate) is skipped (R8.5.1.2). 'status' shows the current mode and which modes are available.";
                 case "layout":
-                    return "hsr layout [status|row <list|add <column> <type>|remove <column> <index>|clear <column>>|text <list|add <x> <y> <text...>|remove <index>|clear>|get <key>|set <key> <value>]\r\nInspect/edit the HUD layout. Rows live in columns ([column.N] in layout.ini): columns are drawn left-to-right by index, an empty column is hidden, and the LastRun / Wake-Up-Time column is always the rightmost one.";
+                    return "hsr layout [status|row <list|add <column> <type> [position]|remove <column> <position>|clear <column>>|column <list|new|remove <column>>|text <list|add <x> <y> <text...>|remove <index>|clear>|get <key>|set <key> <value>]\r\nInspect/edit the HUD layout. Rows live in columns ([column.N] in layout.ini): columns are drawn left-to-right by number and an empty column is hidden. Each row's key is its 1-based position within the column (0 is never stored); the panel's Timer HUD editor edits the same positions. Every row type (including LastRun and WakeUpTime) is a regular column row; RealTime is shown only where you place it.";
                 case "tag":
                     return "hsr tag [list|label <status|on|off|auto>|enable <id>|disable <id>|set <id> <on|off>]\r\nList available tag rules and toggle which tags are enabled (tags.ini). Auto label tags (e.g. Co-op, R3.10) are listed by 'hsr tag list' with their live state and cannot be toggled manually; 'hsr tag label' inspects the Co-op label and can force it on/off for testing ('auto' restores the multiplayer-driven state).";
                 case "lang":

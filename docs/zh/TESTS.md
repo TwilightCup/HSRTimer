@@ -40,7 +40,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr hud [on\|off\|toggle\|status]` | 控制计时 HUD 的显示 |
 | `hsr panel [open\|close\|toggle\|status]` | 控制设置面板 |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | 控制排行榜 HUD |
-| `hsr layout [status\|row ...\|text ...\|get <key>\|set <key> <value>]` | 查看 / 编辑 HUD 布局 |
+| `hsr layout [status\|row ...\|column ...\|text ...\|get <key>\|set <key> <value>]` | 查看 / 编辑 HUD 布局(列内为 1 基行位置) |
 | `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | 开关启用的标签规则;查看/强制自动 Co-op 标签 |
 | `hsr lang [list\|set <code>\|reload\|current]` | 管理本地化 |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | 管理预设(R11) |
@@ -58,7 +58,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 
 - `auto_reset`、`use_plcc_timing_standard`、`restart_clears_forgivable`、`retry_min_dwell`
 - `retry_level_override_enabled`、`retry_level_override`
-- `show_hud`、`show_real_time`、`show_wake_up_time`
+- `show_hud`
 - `only_record_first_wake_up_time`、`center_loading_saving`、`language`
 - `reset_key`、`retry_key`、`menu_key`
 - `subsegment_enable`、`subsegment_pb_path`、`subsegment_load_path`、
@@ -180,10 +180,15 @@ hsr hud on
 hsr layout status
 hsr layout row list
 hsr layout row add 1 CurrentState
-hsr layout row remove 1 5
+hsr layout row add 1 CurrentState 2
+hsr layout row remove 1 2
 hsr layout row add 2 RealTime
 hsr layout row add 2 PrevRt
 hsr layout row clear 2
+hsr layout column list
+hsr layout column new
+hsr layout row add 4 WakeUpTime
+hsr layout column remove 4
 hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
 hsr layout set font_size 24
@@ -191,7 +196,9 @@ hsr layout set offset_x 30
 hsr layout set color_a FF0000FF
 ```
 
-HUD 应在下一帧生效,且改动持久化到 `layout.ini`。`PrevRt` 是 `hsr layout row add` 的合法行类型(上一关的现实时间快照;首关完成前显示 `--:--`)。
+HUD 应在下一帧生效,且改动持久化到 `layout.ini`。`layout.ini` 的 `[column.N]` 键是 1 基行位置。`PrevRt` 是 `hsr layout row add` 的合法行类型(上一关的现实时间快照;首关完成前显示 `--:--`),`LastRun` 与 `WakeUpTime` 同样是普通行 —— 所有行类型现在都是普通列行,`show_real_time` / `show_wake_up_time` 不再是设置(`hsr set` 不再列出它们)。`hsr layout row add <column> <type> [position]` 省略位置时追加到末尾;`hsr layout column new` 追加空列,`hsr layout column remove <n>` 删除一列。
+
+设置面板的 **界面** 页与上述编辑器一致:顶部是 **居中加载/保存**,然后 **计时器HUD** 按钮(英文 `Timer HUD`)进入子页面,内含 **HUD 通用设置**(显示计时器面板、偏移、字号、颜色,以及“仅记录第一次起身时间”)、每列一个可折叠的 **第 N 列** 下拉(逐行类型带整数**位置**输入框:`0` = 隐藏,`N > 0` = 第 N 行)、每列一个 **删除** 按钮(需确认),以及底部的 **新建列** 按钮。
 
 ### 5. 设置面板 / 常规设置
 
@@ -375,7 +382,8 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr update check` 报告已最新 / 显示更新版本 / 离线时显示一行错误,`hsr update apply` 安装 DLL(R13)。
 - [ ] `hsr tag enable/disable` 改变启用的标签并持久化。
 - [ ] `hsr set language zh-Hans` 切换界面语言。
-- [ ] `hsr layout row list/add/remove/clear` 改变 HUD 行(按列),含添加 `PrevRt`。
+- [ ] `hsr layout row list/add/remove/clear` 改变 HUD 行(按 1 基位置),含添加 `PrevRt`、`LastRun` 与 `WakeUpTime`。
+- [ ] `hsr layout column new/remove` 追加 / 删除列,`hsr set show_real_time` / `show_wake_up_time` 不再被接受(这些行现在是列位置)。
 - [ ] `hsr preset create/save/apply` 完整往返布局 + 标记。
 - [ ] 有分段数据时 `hsr sub status/entries` 正常。
 - [ ] 关卡内 `hsr marker add/list/toggle/pb` 正常。

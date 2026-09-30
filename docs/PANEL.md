@@ -86,14 +86,30 @@ HSRTimer saves.
 
 ## Interface
 
-- **HUD** — `show_hud`; `show_real_time` (show the always-active Real Time
-  clock); `show_wake_up_time` (show Wake Up Time in the right-hand HUD column);
-  `only_record_first_wake_up_time` (visible only while Wake Up Time display is
-  on — restores the original first-wake-up-only behavior);
-  `center_loading_saving` (moves the game's own top-right
-  "Loading"/"Saving" prompts to the top-center); the main text block's offset
-  (`offset_x`, `offset_y`), `font_size`, and the two-color gradient
-  (`color_a`, `color_b`) with per-channel RGBA sliders.
+- **Center Loading/Saving** — at the top of the page:
+  `center_loading_saving` moves the game's own top-right "Loading"/"Saving"
+  prompts to the top-center.
+- **Timer HUD** — a button that opens the timer HUD sub-page (marker-style
+  drill-down with a **Back** button at the top):
+  - **HUD general settings** — `show_hud`; the main text block's offset
+    (`offset_x`, `offset_y`), `font_size`, and the two-color gradient
+    (`color_a`, `color_b`) with per-channel RGBA sliders; and
+    `only_record_first_wake_up_time` (restores the original
+    first-wake-up-only behavior).
+  - **Columns** — one collapsible dropdown button per column (columns are
+    drawn left-to-right by number; an empty column is not displayed). Each
+    dropdown lists every timer HUD row type (**Game Time**, **Real Time**,
+    **Prev RT**, **Segment Time**, **Total at Last Segment**, **Last
+    Segment**, **Last Run**, **Wake Up Time**, **State**) with an integer
+    **position** field: `0` hides the row, and a value `N > 0` shows it at
+    the N-th line of that column (so the same field both enables and orders
+    the row). Entering a position already used by another row replaces that
+    row. Each dropdown has a **Delete** button (with confirmation, like the
+    marker editor), and the page ends with a **New column** button that
+    appends an empty column.
+    Real Time and Wake Up Time are regular rows here — they show wherever you
+    place them, so the old `show_real_time` / `show_wake_up_time` toggles are
+    gone (the Real Time clock itself always runs in the background).
 
 ## Category
 

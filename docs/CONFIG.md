@@ -23,8 +23,6 @@ retry_min_dwell = 0.5
 retry_level_override_enabled = false
 retry_level_override =
 show_hud = true
-show_real_time = true
-show_wake_up_time = true
 only_record_first_wake_up_time = false
 center_loading_saving = false
 language = en
@@ -43,10 +41,8 @@ menu_key = Home
 | `retry_level_override_enabled` | true/false | false | R6.5 — use a fixed retry target instead of the current/campaign-start level. Disabled keeps the normal one-key retry behavior. |
 | `retry_level_override` | string (English level name or Workshop numeric id) | (empty) | R6.5 — the one-key retry target. Case-insensitive name for BuiltIn/EditorPick levels, or a loaded Steam Workshop id. Invalid values show a red HUD hint when Retry is pressed and do not start a retry. When enabled and no level is active (e.g. the main menu), pressing Retry directly enters the specified level. |
 | `show_hud` | true/false | true | R2.5.1 |
-| `show_real_time` | true/false | true | R2.5.3 — show the always-active Real Time clock in the HUD (default shown below Game Time; can still be hidden) |
-| `show_wake_up_time` | true/false | true | Show Wake Up Time in the right-hand HUD column, below Last Run when both are visible. By default it measures from the latest wake-up-relevant moment (level start, respawn, pause-menu checkpoint load, or pause-menu level restart) to the next wake-up |
-| `only_record_first_wake_up_time` | true/false | false | R2.5.5 — restore the original Wake Up Time behavior: measure only the first wake-up after a level starts and ignore later respawns/checkpoint loads/level restarts. Visible in the settings panel only while `show_wake_up_time` is enabled |
-| `center_loading_saving` | true/false | false | Move the game's own top-right "Loading"/"Saving" progress indicator to the top-center of the screen |
+| `only_record_first_wake_up_time` | true/false | false | R2.5.5 — restore the original Wake Up Time behavior: measure only the first wake-up after a level starts and ignore later respawns/checkpoint loads/level restarts. Always shown in the settings panel (**Interface → Timer HUD**) |
+| `center_loading_saving` | true/false | false | Move the game's own top-right "Loading"/"Saving" progress indicator to the top-center of the screen (top of the Interface page) |
 | `language` | BCP-47 code | en | matches a `lang/<code>.txt` |
 | `category` | category id | any | R3.1 |
 | `reset_key` | KeyCode | Backspace | reset-run keybind |
@@ -101,13 +97,17 @@ color_a = FF5272FF
 color_b = FF9A72FF
 
 [column.1]
-0 = GameTime
-1 = CurrentSegment
-2 = LastSegment
+1 = GameTime
+2 = CurrentSegment
+3 = LastSegment
 
 [column.2]
-0 = RealTime
-1 = PrevRt
+1 = RealTime
+2 = PrevRt
+
+[column.3]
+1 = LastRun
+2 = WakeUpTime
 
 [leaderboard]
 font_size = 16
@@ -136,19 +136,21 @@ text = Collection: {collection}
   draggable). `offset_x`/`offset_y` are the pixel offset from the top-left;
   `font_size` is the font size; `color_a`/`color_b` are the default two-color
   gradient (hex, see [HUD.md](HUD.md)).
-- `[column.<n>]` — one column of ordered rows; keys are 0-based indices.
+- `[column.<n>]` — one column of rows; each key is the row's **1-based
+  position** within the column (drawn top-to-bottom; positions must be unique
+  and `0` is never written).
   Columns are drawn left-to-right by number (`[column.1]` leftmost); an empty
-  column is not displayed, and a missing column is created empty on save, so
-  `[column.1]` / `[column.2]` always exist (`RealTime` and `PrevRt` default into
-  `[column.2]`, with `PrevRt` directly below `RealTime`). Row types: `GameTime`,
-  `RealTime`, `PrevRt`, `CurrentSegment`,
-  `LastSegment`, `LastRun`, `CurrentState`. `RealTime` is also gated by the
-  `show_real_time` setting (default on). Wake Up Time is not a row type — it
-  renders in the right-hand column next to Last Run (always the rightmost
-  column) and is gated by `show_wake_up_time`. Old `[rows]` configs are
-  migrated automatically to `[column.1]` plus an empty `[column.2]`; a
-  non-empty default-derived `[column.2]` is auto-completed with `PrevRt` on the
-  next boot (an empty one is left alone).
+  column is not displayed. The default file (written once on a fresh install)
+  has `[column.1]` (`GameTime` / `CurrentSegment` / `TotalAtLastSegment` /
+  `LastSegment`), `[column.2]` (`RealTime` / `PrevRt`, `PrevRt` directly below
+  `RealTime`) and `[column.3]` (`LastRun` / `WakeUpTime`). Row types:
+  `GameTime`, `RealTime`, `PrevRt`, `CurrentSegment`, `TotalAtLastSegment`,
+  `LastSegment`, `LastRun`, `WakeUpTime`, `CurrentState`. Every row type —
+  including `RealTime`, `LastRun` and `WakeUpTime` — is a regular row: it shows
+  wherever you place it, so the old `show_real_time` / `show_wake_up_time`
+  settings are gone. Old `[rows]` configs still load (mapped to `[column.1]` in
+  memory) and are rewritten in the `[column.N]` format on the next save;
+  nothing is migrated or auto-modified at boot.
 - `[leaderboard]` — the shared leaderboard HUD (Subsegment / Markers modes).
   `font_size`, `offset_x`, `offset_y`, `color_faster`, `color_slower`,
   `color_tie`, `mode`, and `markers_time_mode` control its appearance and

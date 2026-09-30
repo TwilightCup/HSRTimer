@@ -215,8 +215,9 @@ it keeps advancing through `LoadingLevel` screens and pauses. It is stopped (and
 the value frozen) in `TimerCore.EndSegment` at the same moment a completed run
 is recorded (R1.6), and also stopped when the run exits to a menu or lobby
 (unless a retry is in progress) so it does not silently count idle time. Full resets and one-key retries zero it along with the live
-game timers. The HUD shows the row by default below Game Time through
-`show_real_time`; the clock remains active regardless of that display setting.
+game timers. The HUD shows the row wherever the user placed it in a column
+(default below Game Time in `[column.2]`); the clock remains active regardless
+of whether the row is displayed.
 
 **Prev RT (`RunState.RealTimeAtLastSegment`)** is the real-time counterpart of
 `TotalAtLastSegment`: in `RunState.EndSegment` (only when the segment
@@ -436,21 +437,18 @@ start when the clock was running was removed: it fired mid-campaign at every
 level boundary and never on EditorPick/Workshop ends, and now `LastRun` updates
 only on these genuine completions.
 
-`LastRun` renders in its own column immediately to the right of the last timer
-column (not inside any configured column, anchored right after the columns'
-rightmost edge), and only while idle
-(`!InSegment && PlayableTicks == 0`) — once a new run starts timing it hides until
-the next completion. That same right-hand column — which is **always the
-rightmost column**, regardless of how many timer columns are configured — can also show the current level's **Wake Up Time**
-as its second row (gated by `show_wake_up_time`), so the per-level value stays
-visible during a run even when `LastRun` is hidden. By default the measurement
+`LastRun` is a regular HUD row like any other (defaults into `[column.3]`), and
+renders only while idle (`!InSegment && PlayableTicks == 0`) — once a new run
+starts timing it hides until the next completion. **Wake Up Time** is also a
+regular row (defaults below `LastRun`), so the per-level value stays visible
+during a run even when `LastRun` is hidden. By default the wake-up measurement
 restarts on player respawns, pause-menu checkpoint loads, and pause-menu level
 restarts; the `only_record_first_wake_up_time` setting restores the original
 level-start-to-first-wake-up behavior. It is cleared when the level ends or is
 exited. The one exception is the campaign epilogue: the game loads
 Credits (BuiltIn index == `levelCount`) as an ordinary level right after the
 final playable level is passed, and that segment is flagged
-`InEpilogueSegment` — it belongs to the run that just finished, so the column
+`InEpilogueSegment` — it belongs to the run that just finished, so the row
 stays visible through Credits (and Credits itself never records anything: it
 has no pass zone, so its segment never counts as `completed`). Credits listed as
 a level inside a collection run does NOT count as the epilogue (the run is still
@@ -481,11 +479,10 @@ through the `Retrying` flag while preserving the run's records.
 
 `ConfigRepair.Run(cfg)` runs once in `Plugin.Awake`, right after `ConfigService.Load`
 and before any subsystem reads the models. It detects and fills in missing or
-incorrect config items. Scalar settings/layout keys already self-heal to defaults
-(the parse helpers fall back to the current value), so the rules target collection
-fields that `Clear()`-then-rebuild from disk — where a newly-added default item is
-silently lost for existing users (this is how the `TotalAtLastSegment` row failed
-to appear until this system existed).
+incorrect config items. Scalar settings/layout keys self-heal to defaults
+(the parse helpers fall back to the current value); today the only rule is the
+shared-leaderboard migration (`MigrateLeaderboardFromSettings`), which copies the
+old settings.ini leaderboard keys into layout.ini `[leaderboard]` exactly once.
 
 Design: **idempotent structural checks every boot, write only when something
 changed** (a dirty-gated `ConfigService.SaveSettings`). No config-version key — a
@@ -493,24 +490,14 @@ stored version lies when a user hand-edits the file, whereas cheap structural
 checks self-heal hand-edited corruption and leave clean files untouched. It logs
 one summary line on a repair and is silent on a clean boot.
 
-The first rule, `MigrateRowsToColumns`, rewrites a legacy `[rows]` layout.ini
-into the multi-column format (`[column.1]` gets the old rows, plus an empty
-`[column.2]`) — `RealTime` is intentionally not moved. The second rule,
-`RepairLayoutColumns`, inserts any missing default HUD row into `[column.1]` when
-that column looks default-derived (`IsDefaultDerived`: the rows equal the
-defaults in order, minus any missing entries — checked against the legacy flat
-default order so migrated `[rows]` configs are still recognized). A reordered or
-extra/duplicate row set is treated as hand-customized and left untouched, with
-an advisory hint. The third rule, `RepairLayoutColumn2`, does the same for the
-real-time rows' home (`[column.2]`): a **non-empty**, default-derived column 2
-(e.g. just `RealTime`) is completed with the new `PrevRt` default below it,
-while an empty column 2 — a valid configuration, and what the `[rows]`
-migration deliberately creates — is never auto-filled. Later columns are never
-auto-filled. The canonical default layout lives in one place —
-`LayoutModel.DefaultColumns` — shared by the `Columns` field initializer and the
-repair target, so the two can't drift; adding a new default row is a single line
-there. Adding a new repair concern is one method plus one entry in the
-`ConfigRepair.Rules` array.
+**The HUD layout columns are deliberately not repaired here.** The default
+layout is written exactly once, at config initialization — `ConfigService.Load`
+writes `layout.ini` when it does not exist, seeding the canonical
+`LayoutModel.DefaultColumns` (columns 1–3). Existing files are never
+auto-modified: users manage columns through the settings panel's
+Interface → Timer HUD column editor (or `hsr layout row/column`), and legacy
+`[rows]` configs still load (mapped to `[column.1]` in memory) but are only
+rewritten in the `[column.N]` format on the next normal save.
 
 ## Building
 

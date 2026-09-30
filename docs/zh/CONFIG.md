@@ -19,8 +19,6 @@ retry_min_dwell = 0.5
 retry_level_override_enabled = false
 retry_level_override =
 show_hud = true
-show_real_time = true
-show_wake_up_time = true
 only_record_first_wake_up_time = false
 center_loading_saving = false
 language = en
@@ -38,10 +36,8 @@ menu_key = Home
 | `retry_level_override_enabled` | true/false | false | R6.5 —— 使用固定的重试关卡,而不是当前关卡 / 从菜单进入的战役起点关。关闭时保持现有的一键重试行为。 |
 | `retry_level_override` | 字符串(关卡英文名或创意工坊数字 id) | (空) | R6.5 —— 一键重试目标。官方关卡按英文名不区分大小写匹配;创意工坊关卡填已加载的 Steam Workshop 数字 id。无效值会在按下重试键时用计时器面板的红色无效样式提示,且不执行重试。开启且当前没有活动关卡时(例如主菜单),按重试键会**直接进入**该指定关卡。 |
 | `show_hud` | true/false | true | R2.5.1 |
-| `show_real_time` | true/false | true | R2.5.3 —— 在面板中显示始终活跃的现实时间计时器(默认显示在游戏总时间下方;可关闭) |
-| `show_wake_up_time` | true/false | true | 在右侧列显示“起身时间”;与“上一局游戏时间”同时可见时显示在其下一行。默认从最近一次可起身起点(本关开始、玩家重生、暂停菜单加载存档点、暂停菜单重新开始关卡)开始测量,到下一次起身为止 |
-| `only_record_first_wake_up_time` | true/false | false | R2.5.5 —— 恢复原来的起身时间机制:只记录本关开始后的第一次起身,后续重生、加载存档点或重新开始关卡不重置。设置面板中仅在 `show_wake_up_time` 开启时可见 |
-| `center_loading_saving` | true/false | false | 将游戏自带的右上角"加载/保存"进度提示移动到画面顶部居中 |
+| `only_record_first_wake_up_time` | true/false | false | R2.5.5 —— 恢复原来的起身时间机制:只记录本关开始后的第一次起身,后续重生、加载存档点或重新开始关卡不重置。设置面板(**界面 → 计时器HUD**)中始终显示 |
+| `center_loading_saving` | true/false | false | 将游戏自带的右上角"加载/保存"进度提示移动到画面顶部居中(位于界面页顶部) |
 | `language` | BCP-47 代码 | en | 对应一个 `lang/<code>.txt` |
 | `reset_key` | KeyCode | Backspace | 重置成绩键 |
 | `retry_key` | KeyCode | R | 重试关卡键 |
@@ -80,13 +76,17 @@ color_a = FF5272FF
 color_b = FF9A72FF
 
 [column.1]
-0 = GameTime
-1 = CurrentSegment
-2 = LastSegment
+1 = GameTime
+2 = CurrentSegment
+3 = LastSegment
 
 [column.2]
-0 = RealTime
-1 = PrevRt
+1 = RealTime
+2 = PrevRt
+
+[column.3]
+1 = LastRun
+2 = WakeUpTime
 
 [leaderboard]
 font_size = 16
@@ -112,7 +112,7 @@ text = Collection: {collection}
 ```
 
 - `[text]` —— 主文本块直接绘制在屏幕上(无窗口、不可拖动)。`offset_x`/`offset_y` 为距屏幕左上角的像素偏移;`font_size` 为字号;`color_a`/`color_b` 为默认双色渐变(十六进制,见 [HUD.md](HUD.md))。
-- `[column.<n>]` —— 一列有序行;键为列内从 0 开始的索引。列按编号从左到右绘制(`[column.1]` 最左);空列不显示,缺失的列在保存时会被创建为空列,因此 `[column.1]` / `[column.2]` 始终存在(`RealTime` 与 `PrevRt` 默认放进 `[column.2]`,`PrevRt` 位于 `RealTime` 正下方)。行类型:`GameTime`、`RealTime`、`PrevRt`、`CurrentSegment`、`LastSegment`、`LastRun`、`CurrentState`。`RealTime` 还受 `show_real_time` 设置控制(默认开启)。起身时间不是行类型 —— 它显示在“上一局游戏时间”旁边的右侧列(始终为最右侧列),由 `show_wake_up_time` 控制。旧 `[rows]` 配置会自动迁移到 `[column.1]` 并新建空的 `[column.2]`;非空且默认派生的 `[column.2]` 会在下次启动时自动补入 `PrevRt`(空的不填充)。
+- `[column.<n>]` —— 一列的若干行;每个键是该行在列内的 **1 基位置**(自上而下绘制;位置不可重复,永远不会写入 `0`)。列按编号从左到右绘制(`[column.1]` 最左);空列不显示。默认文件(首次安装时写入一次)含 `[column.1]`(`GameTime` / `CurrentSegment` / `TotalAtLastSegment` / `LastSegment`)、`[column.2]`(`RealTime` / `PrevRt`,`PrevRt` 位于 `RealTime` 正下方)与 `[column.3]`(`LastRun` / `WakeUpTime`)。行类型:`GameTime`、`RealTime`、`PrevRt`、`CurrentSegment`、`TotalAtLastSegment`、`LastSegment`、`LastRun`、`WakeUpTime`、`CurrentState`。**所有行类型 —— 包括 `RealTime`、`LastRun` 与 `WakeUpTime` —— 都是普通行**:显示在你放置它们的列中,因此旧的 `show_real_time` / `show_wake_up_time` 设置已移除。旧 `[rows]` 配置仍可加载(在内存中映射到 `[column.1]`),并在下次保存时改写为 `[column.N]` 格式;启动时不再做任何迁移或自动修改。
 - `[leaderboard]` —— 共享排行榜 HUD（分段对比 / 标记模式）。`font_size`、`offset_x`、`offset_y`、`color_faster`、`color_slower`、`color_tie`、`mode`、`markers_time_mode` 控制其外观与显示模式。`offset_y` 相对屏幕垂直中心的固定顶部锚点；内容向下延伸。
 - `[custom.<n>]` —— 位于 `(x, y)` 的任意屏上文本,各自带渐变。模板变量:`{date}`、`{time}`、`{version}`、`{collection}`、`{category}`、`{gametime}`、`{realtime}`。
 

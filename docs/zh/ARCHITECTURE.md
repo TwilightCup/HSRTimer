@@ -128,7 +128,7 @@ plcc 标准下 `Game.EnterPassZone` / `Game.Fall` hook 仅锁存 `LevelPassed` �
 
 ### 现实时间计时器(R1.10)
 
-与 tick 游戏时钟分开,`RunState.RealTime` 是墙钟计时器:它在整个运行的第一个可玩分段开始时启动,只要 `RunState.RealTimeActive` 为真,就在 `TimerCore.Update` 中用 `Time.unscaledDeltaTime` 累计。由于它不受 `PlayingLevel` 门槛限制,因此能穿过 `LoadingLevel` 加载屏与暂停继续前进。它在 `TimerCore.EndSegment` 记录整局完成(R1.6)的同一时刻停表并定格;当本局退出到菜单/大厅(重试除外)时也会停止,避免在空闲界面里暗中累计。整局重置与一键重试会把它与活动游戏计时器一并清零。HUD 通过 `show_real_time` 默认在游戏总时间下方显示该行,但无论是否显示,时钟都保持后台活跃。
+与 tick 游戏时钟分开,`RunState.RealTime` 是墙钟计时器:它在整个运行的第一个可玩分段开始时启动,只要 `RunState.RealTimeActive` 为真,就在 `TimerCore.Update` 中用 `Time.unscaledDeltaTime` 累计。由于它不受 `PlayingLevel` 门槛限制,因此能穿过 `LoadingLevel` 加载屏与暂停继续前进。它在 `TimerCore.EndSegment` 记录整局完成(R1.6)的同一时刻停表并定格;当本局退出到菜单/大厅(重试除外)时也会停止,避免在空闲界面里暗中累计。整局重置与一键重试会把它与活动游戏计时器一并清零。HUD 行显示在用户放置它的列中(默认在 `[column.2]` 的“游戏总时间”下方),但无论是否显示,时钟都保持后台活跃。
 
 **上关RT(`RunState.RealTimeAtLastSegment`)** 是 `TotalAtLastSegment` 的现实时间对应物:`RunState.EndSegment` 仅在分段 `completed` 时,把当前的 `RealTime` 值定格进 `RealTimeAtLastSegment`,于是 HUD 行显示上一关结束时整局累计的现实时间(R1.10.7)。它与 `TotalAtLastSegmentTicks` 走相同的清零路径(自动重置、从菜单开始新局、手动重置),重试保留。默认显示在第二列 `RealTime` 正下方的行。
 
@@ -214,15 +214,15 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 
 (单独的 Workshop 关卡通关不算"整局完成" —— 在计时器的语义里它不结束一局。)过去那个"任何分段开始时时钟还在跑就记录 LastRun"的启发式已移除:它会在战役中途的每个关卡边界误触发,而 EditorPick/Workshop 的收尾又永远捕不到;现在 `LastRun` 只在上述真正的完成时更新。
 
-`LastRun` 渲染在**紧挨最后一列计时列右侧新建的独立列**中(锚定在所有配置列的最右边缘之后),不与任何配置列同列,且仅空闲时(`!InSegment && PlayableTicks == 0`)显示 —— 新局开始计时即隐藏,直到下次整局完成。同一个右侧列——**无论配置多少计时列,它始终是最右侧的一列**——在启用 `show_wake_up_time` 时还会把当前关卡的**起身时间**显示为第二行,因此即便 `LastRun` 隐藏,关内也能看到该值;默认在玩家重生、暂停菜单加载存档点或暂停菜单重新开始关卡时重新开始测量,`only_record_first_wake_up_time` 可恢复“本关开始后只记第一次起身”的原机制;关卡结束或退出时该值会被清除。唯一的例外是战役尾声:最后一个可玩关卡被通关后,游戏会把 Credits(BuiltIn 索引 == `levelCount`)当作普通关卡加载,该分段被标记为 `InEpilogueSegment` —— 它属于刚结束的那局,所以 Credits 期间列持续显示(且 Credits 自身不会记录任何东西:它没有通关区,其分段永远不会算作 `completed`)。**地图包运行中被列为关卡的 Credits 不算尾声**(运行仍在进行 —— collection 中途出现 Credits 只是一关普通关卡),因此 `InEpilogueSegment` 还要求"当前不在地图包运行中"。
+`LastRun` 是与其它行相同的普通 HUD 行(默认放进 `[column.3]`),且仅空闲时(`!InSegment && PlayableTicks == 0`)显示 —— 新局开始计时即隐藏,直到下次整局完成。**起身时间**也是普通行(默认在 `LastRun` 下方),因此即便 `LastRun` 隐藏,关内也能看到该值;默认在玩家重生、暂停菜单加载存档点或暂停菜单重新开始关卡时重新开始测量,`only_record_first_wake_up_time` 可恢复“本关开始后只记第一次起身”的原机制;关卡结束或退出时该值会被清除。唯一的例外是战役尾声:最后一个可玩关卡被通关后,游戏会把 Credits(BuiltIn 索引 == `levelCount`)当作普通关卡加载,该分段被标记为 `InEpilogueSegment` —— 它属于刚结束的那局,所以 Credits 期间该行持续显示(且 Credits 自身不会记录任何东西:它没有通关区,其分段永远不会算作 `completed`)。**地图包运行中被列为关卡的 Credits 不算尾声**(运行仍在进行 —— collection 中途出现 Credits 只是一关普通关卡),因此 `InEpilogueSegment` 还要求"当前不在地图包运行中"。
 
 ## 配置检查与修复
 
-`ConfigRepair.Run(cfg)` 在 `Plugin.Awake` 中、`ConfigService.Load` 之后、任何子系统读取配置之前运行一次,检测并补全缺失或错误的配置项。标量类设置 / 布局键本就会自愈到默认值(解析辅助函数在失败时回退到当前值),因此规则针对的是那些"清空后仅从磁盘重建"的集合字段——新加入的默认项对老用户会静默丢失(这正是 `TotalAtLastSegment` 行在引入此系统前不显示的原因)。
+`ConfigRepair.Run(cfg)` 在 `Plugin.Awake` 中、`ConfigService.Load` 之后、任何子系统读取配置之前运行一次,检测并补全缺失或错误的配置项。标量类设置 / 布局键本就会自愈到默认值(解析辅助函数在失败时回退到当前值);目前唯一的规则是共享排行榜迁移(`MigrateLeaderboardFromSettings`),把旧 settings.ini 里的排行榜键一次性复制到 layout.ini 的 `[leaderboard]`。
 
 设计:**每次启动做幂等的结构性检查,仅在确有改动时写盘**(由一个 dirty 标志门控的 `ConfigService.SaveSettings`)。不引入配置版本号——一旦用户手工编辑文件,存储的版本号就会失真;而廉价的结构性检查能自愈手工编辑造成的损坏,且对干净文件零改动。修复时输出一行汇总日志,干净启动时静默。
 
-第一条规则 `MigrateRowsToColumns` 把遗留的 `[rows]` 版 `layout.ini` 改写为多列格式(`[column.1]` 承接旧行,并新建一个空的 `[column.2]`)——`RealTime` 刻意不移入。第二条规则 `RepairLayoutColumns`:当第 1 列看起来是"默认派生"时(`IsDefaultDerived`:该列等于按默认顺序排列、扣除缺失项后的默认集——校验按旧版扁平默认顺序进行,以便迁移后的 `[rows]` 配置仍能被识别),插入任何缺失的默认 HUD 行。被重排、含额外或重复行的集合视为手工自定义,原样保留并仅给出提示。第三条规则 `RepairLayoutColumn2` 对现实时间行的家(`[column.2]`)做同样的事:**非空**且默认派生的第 2 列(例如仅 `RealTime`)会被补入其下的新默认行 `PrevRt`,而空的第 2 列——这是合法配置,也是 `[rows]` 迁移刻意产出的形态——绝不自动填充。后续列从不自动填充。规范的默认布局只有一个出处——`LayoutModel.DefaultColumns`,被 `Columns` 字段初始化器与修复目标共用,二者不会漂移;新增默认行只需在此改一行。新增一个修复关注点只需写一个方法并在 `ConfigRepair.Rules` 数组加一项。
+**HUD 布局列刻意不在这里修复。** 默认布局只在配置初始化时写入一次 —— `ConfigService.Load` 在 `layout.ini` 不存在时写入它,种下规范的 `LayoutModel.DefaultColumns`(第 1–3 列)。既有文件绝不自动修改:用户通过设置面板的 **界面 → 计时器HUD** 列编辑器(或 `hsr layout row/column`)管理列;旧 `[rows]` 配置仍可加载(在内存中映射到 `[column.1]`),但只会在下次正常保存时改写为 `[column.N]` 格式。
 
 ## 构建
 

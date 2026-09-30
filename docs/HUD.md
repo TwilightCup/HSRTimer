@@ -18,51 +18,52 @@ Each row renders one value:
 | `CurrentSegment` | Time since entering the current level |
 | `TotalAtLastSegment` | Run total frozen at the moment the last segment completed |
 | `LastSegment` | Duration of the last completed level |
-| `LastRun` | Total time of the last complete run — rendered in its own column immediately to the right of the last timer column (not in any configured column), shown only while idle (hidden once a new run starts timing) |
+| `LastRun` | Total time of the last complete run — a regular row like any other (defaults into the third column), shown only while idle (hidden once a new run starts timing) |
+| `WakeUpTime` | **Wake Up Time** (defaults into the third column below `LastRun`): time from the most recent wake-up-relevant moment to the first time the local player leaves the soft/spawn state, formatted `SS:mmm` |
 | `CurrentState` | The engine's detected game state (debug) |
 
 ## Columns
 
 Rows are grouped into **columns**. Each `[column.<n>]` section in `layout.ini`
-holds one column's ordered rows (0-based indices inside the column). Columns
+holds one column's rows, where **each key is the row's 1-based position** in
+that column (positions must be unique; `0` is never stored). Columns
 are drawn **left-to-right by their number** — `[column.1]` is the leftmost
 timer column, `[column.2]` the second, and so on — with the whole block anchored
 at `offset_x` / `offset_y`. A column with **no rows is not displayed** and takes
-no space, so an empty `[column.2]` (as created for migrated configs) is simply
-invisible. The default layout is:
+no space. The default layout (written once on a fresh install) is:
 
 ```ini
 [column.1]
-0 = GameTime
-1 = CurrentSegment
-2 = TotalAtLastSegment
-3 = LastSegment
+1 = GameTime
+2 = CurrentSegment
+3 = TotalAtLastSegment
+4 = LastSegment
 
 [column.2]
-0 = RealTime
-1 = PrevRt
+1 = RealTime
+2 = PrevRt
+
+[column.3]
+1 = LastRun
+2 = WakeUpTime
 ```
 
 `RealTime` and `PrevRt` default into `[column.2]` (`PrevRt` directly below
-`RealTime`); the other timer rows default into `[column.1]`. A missing column is
-always created empty, so `[column.1]` and
-`[column.2]` are always present in the file. The **Last Run / Wake Up Time**
-column (see below) is a fixed extra column that is **always the rightmost one**,
-after all configured columns.
+`RealTime`); `LastRun` and `WakeUpTime` default into `[column.3]` (the former
+"right-hand column"). Every row type — including `LastRun` and `WakeUpTime` —
+is a regular row you can move between columns freely; the panel's
+**Interface → Timer HUD** column editor edits the same positions (`0` hides a
+row), and empty columns are simply hidden.
 
-> **Migration**: old `layout.ini` files store the rows in a flat `[rows]`
-> section. On the first boot after the upgrade that section is migrated to
-> `[column.1]` and an **empty** `[column.2]` is added — `RealTime` is *not*
-> moved into it, so the screen shows exactly what it showed before. Existing
-> configs that already have a default-derived second column (`RealTime` only)
-> receive `PrevRt` automatically on the next boot; an empty second column is
-> left alone.
+> **Legacy `[rows]` configs**: old `layout.ini` files store the rows in a flat
+> `[rows]` section. They still load (mapped to `[column.1]` in memory) and are
+> rewritten in the `[column.N]` format on the next save; nothing is migrated
+> or auto-modified at boot anymore.
 
 ## Wake Up Time
 
-The right-hand column (the one that holds **Last Run**, and always the
-rightmost column on screen) also shows **Wake Up
-Time** when enabled. By default it is the time from the most recent
+**Wake Up Time** is a regular HUD row (defaults below `LastRun` in the third
+column). By default it is the time from the most recent
 wake-up-relevant moment to the first time the local player leaves the
 soft/spawn state (`Spawning` / `Unconscious` / `Dead`). The measurement
 restarts whenever the player respawns (e.g. after a fall), loads the current
@@ -71,18 +72,16 @@ the value then reflects how long it took to get up after that particular
 respawn. Once recorded within one measurement, later manual play-dead does not
 reset it; a new respawn/restart clears it and starts a fresh measurement.
 
-When the **Only record first wake-up time** option is enabled (visible only
-while Wake Up Time display is on), the original behavior is restored: only the
+When the **Only record first wake-up time** option is enabled (in
+**Interface → Timer HUD**), the original behavior is restored: only the
 first wake-up after a level starts is measured, and later respawns / checkpoint
 loads / level restarts do not reset the value. The value is cleared when the
 level is passed or exited.
 
 The value is formatted as `SS:mmm` (seconds and milliseconds, no minute/hour
-breakdown). When Last Run is visible, Wake Up Time is drawn as the second row in
-the same column; otherwise it appears as the only row in that column so it
-remains available during the run. Toggle it from the settings panel's Interface
-page, or set `show_wake_up_time = false` in `settings.ini`. The "only first"
-behavior is controlled by `only_record_first_wake_up_time` in the same file.
+breakdown) and shows `--:--` before the first measurement of a level. Show or
+hide the row by toggling it in a column via the panel's **Interface → Timer
+HUD** column editor (or editing `layout.ini` directly).
 
 ## Real Time clock
 
@@ -93,12 +92,10 @@ completed (the final level is passed) or when you leave the run for the menu.
 
 The Real Time row is shown by default in the second column (`[column.2]`,
 directly to the right of **Game Time**) in the default layout, and the clock is
-always active. You can hide it from the
-settings panel's Interface tab (or set `show_real_time = false` in
-`settings.ini`). `RealTime` is also a regular row type: if you move it in
-`[column.N]` it appears in your chosen position; if you remove it from the
-layout but leave the setting enabled, it appears below your configured timer
-columns as a convenient fallback.
+always active. `RealTime` is a regular row type: move it in `[column.N]` and it
+appears in your chosen position, or remove it entirely — the clock keeps
+running in the background either way. Show or hide the row by toggling it in a
+column via the panel's **Interface → Timer HUD** column editor.
 
 **Prev RT (`PrevRt`)** shows the Real Time clock value frozen at the moment the
 previous level completed (the same moment `TotalAtLastSegment` freezes the game

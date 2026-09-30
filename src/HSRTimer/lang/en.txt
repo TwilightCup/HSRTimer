@@ -46,8 +46,6 @@ SETTINGS_RETRY_MIN_DWELL:Retry empty-scene dwell (s)
 SETTINGS_RETRY_LEVEL_OVERRIDE_ENABLE:Specify retry level
 SETTINGS_RETRY_LEVEL_OVERRIDE:Retry level (English name or Workshop ID)
 SETTINGS_SHOW_HUD:Show timer HUD
-SETTINGS_SHOW_REAL_TIME:Show Real Time
-SETTINGS_SHOW_WAKE_UP_TIME:Show Wake Up Time
 SETTINGS_ONLY_RECORD_FIRST_WAKE_UP_TIME:Only record first wake-up time
 SETTINGS_CENTER_LOADING_SAVING:Center Loading/Saving prompts
 SETTINGS_PRESET:Presets
@@ -74,6 +72,16 @@ PANEL_TAB_INTERFACE:Interface
 PANEL_TAB_CATEGORY:Category
 PANEL_TIMING:Timing
 PANEL_HUD:HUD
+PANEL_TIMER_HUD:Timer HUD
+PANEL_HUD_GENERAL:HUD general settings
+PANEL_COLUMNS:Columns
+PANEL_BACK:Back
+COLUMN_LABEL:Column {0}
+COLUMN_NEW:New column
+COLUMN_DELETE:Delete
+COLUMN_DELETE_CONFIRM:Confirm delete?
+COLUMN_DELETE_CANCEL:Cancel
+COLUMN_ORDER_HINT:Row position: 0 = hidden, 1+ = draw order (unique per column)
 PANEL_TAGS:Rule tags (multi-select)
 PANEL_NO_TAGS:No tag rules registered.
 PANEL_KEYBINDS:Keybinds

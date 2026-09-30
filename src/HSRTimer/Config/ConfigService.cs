@@ -30,6 +30,12 @@ namespace HSRTimer
             Settings.Load();
             EnabledTags.Load();
             Layout.Load();
+            // First-run default seeding: when layout.ini does not exist yet,
+            // write the canonical default layout (columns 1–3) to disk. This is
+            // the only time defaults are written — existing files are never
+            // auto-modified (the old boot-time column repair rules are gone).
+            if (!System.IO.File.Exists(PersistenceService.PathFor("layout.ini")))
+                Layout.Save();
             Localization.Reload();
             Localization.SetLanguage(Settings.CurrentLang);
         }

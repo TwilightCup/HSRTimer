@@ -110,69 +110,21 @@ namespace HSRTimer
                 return;
             }
 
-            float columnsRightX = DrawMainBlock(cfg);
-
-            DrawRightColumn(cfg, columnsRightX);
+            DrawMainBlock(cfg);
 
             DrawCustomTexts(cfg);
-        }
-
-        /// <summary>
-        /// Draw the right-hand column immediately to the right of the last
-        /// timer column. The first row is the finished-run total ("LastRun")
-        /// when visible, and the second row (or the only row when no LastRun is
-        /// available) is the current level's Wake Up time, gated by the "Show
-        /// Wake Up Time" setting. This column is always the rightmost one,
-        /// regardless of how many timer columns are configured.
-        /// </summary>
-        private void DrawRightColumn(ConfigService cfg, float columnsRightX)
-        {
-            var state = TimerCore.State;
-            if (state == null) return;
-
-            // LastRun hides once a *new* run starts timing — but not during the
-            // epilogue (the Credits level the game loads after the campaign
-            // finishes), which belongs to the run that just ended.
-            bool showLastRun = state.LastRunTicks.HasValue
-                && (state.InEpilogueSegment || (!state.InSegment && state.PlayableTicks == 0UL));
-            bool showWakeUp = cfg.Settings.ShowWakeUpTime && state.WakeUpTicks.HasValue;
-            if (!showLastRun && !showWakeUp)
-                return;
-
-            var layout = cfg.Layout;
-            var loc = cfg.Localization;
-
-            // Column gap next to the rightmost timer column; top-aligned with it.
-            const float gap = 24f;
-            float x = columnsRightX + gap;
-            float y = layout.OffsetY;
-
-            if (showLastRun)
-            {
-                string line = loc.Get("TIMER_LAST_RUN") + ":  " + TimeFormatter.Format(GameClock.LastRunSeconds(state));
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-                y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
-            }
-
-            if (showWakeUp)
-            {
-                string line = loc.Get("TIMER_WAKE_UP_TIME") + ":  " + TimeFormatter.FormatWakeUp(GameClock.WakeUpSeconds(state));
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-            }
         }
 
         /// <summary>
         /// Draw the configured columns left-to-right, then the shared extra
         /// status lines below the tallest column. Each non-empty column is a
         /// stack of rows drawn at its own x; an empty column (or one whose rows
-        /// are all hidden) is skipped and takes no space. Returns the x
-        /// coordinate just to the right of the last drawn column — used to
-        /// place the LastRun/Wake-Up-Time column immediately to its right.
+        /// are all hidden) is skipped and takes no space.
         /// </summary>
-        private float DrawMainBlock(ConfigService cfg)
+        private void DrawMainBlock(ConfigService cfg)
         {
             var state = TimerCore.State;
-            if (state == null) return 0f;
+            if (state == null) return;
 
             var layout = cfg.Layout;
             var loc = cfg.Localization;
@@ -180,12 +132,16 @@ namespace HSRTimer
             float y = layout.OffsetY;
             const float colGap = 24f;
 
-            // Each configured column, left-to-right by index. LastRun is NOT
-            // drawn in any column — it renders in its own right-hand column
-            // (see DrawRightColumn) so the finished-run total doesn't sit next
-            // to the live timers. RealTime is a regular row type but is
-            // additionally gated by the ShowRealTime settings toggle.
-            bool hasRealTimeRow = layout.HasRow(RowType.RealTime);
+            // LastRun hides once a *new* run starts timing — but not during the
+            // epilogue (the Credits level the game loads after the campaign
+            // finishes), which belongs to the run that just ended.
+            bool showLastRun = state.LastRunTicks.HasValue
+                && (state.InEpilogueSegment || (!state.InSegment && state.PlayableTicks == 0UL));
+
+            // Each configured column, left-to-right by index. Every row type is
+            // a regular column row now (including LastRun and WakeUpTime); the
+            // RealTime clock always runs in the background and its row shows
+            // wherever the user placed it.
             float rightX = x;
             float bottomY = y;
             var colIndices = new List<int>(layout.Columns.Keys);
@@ -193,15 +149,18 @@ namespace HSRTimer
             foreach (var col in colIndices)
             {
                 var rows = layout.Columns[col];
+                // Rows are drawn top-to-bottom by their 1-based position.
+                var positions = new List<int>(rows.Keys);
+                positions.Sort();
                 float colX = rightX;
                 float colY = y;
                 float colWidth = 0f;
                 bool anyDrawn = false;
-                foreach (var row in rows)
+                foreach (var pos in positions)
                 {
-                    if (row == RowType.LastRun)
-                        continue;
-                    if (row == RowType.RealTime && !cfg.Settings.ShowRealTime)
+                    var row = rows[pos];
+                    // LastRun only renders while the previous run is on show.
+                    if (row == RowType.LastRun && !showLastRun)
                         continue;
                     string label, value;
                     GetRow(row, cfg, state, loc, out label, out value);
@@ -221,16 +180,6 @@ namespace HSRTimer
 
             // Extras sit below the tallest column, starting at the left edge.
             float ey = bottomY;
-
-            // Real-time clock fallback: when the setting is enabled but the user
-            // hasn't placed the row in any column, show it below the columns so
-            // enabling the setting always has an immediate effect.
-            if (cfg.Settings.ShowRealTime && !hasRealTimeRow)
-            {
-                string line = loc.Get("TIMER_REAL_TIME") + ":  " + TimeFormatter.Format(state.RealTime);
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, ey, _rowStyle);
-                ey += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
-            }
 
             // Timing-standard indicator (R1.4.2): one line directly under the
             // time rows while the plcc timing standard is enabled, so the active
@@ -278,8 +227,6 @@ namespace HSRTimer
             // HUD, and the edit-mode XYZ axis indicator sits directly beneath it.
             ey += DrawMarkerEditModeLine(cfg, loc, x, ey);
             ey += DrawMarkerAxisIndicator(cfg, x, ey);
-
-            return rightX;
         }
 
         /// <summary>One line listing the currently enabled rule tags (localized), directly
@@ -489,6 +436,10 @@ namespace HSRTimer
                 case RowType.CurrentState:
                     label = loc.Get("TIMER_CURRENT_STATE");
                     value = loc.Get(StateKey(state.Game != null ? state.Game.state : GameState.Inactive));
+                    break;
+                case RowType.WakeUpTime:
+                    label = loc.Get("TIMER_WAKE_UP_TIME");
+                    value = TimeFormatter.FormatWakeUp(GameClock.WakeUpSeconds(state));
                     break;
                 default:
                     label = "";
