@@ -74,8 +74,16 @@ namespace HSRTimer
 
         // Interface → Leaderboard sub-page state (marker-style drill-down):
         // whether the shared leaderboard sub-page is open. Only one Interface
-        // sub-page can be open at a time; both are closed when the tab changes.
+        // sub-page can be open at a time; all are closed when the tab changes.
         private bool _leaderboardOpen;
+
+        // Interface → Custom Text sub-page state (marker-style drill-down):
+        // whether the custom-text sub-page is open, which text dropdown is
+        // expanded (-1 = none; texts are 0-based list indices), and which text
+        // is awaiting a delete confirmation (-1 = none).
+        private bool _customTextOpen;
+        private int _expandedCustomText = -1;
+        private int _confirmDeleteCustomText = -1;
 
         // Per-row position text buffers for the Timer HUD column editor, keyed
         // by "<column>:<row>". IMGUI text fields are stateless, so we own the
@@ -142,6 +150,9 @@ namespace HSRTimer
                 _expandedColumn = 0;
                 _confirmDeleteColumn = 0;
                 _leaderboardOpen = false;
+                _customTextOpen = false;
+                _expandedCustomText = -1;
+                _confirmDeleteCustomText = -1;
                 _columnPosBuf.Clear();
                 RefreshLanguageList();
                 RefreshPresetList();
@@ -250,6 +261,9 @@ namespace HSRTimer
                 _expandedColumn = 0;
                 _confirmDeleteColumn = 0;
                 _leaderboardOpen = false;
+                _customTextOpen = false;
+                _expandedCustomText = -1;
+                _confirmDeleteCustomText = -1;
             }
             GUILayout.Space(4);
 
@@ -451,10 +465,11 @@ namespace HSRTimer
         }
 
         // ── Page: Interface (HUD appearance) ──
-        // The root page holds Center Loading/Saving and two buttons that each
+        // The root page holds Center Loading/Saving and three buttons that each
         // drill into a marker-style sub-page: "Timer HUD" (timer HUD general
-        // settings + per-column row editor) and "Leaderboard" (the shared
-        // leaderboard HUD content mode, appearance, colors, and sources).
+        // settings + per-column row editor), "Leaderboard" (the shared
+        // leaderboard HUD content mode, appearance, colors, and sources) and
+        // "Custom Text" (per-text position/content/gradient editors).
         private void DrawInterface(ConfigService cfg, LocalizationService loc)
         {
             cfg.Settings.CenterLoadingSaving = Toggle(loc.Get("SETTINGS_CENTER_LOADING_SAVING"), cfg.Settings.CenterLoadingSaving);
@@ -469,6 +484,11 @@ namespace HSRTimer
                 DrawLeaderboardPage(cfg, loc);
                 return;
             }
+            if (_customTextOpen)
+            {
+                DrawCustomTextPage(cfg, loc);
+                return;
+            }
 
             GUILayout.Space(6);
             if (GUILayout.Button(loc.Get("PANEL_TIMER_HUD"), _button))
@@ -479,6 +499,12 @@ namespace HSRTimer
             }
             if (GUILayout.Button(loc.Get("PANEL_LEADERBOARD"), _button))
                 _leaderboardOpen = true;
+            if (GUILayout.Button(loc.Get("PANEL_CUSTOM_TEXT"), _button))
+            {
+                _customTextOpen = true;
+                _expandedCustomText = -1;
+                _confirmDeleteCustomText = -1;
+            }
         }
 
         // ── Interface → Timer HUD sub-page ──
@@ -671,6 +697,94 @@ namespace HSRTimer
             layout.Columns.Remove(col);
             if (_expandedColumn == col) _expandedColumn = 0;
             _confirmDeleteColumn = 0;
+        }
+
+        // ── Interface → Custom Text sub-page (R2.4) ──
+        private void DrawCustomTextPage(ConfigService cfg, LocalizationService loc)
+        {
+            var layout = cfg.Layout;
+            GUILayout.Space(6);
+
+            // Marker-style drill-down: the Back button at the top returns to
+            // the root Interface page.
+            if (GUILayout.Button(loc.Get("PANEL_BACK"), _button))
+            {
+                _customTextOpen = false;
+                _expandedCustomText = -1;
+                _confirmDeleteCustomText = -1;
+                return;
+            }
+
+            Section(loc.Get("PANEL_CUSTOM_TEXT"));
+            GUILayout.Label(loc.Get("CUSTOM_TEXT_HINT"), _small);
+
+            // One collapsible dropdown per custom text; expanding one reveals its
+            // full configuration (content, position, gradient) plus a delete
+            // button. "New text" sits at the bottom, like New column / New marker.
+            int count = layout.CustomTexts.Count;
+            for (int i = 0; i < count && i < layout.CustomTexts.Count; i++)
+                DrawCustomTextEditor(cfg, loc, i);
+
+            if (GUILayout.Button(loc.Get("CUSTOM_TEXT_NEW"), _button))
+                NewCustomText(layout);
+        }
+
+        // ── Interface → Custom Text → one text dropdown ──
+        private void DrawCustomTextEditor(ConfigService cfg, LocalizationService loc, int index)
+        {
+            var layout = cfg.Layout;
+            var ct = layout.CustomTexts[index];
+            bool expanded = _expandedCustomText == index;
+            string title = (expanded ? "▾ " : "▸ ") + loc.Get("CUSTOM_TEXT_LABEL", index + 1);
+            if (GUILayout.Button(title, _button))
+            {
+                _expandedCustomText = expanded ? -1 : index;
+                _confirmDeleteCustomText = -1;
+            }
+            if (!expanded)
+                return;
+
+            // All per-text configuration: content (template vars allowed), screen
+            // position, and the two-color gradient (single color when A == B).
+            ct.Text = TextFieldRow(loc.Get("CUSTOM_TEXT_CONTENT"), ct.Text, 300f);
+            ct.X = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), ct.X);
+            ct.Y = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), ct.Y);
+            ColorRow(loc, "PANEL_COLOR_A", ct.ColorA, c => ct.ColorA = c);
+            ColorRow(loc, "PANEL_COLOR_B", ct.ColorB, c => ct.ColorB = c);
+
+            // Delete with confirmation (marker-style): the button expands into
+            // a Confirm/Cancel pair; the confirm state is dropped when the
+            // panel reopens, the tab changes, or another text is expanded.
+            GUILayout.BeginHorizontal();
+            bool confirming = _confirmDeleteCustomText == index;
+            if (GUILayout.Button(confirming ? loc.Get("CUSTOM_TEXT_DELETE_CONFIRM") : loc.Get("CUSTOM_TEXT_DELETE"), _button, GUILayout.Width(180)))
+            {
+                if (!confirming)
+                    _confirmDeleteCustomText = index;
+                else
+                    DeleteCustomText(layout, index);
+            }
+            if (confirming && GUILayout.Button(loc.Get("CUSTOM_TEXT_DELETE_CANCEL"), _button, GUILayout.Width(120)))
+                _confirmDeleteCustomText = -1;
+            GUILayout.EndHorizontal();
+        }
+
+        private void NewCustomText(LayoutModel layout)
+        {
+            layout.CustomTexts.Add(new CustomText());
+            // Open the new text so the user can immediately edit its content.
+            _expandedCustomText = layout.CustomTexts.Count - 1;
+            _confirmDeleteCustomText = -1;
+        }
+
+        private void DeleteCustomText(LayoutModel layout, int index)
+        {
+            if (index < 0 || index >= layout.CustomTexts.Count) return;
+            layout.CustomTexts.RemoveAt(index);
+            // Indices shift after removal; drop the expanded/confirm state rather
+            // than leaving it pointing at a different text.
+            _expandedCustomText = -1;
+            _confirmDeleteCustomText = -1;
         }
 
         // ── Page: Category (tag multi-select — no presets) ──

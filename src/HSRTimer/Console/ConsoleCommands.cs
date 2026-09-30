@@ -1009,7 +1009,8 @@ namespace HSRTimer
         private static void CmdLayoutText(ConfigService cfg, List<string> args)
         {
             var l = cfg.Layout;
-            if (args.Count == 0) { Print("Usage: hsr layout text <list|add <x> <y> <text...>|remove <index>|clear>"); return; }
+            const string usage = "Usage: hsr layout text <list|add <x> <y> <text...>|set <index> <x|y|text|color_a|color_b> <value>|remove <index>|clear>";
+            if (args.Count == 0) { Print(usage); return; }
             string sub = args[0].ToLowerInvariant();
             switch (sub)
             {
@@ -1039,6 +1040,55 @@ namespace HSRTimer
                     cfg.SaveSettings();
                     Print($"Added custom text {l.CustomTexts.Count - 1}: \"{text}\".");
                     return;
+                case "set":
+                    if (args.Count < 4
+                        || !int.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int setIdx)
+                        || setIdx < 0 || setIdx >= l.CustomTexts.Count)
+                    {
+                        Print("Usage: hsr layout text set <index> <x|y|text|color_a|color_b> <value>");
+                        return;
+                    }
+                    var target = l.CustomTexts[setIdx];
+                    string field = args[2].ToLowerInvariant();
+                    string setValue = string.Join(" ", args.GetRange(3, args.Count - 3));
+                    switch (field)
+                    {
+                        case "x":
+                            if (!float.TryParse(setValue, NumberStyles.Float, CultureInfo.InvariantCulture, out float nx))
+                            {
+                                Print("x must be a number.");
+                                return;
+                            }
+                            target.X = nx;
+                            break;
+                        case "y":
+                            if (!float.TryParse(setValue, NumberStyles.Float, CultureInfo.InvariantCulture, out float ny))
+                            {
+                                Print("y must be a number.");
+                                return;
+                            }
+                            target.Y = ny;
+                            break;
+                        case "text":
+                            target.Text = setValue;
+                            break;
+                        case "color_a":
+                        case "color_b":
+                            if (!GradientText.TryParseColor(setValue, out Color parsedColor))
+                            {
+                                Print($"{field} must be a hex color (e.g. FF0000FF).");
+                                return;
+                            }
+                            if (field == "color_a") target.ColorA = parsedColor;
+                            else target.ColorB = parsedColor;
+                            break;
+                        default:
+                            Print("Usage: hsr layout text set <index> <x|y|text|color_a|color_b> <value>");
+                            return;
+                    }
+                    cfg.SaveSettings();
+                    Print($"Set custom text {setIdx} {field} = {setValue}.");
+                    return;
                 case "remove":
                     if (args.Count < 2 || !int.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int idx)
                         || idx < 0 || idx >= l.CustomTexts.Count)
@@ -1056,7 +1106,7 @@ namespace HSRTimer
                     Print("Cleared all custom texts.");
                     return;
                 default:
-                    Print("Usage: hsr layout text <list|add <x> <y> <text...>|remove <index>|clear>");
+                    Print(usage);
                     return;
             }
         }

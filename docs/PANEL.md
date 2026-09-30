@@ -129,6 +129,17 @@ HSRTimer saves.
     every subsegment source: **PB** and each top-level folder under the load
     directory. Only checked sources appear on the leaderboard. The list is still
     truncated to `MaxLeaderboardEntries` after filtering and sorting.
+- **Custom Text** — a button that opens the custom-text sub-page (same
+  marker-style drill-down with a **Back** button at the top). Each custom text
+  (the `[custom.<n>]` entries in `layout.ini`) is listed as a collapsible
+  dropdown; expanding one shows all of its configuration: the **Content** text
+  input (template variables such as `{gametime}`, `{date}`, `{version}`,
+  `{collection}`, `{category}` are substituted live), the **Offset X** /
+  **Offset Y** position fields, and the two-color gradient (**Color A** /
+  **Color B**) with per-channel RGBA sliders. Each dropdown has a **Delete**
+  button (with confirmation, like the column and marker editors), and the page
+  ends with a **New text** button that appends an empty text set to `(0, 0)`
+  and opens it.
 
 ## Category
 

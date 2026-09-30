@@ -156,7 +156,9 @@ color_b = CCCCCCCF
 | `{realtime}` | Current Real Time clock value |
 
 Unknown `{tokens}` are left intact. Use the literal `\n` in the text for a
-newline.
+newline. Custom texts can also be added, edited, and deleted live from the
+settings panel's **Interface → Custom Text** sub-page (see
+[PANEL.md](PANEL.md)).
 
 ## Position & size
 

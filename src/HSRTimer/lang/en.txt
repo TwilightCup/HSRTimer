@@ -82,6 +82,14 @@ COLUMN_DELETE:Delete
 COLUMN_DELETE_CONFIRM:Confirm delete?
 COLUMN_DELETE_CANCEL:Cancel
 COLUMN_ORDER_HINT:Row position: 0 = hidden, 1+ = draw order (unique per column)
+PANEL_CUSTOM_TEXT:Custom Text
+CUSTOM_TEXT_HINT:Content supports template variables such as {gametime}, {date}, {version}, {collection}, {category}
+CUSTOM_TEXT_LABEL:Custom text {0}
+CUSTOM_TEXT_NEW:New text
+CUSTOM_TEXT_CONTENT:Content
+CUSTOM_TEXT_DELETE:Delete
+CUSTOM_TEXT_DELETE_CONFIRM:Confirm delete?
+CUSTOM_TEXT_DELETE_CANCEL:Cancel
 PANEL_TAGS:Rule tags (multi-select)
 PANEL_NO_TAGS:No tag rules registered.
 PANEL_KEYBINDS:Keybinds
