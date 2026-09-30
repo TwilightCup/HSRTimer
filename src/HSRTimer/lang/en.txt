@@ -59,6 +59,7 @@ SETTINGS_PRESET_CANCEL:Cancel
 SETTINGS_PRESET_LOAD:Load preset
 SETTINGS_PRESET_SAVE:Save preset
 SETTINGS_PRESET_DELETE:Delete preset
+SETTINGS_PRESET_DELETE_CONFIRM:Confirm delete
 SETTINGS_PRESET_EMPTY:Preset name cannot be empty.
 SETTINGS_PRESET_DUPLICATE:A preset with this name already exists.
 SETTINGS_PRESET_LOAD_FAILED:Failed to load the selected preset.

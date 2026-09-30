@@ -59,6 +59,7 @@ namespace HSRTimer
         private string[] _presetNames;
         private bool _presetDropdownOpen;
         private bool _presetCreating;
+        private bool _presetDeleting;
         private string _presetNewName = "";
         private string _presetErrorKey;
 
@@ -115,6 +116,7 @@ namespace HSRTimer
                 _langDropdownOpen = false;
                 _presetDropdownOpen = false;
                 _presetCreating = false;
+                _presetDeleting = false;
                 _presetNewName = "";
                 _presetErrorKey = null;
                 RefreshLanguageList();
@@ -216,7 +218,11 @@ namespace HSRTimer
             GUILayout.BeginHorizontal();
 
             int nextTab = GUILayout.SelectionGrid(_tab, _tabDisplays, 1, _button, GUILayout.Width(120));
-            if (nextTab != _tab) _tab = nextTab;
+            if (nextTab != _tab)
+            {
+                _tab = nextTab;
+                _presetDeleting = false;
+            }
             GUILayout.Space(4);
 
             _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.ExpandWidth(true));
@@ -785,6 +791,7 @@ namespace HSRTimer
                             cfg.SaveSettings();
                             _presetErrorKey = null;
                             _presetCreating = false;
+                            _presetDeleting = false;
                         }
                         _presetDropdownOpen = false;
                     }
@@ -813,6 +820,7 @@ namespace HSRTimer
                 if (GUILayout.Button(loc.Get("SETTINGS_PRESET_NEW"), _button))
                 {
                     _presetCreating = !_presetCreating;
+                    _presetDeleting = false;
                     _presetNewName = "";
                     _presetErrorKey = null;
                 }
@@ -838,13 +846,25 @@ namespace HSRTimer
             bool isDefault = string.Equals(s.CurrentPreset, PresetStore.DefaultPresetName, System.StringComparison.OrdinalIgnoreCase);
             if (!isDefault)
             {
-                if (GUILayout.Button(loc.Get("SETTINGS_PRESET_DELETE"), _button))
+                // Delete with confirmation: the single button expands into a
+                // "Confirm delete" / "Cancel" pair so an accidental click
+                // cannot destroy a preset. The confirm state is dropped when
+                // the tab changes, the panel closes/reopens, or the target
+                // preset selection changes (see Toggle/Draw/selection branch).
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button(_presetDeleting ? loc.Get("SETTINGS_PRESET_DELETE_CONFIRM") : loc.Get("SETTINGS_PRESET_DELETE"), _button))
                 {
-                    if (PresetStore.DeleteCurrent(cfg))
+                    if (!_presetDeleting)
+                    {
+                        _presetDeleting = true;
+                        _presetErrorKey = null;
+                    }
+                    else if (PresetStore.DeleteCurrent(cfg))
                     {
                         RefreshPresetList();
                         _presetDropdownOpen = false;
                         _presetCreating = false;
+                        _presetDeleting = false;
                         _presetErrorKey = null;
                     }
                     else
@@ -852,6 +872,12 @@ namespace HSRTimer
                         _presetErrorKey = "SETTINGS_PRESET_DELETE_FAILED";
                     }
                 }
+                if (_presetDeleting && GUILayout.Button(loc.Get("SETTINGS_PRESET_CANCEL"), _button))
+                {
+                    _presetDeleting = false;
+                    _presetErrorKey = null;
+                }
+                GUILayout.EndHorizontal();
             }
 
             if (_presetErrorKey != null)

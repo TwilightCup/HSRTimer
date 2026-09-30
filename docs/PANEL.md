@@ -68,7 +68,10 @@ HSRTimer saves.
   the top); the **Load preset** button
   applies the selected snapshot to the live layout/markers, and **Save preset**
   writes the current layout/markers into the selected preset. **New preset**
-  saves the current config under a new name and selects it. The current
+  saves the current config under a new name and selects it. **Delete preset**
+  (hidden for `default`) asks for confirmation: the button expands into a
+  **Confirm delete** / **Cancel** pair, and the confirmation is dismissed when
+  you switch tabs or close/reopen the panel. The current
   selection is persisted in `settings.ini` (`[Presets] Current`). The built-in
   `default` preset is created automatically on first load/upgrade and cannot be
   deleted. See [CONFIG.md](CONFIG.md).

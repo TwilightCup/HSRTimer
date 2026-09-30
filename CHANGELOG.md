@@ -9,6 +9,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Details:**
   - Added a **Prev RT** HUD row (Chinese: `上关RT`) showing the Real Time value frozen at the moment the previous level completed — the real-time counterpart of the "Total at Last Segment" row. It defaults directly below **Real Time** in the second column, and existing default-derived layouts receive it automatically on the next boot.
   - The timer HUD now supports multiple columns: `layout.ini` uses `[column.N]` sections (drawn left-to-right by number, an empty column is hidden), `RealTime` defaults into `[column.2]`, and old `[rows]` configs are migrated automatically to `[column.1]` plus an empty `[column.2]` — RealTime is not moved, so the screen looks the same. The Last Run / Wake Up Time column is always the rightmost one.
+  - Deleting a preset now asks for confirmation: the **Delete preset** button expands into a **Confirm delete** / **Cancel** pair, and the confirmation is dismissed when you switch tabs or close/reopen the settings panel.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.9.0
