@@ -127,7 +127,7 @@ once per level and skipped; re-capture the object in the editor.
 The shared leaderboard HUD (left side, cycled by the leaderboard mode-cycle
 key: hidden → the available content modes → hidden; a mode whose module is
 disabled — user setting or auto-disable mechanism — is skipped) has a content
-switch on the **Leaderboard** settings tab: **Subsegment** or **Markers**.
+switch on the **Interface → Leaderboard** sub-page: **Subsegment** or **Markers**.
 Its top edge is fixed at the screen center (plus the configured Y offset), so
 rows always extend downward as the feed grows.
 

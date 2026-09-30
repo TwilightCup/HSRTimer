@@ -90,6 +90,16 @@ namespace HSRTimer
                 ? Seconds(s.TotalAtLastSegmentTicks.Value, s.TotalAtLastSegmentPause)
                 : (double?)null;
 
+        /// <summary>
+        /// The "Prev RT" snapshot: the run's cumulative real time frozen at the
+        /// instant the last segment completed, or null. Pure pass-through — no
+        /// tick conversion, because <see cref="RunState.RealTime"/> is already
+        /// wall-clock seconds. Kept on the facade so the HUD reads it through
+        /// the same conversion boundary as every other snapshot.
+        /// </summary>
+        public static double? RealTimeAtLastSegmentSeconds(RunState s)
+            => s.RealTimeAtLastSegment;
+
         public static double? LastRunSeconds(RunState s)
             => s.LastRunTicks.HasValue
                 ? Seconds(s.LastRunTicks.Value, s.LastRunPause)

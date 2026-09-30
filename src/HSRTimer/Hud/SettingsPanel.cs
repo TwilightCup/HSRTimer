@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
 
@@ -6,7 +7,7 @@ namespace HSRTimer
 {
     /// <summary>
     /// An IMGUI settings panel, organized into tabbed pages (About, General,
-    /// Interface, Category, Subsegment, Leaderboard, Markers, plus any tabs
+    /// Interface, Category, Subsegment, Markers, plus any tabs
     /// registered by other plugins via <see cref="ISettingsPanelTab"/>). Edits every user-tunable
     /// option and applies it live (the HUD/engine read from the shared models
     /// each frame, so changes take effect immediately). Changes are written to
@@ -38,7 +39,7 @@ namespace HSRTimer
         private const int GeneralTabIndex = 1;
         private int _tab = GeneralTabIndex;
         private string[] _tabDisplays;
-        private static readonly string[] _tabKeys = { "PANEL_TAB_ABOUT", "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_LEADERBOARD", "PANEL_TAB_MARKERS" };
+        private static readonly string[] _tabKeys = { "PANEL_TAB_ABOUT", "PANEL_TAB_GENERAL", "PANEL_TAB_INTERFACE", "PANEL_TAB_CATEGORY", "PANEL_TAB_SUBSEGMENT", "PANEL_TAB_MARKERS" };
 
         // Keybind rebind state: which logical action is awaiting a keypress.
         private string _pendingRebind;
@@ -59,8 +60,35 @@ namespace HSRTimer
         private string[] _presetNames;
         private bool _presetDropdownOpen;
         private bool _presetCreating;
+        private bool _presetDeleting;
         private string _presetNewName = "";
         private string _presetErrorKey;
+
+        // Interface → Timer HUD sub-page state (marker-style drill-down):
+        // whether the HUD sub-page is open, which column dropdown is expanded
+        // (0 = none; columns are 1-based), and which column is awaiting a
+        // delete confirmation (0 = none).
+        private bool _timerHudOpen;
+        private int _expandedColumn;
+        private int _confirmDeleteColumn;
+
+        // Interface → Leaderboard sub-page state (marker-style drill-down):
+        // whether the shared leaderboard sub-page is open. Only one Interface
+        // sub-page can be open at a time; all are closed when the tab changes.
+        private bool _leaderboardOpen;
+
+        // Interface → Custom Text sub-page state (marker-style drill-down):
+        // whether the custom-text sub-page is open, which text dropdown is
+        // expanded (-1 = none; texts are 0-based list indices), and which text
+        // is awaiting a delete confirmation (-1 = none).
+        private bool _customTextOpen;
+        private int _expandedCustomText = -1;
+        private int _confirmDeleteCustomText = -1;
+
+        // Per-row position text buffers for the Timer HUD column editor, keyed
+        // by "<column>:<row>". IMGUI text fields are stateless, so we own the
+        // string and reconcile it with the live 1-based position (0 = hidden).
+        private readonly Dictionary<string, string> _columnPosBuf = new Dictionary<string, string>();
 
         private void Awake()
         {
@@ -115,8 +143,17 @@ namespace HSRTimer
                 _langDropdownOpen = false;
                 _presetDropdownOpen = false;
                 _presetCreating = false;
+                _presetDeleting = false;
                 _presetNewName = "";
                 _presetErrorKey = null;
+                _timerHudOpen = false;
+                _expandedColumn = 0;
+                _confirmDeleteColumn = 0;
+                _leaderboardOpen = false;
+                _customTextOpen = false;
+                _expandedCustomText = -1;
+                _confirmDeleteCustomText = -1;
+                _columnPosBuf.Clear();
                 RefreshLanguageList();
                 RefreshPresetList();
                 RefreshTabDisplays();
@@ -216,7 +253,18 @@ namespace HSRTimer
             GUILayout.BeginHorizontal();
 
             int nextTab = GUILayout.SelectionGrid(_tab, _tabDisplays, 1, _button, GUILayout.Width(120));
-            if (nextTab != _tab) _tab = nextTab;
+            if (nextTab != _tab)
+            {
+                _tab = nextTab;
+                _presetDeleting = false;
+                _timerHudOpen = false;
+                _expandedColumn = 0;
+                _confirmDeleteColumn = 0;
+                _leaderboardOpen = false;
+                _customTextOpen = false;
+                _expandedCustomText = -1;
+                _confirmDeleteCustomText = -1;
+            }
             GUILayout.Space(4);
 
             _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.ExpandWidth(true));
@@ -228,8 +276,7 @@ namespace HSRTimer
                 case 2: DrawInterface(cfg, loc); break;
                 case 3: DrawCategory(cfg, loc); break;
                 case 4: DrawSubsegment(cfg, s, loc); break;
-                case 5: DrawLeaderboard(cfg, s, loc); break;
-                case 6: DrawMarkers(cfg, loc); break;
+                case 5: DrawMarkers(cfg, loc); break;
                 default: DrawExternalTab(_tab - _tabKeys.Length); break;
             }
 
@@ -418,22 +465,328 @@ namespace HSRTimer
         }
 
         // ── Page: Interface (HUD appearance) ──
+        // The root page holds Center Loading/Saving and three buttons that each
+        // drill into a marker-style sub-page: "Timer HUD" (timer HUD general
+        // settings + per-column row editor), "Leaderboard" (the shared
+        // leaderboard HUD content mode, appearance, colors, and sources) and
+        // "Custom Text" (per-text position/content/gradient editors).
         private void DrawInterface(ConfigService cfg, LocalizationService loc)
         {
-            // (No Validity section: cheat/speed/drift detection is always on with
-            //  hardcoded thresholds — intentionally not user-configurable.)
-            Section(loc.Get("PANEL_HUD"));
-            cfg.Settings.ShowHud = Toggle(loc.Get("SETTINGS_SHOW_HUD"), cfg.Settings.ShowHud);
-            cfg.Settings.ShowRealTime = Toggle(loc.Get("SETTINGS_SHOW_REAL_TIME"), cfg.Settings.ShowRealTime);
-            cfg.Settings.ShowWakeUpTime = Toggle(loc.Get("SETTINGS_SHOW_WAKE_UP_TIME"), cfg.Settings.ShowWakeUpTime);
-            if (cfg.Settings.ShowWakeUpTime)
-                cfg.Settings.OnlyRecordFirstWakeUpTime = Toggle(loc.Get("SETTINGS_ONLY_RECORD_FIRST_WAKE_UP_TIME"), cfg.Settings.OnlyRecordFirstWakeUpTime);
             cfg.Settings.CenterLoadingSaving = Toggle(loc.Get("SETTINGS_CENTER_LOADING_SAVING"), cfg.Settings.CenterLoadingSaving);
-            cfg.Layout.OffsetX = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), cfg.Layout.OffsetX);
-            cfg.Layout.OffsetY = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), cfg.Layout.OffsetY);
-            cfg.Layout.FontSize = Mathf.RoundToInt(SliderRow(loc.Get("PANEL_FONT_SIZE"), cfg.Layout.FontSize, 8, 72));
-            ColorRow(loc, "PANEL_COLOR_A", cfg.Layout.ColorA, c => cfg.Layout.ColorA = c);
-            ColorRow(loc, "PANEL_COLOR_B", cfg.Layout.ColorB, c => cfg.Layout.ColorB = c);
+
+            if (_timerHudOpen)
+            {
+                DrawTimerHudPage(cfg, loc);
+                return;
+            }
+            if (_leaderboardOpen)
+            {
+                DrawLeaderboardPage(cfg, loc);
+                return;
+            }
+            if (_customTextOpen)
+            {
+                DrawCustomTextPage(cfg, loc);
+                return;
+            }
+
+            GUILayout.Space(6);
+            if (GUILayout.Button(loc.Get("PANEL_TIMER_HUD"), _button))
+            {
+                _timerHudOpen = true;
+                _expandedColumn = 0;
+                _confirmDeleteColumn = 0;
+            }
+            if (GUILayout.Button(loc.Get("PANEL_LEADERBOARD"), _button))
+                _leaderboardOpen = true;
+            if (GUILayout.Button(loc.Get("PANEL_CUSTOM_TEXT"), _button))
+            {
+                _customTextOpen = true;
+                _expandedCustomText = -1;
+                _confirmDeleteCustomText = -1;
+            }
+        }
+
+        // ── Interface → Timer HUD sub-page ──
+        private void DrawTimerHudPage(ConfigService cfg, LocalizationService loc)
+        {
+            var s = cfg.Settings;
+            var layout = cfg.Layout;
+            GUILayout.Space(6);
+
+            // Marker-style drill-down: the Back button at the top returns to
+            // the root Interface page.
+            if (GUILayout.Button(loc.Get("PANEL_BACK"), _button))
+            {
+                _timerHudOpen = false;
+                _expandedColumn = 0;
+                _confirmDeleteColumn = 0;
+                return;
+            }
+
+            // HUD general settings: show/hide, position, font size, colors, and
+            // the wake-up measurement option (visible while the WakeUpTime row
+            // is placed in some column, mirroring its old display-gated rule).
+            Section(loc.Get("PANEL_HUD_GENERAL"));
+            s.ShowHud = Toggle(loc.Get("SETTINGS_SHOW_HUD"), s.ShowHud);
+            layout.OffsetX = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), layout.OffsetX);
+            layout.OffsetY = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), layout.OffsetY);
+            layout.FontSize = Mathf.RoundToInt(SliderRow(loc.Get("PANEL_FONT_SIZE"), layout.FontSize, 8, 72));
+            ColorRow(loc, "PANEL_COLOR_A", layout.ColorA, c => layout.ColorA = c);
+            ColorRow(loc, "PANEL_COLOR_B", layout.ColorB, c => layout.ColorB = c);
+            s.OnlyRecordFirstWakeUpTime = Toggle(loc.Get("SETTINGS_ONLY_RECORD_FIRST_WAKE_UP_TIME"), s.OnlyRecordFirstWakeUpTime);
+
+            // Columns: one collapsible dropdown per column (vertically
+            // arranged); each lists every timer HUD row with a 1-based position
+            // input and has a delete button. "New column" sits at the bottom,
+            // like the marker page's New marker button.
+            Section(loc.Get("PANEL_COLUMNS"));
+            GUILayout.Label(loc.Get("COLUMN_ORDER_HINT"), _small);
+            var colIndices = new List<int>(layout.Columns.Keys);
+            colIndices.Sort();
+            foreach (var col in colIndices)
+                DrawColumnEditor(cfg, loc, col);
+
+            if (GUILayout.Button(loc.Get("COLUMN_NEW"), _button))
+                NewColumn(layout);
+        }
+
+        // ── Interface → Timer HUD → one column dropdown ──
+        private void DrawColumnEditor(ConfigService cfg, LocalizationService loc, int col)
+        {
+            var layout = cfg.Layout;
+            bool expanded = _expandedColumn == col;
+            string title = (expanded ? "▾ " : "▸ ") + loc.Get("COLUMN_LABEL", col);
+            if (GUILayout.Button(title, _button))
+            {
+                _expandedColumn = expanded ? 0 : col;
+                _confirmDeleteColumn = 0;
+            }
+            if (!expanded)
+                return;
+
+            // One integer position input per row type: 0 = hidden, N > 0 =
+            // shown at the N-th row of this column.
+            foreach (var row in TimerHudRowOrder)
+                ColumnPositionRow(cfg, loc, col, row);
+
+            // Delete with confirmation (marker-style): the button expands into
+            // a Confirm/Cancel pair; the confirm state is dropped when the
+            // panel reopens, the tab changes, or another column is expanded.
+            GUILayout.BeginHorizontal();
+            bool confirming = _confirmDeleteColumn == col;
+            if (GUILayout.Button(confirming ? loc.Get("COLUMN_DELETE_CONFIRM") : loc.Get("COLUMN_DELETE"), _button, GUILayout.Width(180)))
+            {
+                if (!confirming)
+                    _confirmDeleteColumn = col;
+                else
+                    DeleteColumn(layout, col);
+            }
+            if (confirming && GUILayout.Button(loc.Get("COLUMN_DELETE_CANCEL"), _button, GUILayout.Width(120)))
+                _confirmDeleteColumn = 0;
+            GUILayout.EndHorizontal();
+        }
+
+        /// <summary>
+        /// One row type's 1-based position field inside a column. The typed text
+        /// is buffered (IMGUI fields are stateless) and reconciled with the live
+        /// position so an edit made elsewhere (e.g. another row taking this
+        /// position) is reflected.
+        /// </summary>
+        private void ColumnPositionRow(ConfigService cfg, LocalizationService loc, int col, RowType row)
+        {
+            var rows = cfg.Layout.Columns[col];
+            int live = LayoutModel.PositionOf(rows, row);
+            string key = col + ":" + row;
+            string buf;
+            if (!_columnPosBuf.TryGetValue(key, out buf))
+                buf = live.ToString(CultureInfo.InvariantCulture);
+
+            GUILayout.BeginHorizontal();
+            string next = GUILayout.TextField(buf, _textField, GUILayout.Width(52));
+            GUILayout.Label(TimerHudRowLabel(row, loc), _label);
+            GUILayout.EndHorizontal();
+
+            if (next != buf)
+            {
+                _columnPosBuf[key] = next;
+                int parsed;
+                if (int.TryParse(next.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out parsed))
+                    SetColumnPosition(rows, row, live, parsed);
+            }
+            else
+            {
+                // The user is not typing. If the buffer holds a valid value
+                // that no longer matches the live position, the model changed
+                // underneath us (another row took this position) — re-sync. A
+                // non-numeric / empty buffer is left alone so the user can
+                // clear the field and type a new value.
+                int parsedBuf;
+                if (int.TryParse(buf.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedBuf)
+                    && parsedBuf != live)
+                {
+                    _columnPosBuf[key] = live.ToString(CultureInfo.InvariantCulture);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Apply a typed position: 0 removes the row from the column; N &gt; 0
+        /// places it at the 1-based position N (displacing whatever row already
+        /// occupied N).
+        /// </summary>
+        private static void SetColumnPosition(Dictionary<int, RowType> rows, RowType row, int oldPos, int newPos)
+        {
+            if (newPos <= 0)
+            {
+                if (oldPos > 0) rows.Remove(oldPos);
+                return;
+            }
+            if (newPos == oldPos) return;
+            if (oldPos > 0) rows.Remove(oldPos);
+            rows.Remove(newPos);      // displace any other row already at N
+            rows[newPos] = row;
+        }
+
+        /// <summary>The canonical order timer HUD items are listed in a column dropdown.</summary>
+        private static readonly RowType[] TimerHudRowOrder =
+        {
+            RowType.GameTime,
+            RowType.RealTime,
+            RowType.PrevRt,
+            RowType.CurrentSegment,
+            RowType.TotalAtLastSegment,
+            RowType.LastSegment,
+            RowType.LastRun,
+            RowType.WakeUpTime,
+            RowType.CurrentState,
+        };
+
+        private static string TimerHudRowLabel(RowType row, LocalizationService loc)
+        {
+            switch (row)
+            {
+                case RowType.GameTime: return loc.Get("TIMER_GAME_TIME");
+                case RowType.RealTime: return loc.Get("TIMER_REAL_TIME");
+                case RowType.PrevRt: return loc.Get("TIMER_PREV_RT");
+                case RowType.CurrentSegment: return loc.Get("TIMER_SEGMENT_TIME");
+                case RowType.TotalAtLastSegment: return loc.Get("TIMER_LAST_TOTAL");
+                case RowType.LastSegment: return loc.Get("TIMER_LAST_SEGMENT");
+                case RowType.LastRun: return loc.Get("TIMER_LAST_RUN");
+                case RowType.WakeUpTime: return loc.Get("TIMER_WAKE_UP_TIME");
+                case RowType.CurrentState: return loc.Get("TIMER_CURRENT_STATE");
+                default: return row.ToString();
+            }
+        }
+
+        private void NewColumn(LayoutModel layout)
+        {
+            int max = 0;
+            foreach (var k in layout.Columns.Keys)
+                if (k > max) max = k;
+            int next = max + 1;
+            layout.Columns[next] = new Dictionary<int, RowType>();
+            // Open the new column so the user can immediately set positions in
+            // it (an empty column is valid but invisible on screen).
+            _expandedColumn = next;
+            _confirmDeleteColumn = 0;
+        }
+
+        private void DeleteColumn(LayoutModel layout, int col)
+        {
+            layout.Columns.Remove(col);
+            if (_expandedColumn == col) _expandedColumn = 0;
+            _confirmDeleteColumn = 0;
+        }
+
+        // ── Interface → Custom Text sub-page (R2.4) ──
+        private void DrawCustomTextPage(ConfigService cfg, LocalizationService loc)
+        {
+            var layout = cfg.Layout;
+            GUILayout.Space(6);
+
+            // Marker-style drill-down: the Back button at the top returns to
+            // the root Interface page.
+            if (GUILayout.Button(loc.Get("PANEL_BACK"), _button))
+            {
+                _customTextOpen = false;
+                _expandedCustomText = -1;
+                _confirmDeleteCustomText = -1;
+                return;
+            }
+
+            Section(loc.Get("PANEL_CUSTOM_TEXT"));
+            GUILayout.Label(loc.Get("CUSTOM_TEXT_HINT"), _small);
+
+            // One collapsible dropdown per custom text; expanding one reveals its
+            // full configuration (content, position, gradient) plus a delete
+            // button. "New text" sits at the bottom, like New column / New marker.
+            int count = layout.CustomTexts.Count;
+            for (int i = 0; i < count && i < layout.CustomTexts.Count; i++)
+                DrawCustomTextEditor(cfg, loc, i);
+
+            if (GUILayout.Button(loc.Get("CUSTOM_TEXT_NEW"), _button))
+                NewCustomText(layout);
+        }
+
+        // ── Interface → Custom Text → one text dropdown ──
+        private void DrawCustomTextEditor(ConfigService cfg, LocalizationService loc, int index)
+        {
+            var layout = cfg.Layout;
+            var ct = layout.CustomTexts[index];
+            bool expanded = _expandedCustomText == index;
+            string title = (expanded ? "▾ " : "▸ ") + loc.Get("CUSTOM_TEXT_LABEL", index + 1);
+            if (GUILayout.Button(title, _button))
+            {
+                _expandedCustomText = expanded ? -1 : index;
+                _confirmDeleteCustomText = -1;
+            }
+            if (!expanded)
+                return;
+
+            // All per-text configuration: content (template vars allowed), font
+            // size, screen position, and the two-color gradient (single color when
+            // A == B).
+            ct.Text = TextFieldRow(loc.Get("CUSTOM_TEXT_CONTENT"), ct.Text, 300f);
+            ct.FontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("PANEL_FONT_SIZE"), ct.FontSize, 8, 72)), 8, 72);
+            ct.X = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), ct.X);
+            ct.Y = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), ct.Y);
+            ColorRow(loc, "PANEL_COLOR_A", ct.ColorA, c => ct.ColorA = c);
+            ColorRow(loc, "PANEL_COLOR_B", ct.ColorB, c => ct.ColorB = c);
+
+            // Delete with confirmation (marker-style): the button expands into
+            // a Confirm/Cancel pair; the confirm state is dropped when the
+            // panel reopens, the tab changes, or another text is expanded.
+            GUILayout.BeginHorizontal();
+            bool confirming = _confirmDeleteCustomText == index;
+            if (GUILayout.Button(confirming ? loc.Get("CUSTOM_TEXT_DELETE_CONFIRM") : loc.Get("CUSTOM_TEXT_DELETE"), _button, GUILayout.Width(180)))
+            {
+                if (!confirming)
+                    _confirmDeleteCustomText = index;
+                else
+                    DeleteCustomText(layout, index);
+            }
+            if (confirming && GUILayout.Button(loc.Get("CUSTOM_TEXT_DELETE_CANCEL"), _button, GUILayout.Width(120)))
+                _confirmDeleteCustomText = -1;
+            GUILayout.EndHorizontal();
+        }
+
+        private void NewCustomText(LayoutModel layout)
+        {
+            layout.CustomTexts.Add(new CustomText());
+            // Open the new text so the user can immediately edit its content.
+            _expandedCustomText = layout.CustomTexts.Count - 1;
+            _confirmDeleteCustomText = -1;
+        }
+
+        private void DeleteCustomText(LayoutModel layout, int index)
+        {
+            if (index < 0 || index >= layout.CustomTexts.Count) return;
+            layout.CustomTexts.RemoveAt(index);
+            // Indices shift after removal; drop the expanded/confirm state rather
+            // than leaving it pointing at a different text.
+            _expandedCustomText = -1;
+            _confirmDeleteCustomText = -1;
         }
 
         // ── Page: Category (tag multi-select — no presets) ──
@@ -471,11 +824,21 @@ namespace HSRTimer
             s.SubsegmentMaxLeaderboardEntries = Mathf.Max(1, Mathf.RoundToInt(FloatFieldRow(loc.Get("SETTINGS_SUBSEGMENT_MAX_LEADERBOARD_ENTRIES"), s.SubsegmentMaxLeaderboardEntries, "F0")));
         }
 
-        // ── Page: Leaderboard (R8.5 HUD appearance + entry state colors + content mode) ──
-        private void DrawLeaderboard(ConfigService cfg, SettingsModel s, LocalizationService loc)
+        // ── Interface → Leaderboard sub-page (R8.5 HUD appearance + entry
+        //    state colors + content mode) ──
+        private void DrawLeaderboardPage(ConfigService cfg, LocalizationService loc)
         {
+            var s = cfg.Settings;
             var layout = cfg.Layout;
-            Section(loc.Get("PANEL_LEADERBOARD"));
+            GUILayout.Space(6);
+
+            // Marker-style drill-down: the Back button at the top returns to
+            // the root Interface page.
+            if (GUILayout.Button(loc.Get("PANEL_BACK"), _button))
+            {
+                _leaderboardOpen = false;
+                return;
+            }
 
             // R10.7.1: the shared leaderboard shows either the subsegment
             // references or the current level's marker feed.
@@ -785,6 +1148,7 @@ namespace HSRTimer
                             cfg.SaveSettings();
                             _presetErrorKey = null;
                             _presetCreating = false;
+                            _presetDeleting = false;
                         }
                         _presetDropdownOpen = false;
                     }
@@ -813,6 +1177,7 @@ namespace HSRTimer
                 if (GUILayout.Button(loc.Get("SETTINGS_PRESET_NEW"), _button))
                 {
                     _presetCreating = !_presetCreating;
+                    _presetDeleting = false;
                     _presetNewName = "";
                     _presetErrorKey = null;
                 }
@@ -838,13 +1203,25 @@ namespace HSRTimer
             bool isDefault = string.Equals(s.CurrentPreset, PresetStore.DefaultPresetName, System.StringComparison.OrdinalIgnoreCase);
             if (!isDefault)
             {
-                if (GUILayout.Button(loc.Get("SETTINGS_PRESET_DELETE"), _button))
+                // Delete with confirmation: the single button expands into a
+                // "Confirm delete" / "Cancel" pair so an accidental click
+                // cannot destroy a preset. The confirm state is dropped when
+                // the tab changes, the panel closes/reopens, or the target
+                // preset selection changes (see Toggle/Draw/selection branch).
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button(_presetDeleting ? loc.Get("SETTINGS_PRESET_DELETE_CONFIRM") : loc.Get("SETTINGS_PRESET_DELETE"), _button))
                 {
-                    if (PresetStore.DeleteCurrent(cfg))
+                    if (!_presetDeleting)
+                    {
+                        _presetDeleting = true;
+                        _presetErrorKey = null;
+                    }
+                    else if (PresetStore.DeleteCurrent(cfg))
                     {
                         RefreshPresetList();
                         _presetDropdownOpen = false;
                         _presetCreating = false;
+                        _presetDeleting = false;
                         _presetErrorKey = null;
                     }
                     else
@@ -852,6 +1229,12 @@ namespace HSRTimer
                         _presetErrorKey = "SETTINGS_PRESET_DELETE_FAILED";
                     }
                 }
+                if (_presetDeleting && GUILayout.Button(loc.Get("SETTINGS_PRESET_CANCEL"), _button))
+                {
+                    _presetDeleting = false;
+                    _presetErrorKey = null;
+                }
+                GUILayout.EndHorizontal();
             }
 
             if (_presetErrorKey != null)

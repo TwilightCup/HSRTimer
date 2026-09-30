@@ -68,7 +68,10 @@ HSRTimer saves.
   the top); the **Load preset** button
   applies the selected snapshot to the live layout/markers, and **Save preset**
   writes the current layout/markers into the selected preset. **New preset**
-  saves the current config under a new name and selects it. The current
+  saves the current config under a new name and selects it. **Delete preset**
+  (hidden for `default`) asks for confirmation: the button expands into a
+  **Confirm delete** / **Cancel** pair, and the confirmation is dismissed when
+  you switch tabs or close/reopen the panel. The current
   selection is persisted in `settings.ini` (`[Presets] Current`). The built-in
   `default` preset is created automatically on first load/upgrade and cannot be
   deleted. See [CONFIG.md](CONFIG.md).
@@ -83,14 +86,60 @@ HSRTimer saves.
 
 ## Interface
 
-- **HUD** — `show_hud`; `show_real_time` (show the always-active Real Time
-  clock); `show_wake_up_time` (show Wake Up Time in the right-hand HUD column);
-  `only_record_first_wake_up_time` (visible only while Wake Up Time display is
-  on — restores the original first-wake-up-only behavior);
-  `center_loading_saving` (moves the game's own top-right
-  "Loading"/"Saving" prompts to the top-center); the main text block's offset
-  (`offset_x`, `offset_y`), `font_size`, and the two-color gradient
-  (`color_a`, `color_b`) with per-channel RGBA sliders.
+- **Center Loading/Saving** — at the top of the page:
+  `center_loading_saving` moves the game's own top-right "Loading"/"Saving"
+  prompts to the top-center.
+- **Timer HUD** — a button that opens the timer HUD sub-page (marker-style
+  drill-down with a **Back** button at the top):
+  - **HUD general settings** — `show_hud`; the main text block's offset
+    (`offset_x`, `offset_y`), `font_size`, and the two-color gradient
+    (`color_a`, `color_b`) with per-channel RGBA sliders; and
+    `only_record_first_wake_up_time` (restores the original
+    first-wake-up-only behavior).
+  - **Columns** — one collapsible dropdown button per column (columns are
+    drawn left-to-right by number; an empty column is not displayed). Each
+    dropdown lists every timer HUD row type (**Game Time**, **Real Time**,
+    **Prev RT**, **Segment Time**, **Total at Last Segment**, **Last
+    Segment**, **Last Run**, **Wake Up Time**, **State**) with an integer
+    **position** field: `0` hides the row, and a value `N > 0` shows it at
+    the N-th line of that column (so the same field both enables and orders
+    the row). Entering a position already used by another row replaces that
+    row. Each dropdown has a **Delete** button (with confirmation, like the
+    marker editor), and the page ends with a **New column** button that
+    appends an empty column.
+    Real Time and Wake Up Time are regular rows here — they show wherever you
+    place them, so the old `show_real_time` / `show_wake_up_time` toggles are
+    gone (the Real Time clock itself always runs in the background).
+- **Leaderboard** — a button that opens the shared leaderboard HUD sub-page
+  (same marker-style drill-down with a **Back** button at the top):
+  - **Content** — choose what the shared leaderboard HUD shows: **Subsegment**
+    (reference time comparison) or **Markers** (the current level's marker
+    feed). The mode-cycle key (in **General → Keybinds**) and the appearance
+    settings below apply to both modes.
+  - **HUD** — the leaderboard font size, X offset, and Y offset (relative to
+    the fixed top anchor at the screen center; content extends downward).
+  - **Entry colors** — three user-configurable colors for the three leaderboard
+    entry states: faster/ahead (default green), slower/behind (default red), and
+    tie/no-data (default white, shown as `--`). In Markers mode the colors still
+    reflect ahead/behind vs the marker's PB even when absolute times are shown.
+  - **Marker time display** — (Markers mode only) whether each triggered marker
+    row shows its absolute segment time or the signed difference to that marker's
+    PB.
+  - **Displayed sources** — (Subsegment mode only) at the bottom, a toggle for
+    every subsegment source: **PB** and each top-level folder under the load
+    directory. Only checked sources appear on the leaderboard. The list is still
+    truncated to `MaxLeaderboardEntries` after filtering and sorting.
+- **Custom Text** — a button that opens the custom-text sub-page (same
+  marker-style drill-down with a **Back** button at the top). Each custom text
+  (the `[custom.<n>]` entries in `layout.ini`) is listed as a collapsible
+  dropdown; expanding one shows all of its configuration: the **Content** text
+  input (template variables such as `{gametime}`, `{date}`, `{version}`,
+  `{collection}`, `{category}` are substituted live), a **Font size** slider,
+  the **Offset X** / **Offset Y** position fields, and the two-color gradient
+  (**Color A** / **Color B**) with per-channel RGBA sliders. Each dropdown has a
+  **Delete** button (with confirmation, like the column and marker editors), and
+  the page ends with a **New text** button that appends an empty text set to
+  `(0, 0)` and opens it.
 
 ## Category
 
@@ -110,26 +159,7 @@ HSRTimer saves.
   the selected project has no data at all, it falls back to the smallest
   project that has data (session-only). The leaderboard mode-cycle key is in
   **General → Keybinds**; the leaderboard appearance settings live on the
-  **Leaderboard** tab below.
-
-## Leaderboard
-
-- **Content** — choose what the shared leaderboard HUD shows: **Subsegment**
-  (reference time comparison) or **Markers** (the current level's marker feed).
-  The mode-cycle key and the appearance settings below apply to both modes.
-- **HUD** — the leaderboard font size, X offset, and Y offset (relative to
-  the fixed top anchor at the screen center; content extends downward).
-- **Entry colors** — three user-configurable colors for the three leaderboard
-  entry states: faster/ahead (default green), slower/behind (default red), and
-  tie/no-data (default white, shown as `--`). In Markers mode the colors still
-  reflect ahead/behind vs the marker's PB even when absolute times are shown.
-- **Marker time display** — (Markers mode only) whether each triggered marker
-  row shows its absolute segment time or the signed difference to that marker's
-  PB.
-- **Displayed sources** — (Subsegment mode only) at the bottom, a toggle for
-  every subsegment source: **PB** and each top-level folder under the load
-  directory. Only checked sources appear on the leaderboard. The list is still
-  truncated to `MaxLeaderboardEntries` after filtering and sorting.
+  **Interface → Leaderboard** sub-page.
 
 ## Markers
 

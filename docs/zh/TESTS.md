@@ -40,7 +40,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr hud [on\|off\|toggle\|status]` | 控制计时 HUD 的显示 |
 | `hsr panel [open\|close\|toggle\|status]` | 控制设置面板 |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | 控制排行榜 HUD |
-| `hsr layout [status\|row ...\|text ...\|get <key>\|set <key> <value>]` | 查看 / 编辑 HUD 布局 |
+| `hsr layout [status\|row ...\|column ...\|text ...\|get <key>\|set <key> <value>]` | 查看 / 编辑 HUD 布局(列内为 1 基行位置) |
 | `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | 开关启用的标签规则;查看/强制自动 Co-op 标签 |
 | `hsr lang [list\|set <code>\|reload\|current]` | 管理本地化 |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | 管理预设(R11) |
@@ -58,7 +58,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 
 - `auto_reset`、`use_plcc_timing_standard`、`restart_clears_forgivable`、`retry_min_dwell`
 - `retry_level_override_enabled`、`retry_level_override`
-- `show_hud`、`show_real_time`、`show_wake_up_time`
+- `show_hud`
 - `only_record_first_wake_up_time`、`center_loading_saving`、`language`
 - `reset_key`、`retry_key`、`menu_key`
 - `subsegment_enable`、`subsegment_pb_path`、`subsegment_load_path`、
@@ -97,6 +97,11 @@ hsr pass real              # 传送到判定箱,让游戏自身完成过关
 本段用时,若为一场成绩的最后一关还应显示 `lastRun`。该命令需要处于分段内且存在
 本地玩家,客户端与回放播放期间为无效操作。**subsegment 与 marker 的 PB 不会写入**
 (这是测试过关),真实的 PB 文件保持不变。
+
+**上关RT(R1.10.7)。** 过关后,`hsr status` 应显示定格的 `prevRt=`(该关结束时
+的现实时间),HUD 的 `Prev Rt` 行(中文 `上关RT`)更新为同一值 —— 这是整局累计的
+现实时间,而非该关自身用时。首个关卡完成前为 `--`(未设置)。`hsr reset` 与退出到
+菜单会清零它;`hsr retry` 保留。
 
 `hsr pass real` 走真实的触发器链路而不是直接置标志:它把玩家动量清零
 (所有身体部件的线速度与角速度)、取消双手抓取,并把本地玩家传送到本关
@@ -174,16 +179,33 @@ hsr hud off
 hsr hud on
 hsr layout status
 hsr layout row list
-hsr layout row add CurrentState
-hsr layout row remove 5
+hsr layout row add 1 CurrentState
+hsr layout row add 1 CurrentState 2
+hsr layout row remove 1 2
+hsr layout row add 2 RealTime
+hsr layout row add 2 PrevRt
+hsr layout row clear 2
+hsr layout column list
+hsr layout column new
+hsr layout row add 4 WakeUpTime
+hsr layout column remove 4
 hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
+hsr layout text set 0 x 320
+hsr layout text set 0 y 240
+hsr layout text set 0 font_size 24
+hsr layout text set 0 text "Level: {category}"
+hsr layout text set 0 color_a 00FF00FF
+hsr layout text set 0 color_b 0000FFFF
+hsr layout text remove 0
 hsr layout set font_size 24
 hsr layout set offset_x 30
 hsr layout set color_a FF0000FF
 ```
 
-HUD 应在下一帧生效,且改动持久化到 `layout.ini`。
+HUD 应在下一帧生效,且改动持久化到 `layout.ini`。`layout.ini` 的 `[column.N]` 键是 1 基行位置。`PrevRt` 是 `hsr layout row add` 的合法行类型(上一关的现实时间快照;首关完成前显示 `--:--`),`LastRun` 与 `WakeUpTime` 同样是普通行 —— 所有行类型现在都是普通列行,`show_real_time` / `show_wake_up_time` 不再是设置(`hsr set` 不再列出它们)。`hsr layout row add <column> <type> [position]` 省略位置时追加到末尾;`hsr layout column new` 追加空列,`hsr layout column remove <n>` 删除一列。`hsr layout text set <index> <x|y|text|font_size|color_a|color_b> <value>` 编辑已有自定义文本的单个字段(text 值可含空格)。
+
+设置面板的 **界面** 页与上述编辑器一致:顶部是 **居中加载/保存**,然后 **计时器HUD** 按钮(英文 `Timer HUD`)进入子页面,内含 **HUD 通用设置**(显示计时器面板、偏移、字号、颜色,以及“仅记录第一次起身时间”)、每列一个可折叠的 **第 N 列** 下拉(逐行类型带整数**位置**输入框:`0` = 隐藏,`N > 0` = 第 N 行)、每列一个 **删除** 按钮(需确认),以及底部的 **新建列** 按钮。同一页还有 **排行榜** 按钮(进入共享排行榜 HUD 子页面:内容模式、HUD 字号/偏移、条目颜色、标记时间显示,以及 subsegment 资料开关)与 **自定义文本** 按钮(英文 `Custom Text`,进入子页面:每条自定义文本为一个可折叠下拉,含内容输入框、字号滑杆、横向/纵向偏移、颜色 A/B 与 **删除** 按钮(需确认),底部为 **新建文本** 按钮)。所有子页面顶部都有 **返回** 按钮。
 
 ### 5. 设置面板 / 常规设置
 
@@ -359,7 +381,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] 计时标准开关:关闭 `use_plcc_timing_standard`(默认)时,`hsr clock history` 由 `pass` 行携带终点 tick;`hsr set use_plcc_timing_standard true` 后(`hsr status` 显示 `plccTiming=True`)会同时出现 `pass` 行(`Game.Fall` 帧,仅观测)与携带终点 tick 的 `leave` 行,且 `leave tick − pass tick` ≈ 1 个物理帧(渲染帧延迟),两种模式下相同操作的 `dur=` 均一致。开启期间计时器 HUD 在时间行下方显示 `plcc计时模式` 一行;关闭后该行消失(R2.6.1)。
 - [ ] 计时标准开关整局锁定(R1.4.2a):本局运行中(`realTimeActive=True`,含两关之间与暂停)`hsr set use_plcc_timing_standard true|false` 会被拒绝并打印锁定说明,`hsr get` 取值不变;本局结束后(`realTimeActive=False`,例如回到主菜单)或执行 `hsr reset` 后同一条 `hsr set` 成功。设置面板中该开关在本局期间变灰、提示文字为"整局运行中不可切换",离开本局后恢复可交互。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
-- [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
+- [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段、定格的 `prevRt`(该关结束时的现实时间)与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
 - [ ] `hsr pass real` 把玩家传送到判定箱,由游戏自身的触发器链路完成过关(且 `LevelPassed` 已锁定);PB 同样不写入。
 - [ ] `hsr hud off/on` 隐藏 / 显示计时 HUD。
 - [ ] `hsr panel open/close` 打开 / 关闭设置面板。
@@ -367,7 +389,9 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr update check` 报告已最新 / 显示更新版本 / 离线时显示一行错误,`hsr update apply` 安装 DLL(R13)。
 - [ ] `hsr tag enable/disable` 改变启用的标签并持久化。
 - [ ] `hsr set language zh-Hans` 切换界面语言。
-- [ ] `hsr layout row add/remove` 改变 HUD 行。
+- [ ] `hsr layout row list/add/remove/clear` 改变 HUD 行(按 1 基位置),含添加 `PrevRt`、`LastRun` 与 `WakeUpTime`。
+- [ ] `hsr layout column new/remove` 追加 / 删除列,`hsr set show_real_time` / `show_wake_up_time` 不再被接受(这些行现在是列位置)。
+- [ ] `hsr layout text add/list/set/remove/clear` 管理自定义文本;面板的 **界面 → 自定义文本** 子页面把每条文本列为下拉(内容、字号、偏移、颜色),带 **删除**(需确认)与 **新建文本** 按钮。
 - [ ] `hsr preset create/save/apply` 完整往返布局 + 标记。
 - [ ] 有分段数据时 `hsr sub status/entries` 正常。
 - [ ] 关卡内 `hsr marker add/list/toggle/pb` 正常。

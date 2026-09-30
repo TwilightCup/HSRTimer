@@ -51,7 +51,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr hud [on\|off\|toggle\|status]` | Control timer HUD visibility |
 | `hsr panel [open\|close\|toggle\|status]` | Control the settings panel |
 | `hsr leaderboard [cycle\|show\|hide\|mode <Subsegment\|Markers>\|status]` | Control the leaderboard HUD |
-| `hsr layout [status\|row ...\|text ...\|get <key>\|set <key> <value>]` | Inspect/edit the HUD layout |
+| `hsr layout [status\|row ...\|column ...\|text ...\|get <key>\|set <key> <value>]` | Inspect/edit the HUD layout (columns use 1-based row positions) |
 | `hsr tag [list\|label <status\|on\|off\|auto>\|enable <id>\|disable <id>\|set <id> <on\|off>]` | Toggle enabled tag rules; inspect/force the auto Co-op label |
 | `hsr lang [list\|set <code>\|reload\|current]` | Manage localization |
 | `hsr preset [list\|current\|create <name>\|apply [name]\|save\|delete <name>]` | Manage presets (R11) |
@@ -70,7 +70,7 @@ and `LayoutModel`. Common examples:
 
 - `auto_reset`, `use_plcc_timing_standard`, `restart_clears_forgivable`, `retry_min_dwell`
 - `retry_level_override_enabled`, `retry_level_override`
-- `show_hud`, `show_real_time`, `show_wake_up_time`
+- `show_hud`
 - `only_record_first_wake_up_time`, `center_loading_saving`, `language`
 - `reset_key`, `retry_key`, `menu_key`
 - `subsegment_enable`, `subsegment_pb_path`, `subsegment_load_path`,
@@ -116,6 +116,13 @@ segment time and (for the last level of a run) a `lastRun` value. It requires
 an active segment with a local player and is a no-op for clients / during
 replays. **Subsegment and marker PBs are deliberately not written** (it is a
 test pass), so real PB files stay untouched.
+
+**Prev RT (R1.10.7).** After a level completes, `hsr status` shows a frozen
+`prevRt=` (the Real Time value at that level's end) and the HUD's `Prev Rt`
+row (Chinese `上关RT`) updates to the same value — the run's cumulative Real
+Time, not the level's own duration. Before the first completed level it reads
+`--` (unset). It is cleared by `hsr reset` and by leaving to the menu, but
+kept across `hsr retry`.
 
 `hsr pass real` exercises the actual trigger chain instead of forcing the
 flag: it zeroes the player's momentum (linear + angular on every body part),
@@ -252,17 +259,56 @@ hsr hud off
 hsr hud on
 hsr layout status
 hsr layout row list
-hsr layout row add CurrentState
-hsr layout row remove 5
+hsr layout row add 1 CurrentState
+hsr layout row add 1 CurrentState 2
+hsr layout row remove 1 2
+hsr layout row add 2 RealTime
+hsr layout row add 2 PrevRt
+hsr layout row clear 2
+hsr layout column list
+hsr layout column new
+hsr layout row add 4 WakeUpTime
+hsr layout column remove 4
 hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
+hsr layout text set 0 x 320
+hsr layout text set 0 y 240
+hsr layout text set 0 font_size 24
+hsr layout text set 0 text "Level: {category}"
+hsr layout text set 0 color_a 00FF00FF
+hsr layout text set 0 color_b 0000FFFF
+hsr layout text remove 0
 hsr layout set font_size 24
 hsr layout set offset_x 30
 hsr layout set color_a FF0000FF
 ```
 
 The HUD should update on the next frame and the changes should persist to
-`layout.ini`.
+`layout.ini`. `layout.ini` `[column.N]` keys are 1-based row positions.
+`PrevRt` is a valid row type for `hsr layout row add` (the previous level's
+Real Time snapshot; it shows `--:--` until the first level is completed), as
+are `LastRun` and `WakeUpTime` — every row type is a regular column row now, and
+`show_real_time` / `show_wake_up_time` are no longer settings (`hsr set` no
+longer lists them). `hsr layout row add <column> <type> [position]` appends at
+the end when the position is omitted; `hsr layout column new` appends an empty
+column and `hsr layout column remove <n>` deletes one. `hsr layout text set
+<index> <x|y|text|font_size|color_a|color_b> <value>` edits one field of an
+existing custom text (the text value may contain spaces).
+
+The settings panel's **Interface** page mirrors this editor: **Center
+Loading/Saving** at the top, then the **Timer HUD** button (Chinese:
+`计时器HUD`) opens the sub-page with **HUD general settings** (Show timer HUD,
+Offset, Font size, Color, and Only-record-first-wake-up) and one collapsible
+**Column N** dropdown per column listing every row type with an integer
+**position** field (`0` = hidden, `N > 0` = the N-th line), a per-column
+**Delete** button (with confirmation), and a **New column** button at the
+bottom. The same page also has a **Leaderboard** button that opens the shared
+leaderboard HUD sub-page (content mode, HUD size/offset, entry colors, marker
+time display, and the subsegment source toggles) and a **Custom Text** button
+(Chinese: `自定义文本`) that opens a sub-page listing every custom text as a
+collapsible dropdown (Content box, Font size, Offset X/Y, Color A/B, **Delete**
+with confirmation) plus a **New text** button at the bottom, each with a **Back**
+button at the top.
 
 ### 5. Settings panel / general settings
 
@@ -501,7 +547,7 @@ Notes:
 - [ ] Timing standard toggle: with `use_plcc_timing_standard` off (default), `hsr clock history` shows the `pass` line carrying the end tick; after `hsr set use_plcc_timing_standard true` (`hsr status` shows `plccTiming=True`) it shows both a `pass` line (the `Game.Fall` frame, observation only) and a `leave` line carrying the end tick, with `leave tick − pass tick` ≈ 1 physics tick (the render-frame delay), and both modes record identical `dur=` for identical runs. With the setting on, the timer HUD shows the `plcc timing mode` line under the time rows; it hides again when the setting is off (R2.6.1).
 - [ ] Timing standard lock (R1.4.2a): while a run is in progress (`realTimeActive=True`, including between levels and paused) `hsr set use_plcc_timing_standard true|false` is refused with the locked message and `hsr get` is unchanged; after the run ends (`realTimeActive=False`, e.g. back at the main menu) or after `hsr reset` the same `hsr set` succeeds. In the settings panel the toggle is greyed out and its note reads "Locked while a run is in progress…" during a run, and interactive again outside one.
 - [ ] `hsr retry` reloads the current level (or the configured override).
-- [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
+- [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment, a frozen `prevRt` (the Real Time at that level's end) and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
 - [ ] `hsr pass real` teleports the player into the pass zone and the game's own trigger flow completes the level (with `LevelPassed` latched); PBs still not written.
 - [ ] `hsr hud off/on` hides/shows the timer HUD.
 - [ ] `hsr panel open/close` opens/closes the settings panel.
@@ -509,7 +555,9 @@ Notes:
 - [ ] `hsr update check` reports up to date / shows a newer release / shows a one-line error (offline), and `hsr update apply` installs the DLL (R13).
 - [ ] `hsr tag enable/disable` changes the enabled tags and persists them.
 - [ ] `hsr set language zh-Hans` switches UI language.
-- [ ] `hsr layout row add/remove` changes the HUD rows.
+- [ ] `hsr layout row list/add/remove/clear` changes the HUD rows (per 1-based position), including adding `PrevRt`, `LastRun` and `WakeUpTime`.
+- [ ] `hsr layout column new/remove` appends/deletes columns, and `hsr set show_real_time` / `show_wake_up_time` are no longer accepted (the rows are column positions now).
+- [ ] `hsr layout text add/list/set/remove/clear` manages custom texts; the panel's **Interface → Custom Text** sub-page lists each text as a dropdown (content, font size, offsets, colors) with a **Delete** (confirm) and a **New text** button.
 - [ ] `hsr preset create/save/apply` round-trips layout + markers.
 - [ ] `hsr sub status/entries` works with subsegment data present.
 - [ ] `hsr marker add/list/toggle/pb` works while in a level.

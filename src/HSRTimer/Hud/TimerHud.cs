@@ -110,117 +110,90 @@ namespace HSRTimer
                 return;
             }
 
-            float mainBlockWidth = DrawMainBlock(cfg);
-
-            DrawRightColumn(cfg, mainBlockWidth);
+            DrawMainBlock(cfg);
 
             DrawCustomTexts(cfg);
         }
 
         /// <summary>
-        /// Draw the right-hand column next to the main timer stack. The first row
-        /// is the finished-run total ("LastRun") when visible, and the second row
-        /// (or the only row when no LastRun is available) is the current level's
-        /// Wake Up time, gated by the "Show Wake Up Time" setting.
+        /// Draw the configured columns left-to-right, then the shared extra
+        /// status lines below the tallest column. Each non-empty column is a
+        /// stack of rows drawn at its own x; an empty column (or one whose rows
+        /// are all hidden) is skipped and takes no space.
         /// </summary>
-        private void DrawRightColumn(ConfigService cfg, float mainBlockWidth)
+        private void DrawMainBlock(ConfigService cfg)
         {
             var state = TimerCore.State;
             if (state == null) return;
+
+            var layout = cfg.Layout;
+            var loc = cfg.Localization;
+            float x = layout.OffsetX;
+            float y = layout.OffsetY;
+            const float colGap = 24f;
 
             // LastRun hides once a *new* run starts timing — but not during the
             // epilogue (the Credits level the game loads after the campaign
             // finishes), which belongs to the run that just ended.
             bool showLastRun = state.LastRunTicks.HasValue
                 && (state.InEpilogueSegment || (!state.InSegment && state.PlayableTicks == 0UL));
-            bool showWakeUp = cfg.Settings.ShowWakeUpTime && state.WakeUpTicks.HasValue;
-            if (!showLastRun && !showWakeUp)
-                return;
 
-            var layout = cfg.Layout;
-            var loc = cfg.Localization;
-
-            // Column gap next to the main block's widest line; top-aligned with it.
-            const float gap = 24f;
-            float x = layout.OffsetX + mainBlockWidth + gap;
-            float y = layout.OffsetY;
-
-            if (showLastRun)
+            // Each configured column, left-to-right by index. Every row type is
+            // a regular column row now (including LastRun and WakeUpTime); the
+            // RealTime clock always runs in the background and its row shows
+            // wherever the user placed it.
+            float rightX = x;
+            float bottomY = y;
+            var colIndices = new List<int>(layout.Columns.Keys);
+            colIndices.Sort();
+            foreach (var col in colIndices)
             {
-                string line = loc.Get("TIMER_LAST_RUN") + ":  " + TimeFormatter.Format(GameClock.LastRunSeconds(state));
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-                y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+                var rows = layout.Columns[col];
+                // Rows are drawn top-to-bottom by their 1-based position.
+                var positions = new List<int>(rows.Keys);
+                positions.Sort();
+                float colX = rightX;
+                float colY = y;
+                float colWidth = 0f;
+                bool anyDrawn = false;
+                foreach (var pos in positions)
+                {
+                    var row = rows[pos];
+                    // LastRun only renders while the previous run is on show.
+                    if (row == RowType.LastRun && !showLastRun)
+                        continue;
+                    string label, value;
+                    GetRow(row, cfg, state, loc, out label, out value);
+                    string line = label.Length > 0 ? (label + ":  " + value) : value;
+                    DrawGradientLine(line, layout.ColorA, layout.ColorB, colX, colY, _rowStyle);
+                    var size = _rowStyle.CalcSize(new GUIContent(line));
+                    if (size.x > colWidth) colWidth = size.x;
+                    colY += size.y + 2f;
+                    anyDrawn = true;
+                }
+                if (!anyDrawn)
+                    continue; // empty column (or every row hidden): not displayed
+
+                rightX = colX + colWidth + colGap;
+                if (colY > bottomY) bottomY = colY;
             }
 
-            if (showWakeUp)
-            {
-                string line = loc.Get("TIMER_WAKE_UP_TIME") + ":  " + TimeFormatter.FormatWakeUp(GameClock.WakeUpSeconds(state));
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-            }
-        }
-
-        /// <summary>
-        /// Draw the ordered rows + category extras + invalid banner at the
-        /// anchor. Returns the widest row's width — used to place the LastRun
-        /// column immediately to the right of the timer stack.
-        /// </summary>
-        private float DrawMainBlock(ConfigService cfg)
-        {
-            var state = TimerCore.State;
-            if (state == null) return 0f;
-
-            var layout = cfg.Layout;
-            var loc = cfg.Localization;
-            float x = layout.OffsetX;
-            float y = layout.OffsetY;
-            float widest = 0f;
-
-            // Each configured row. LastRun is NOT drawn here — it renders in its
-            // own right-hand column (see DrawRightColumn) so the finished-run
-            // total doesn't sit in the same column as the live timers. RealTime
-            // is a regular row type but is additionally gated by the ShowRealTime
-            // settings toggle.
-            bool hasRealTimeRow = layout.Rows.Contains(RowType.RealTime);
-            foreach (var row in layout.Rows)
-            {
-                if (row == RowType.LastRun)
-                    continue;
-                if (row == RowType.RealTime && !cfg.Settings.ShowRealTime)
-                    continue;
-                string label, value;
-                GetRow(row, cfg, state, loc, out label, out value);
-                string line = label.Length > 0 ? (label + ":  " + value) : value;
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-                float w = _rowStyle.CalcSize(new GUIContent(line)).x;
-                if (w > widest) widest = w;
-                y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
-            }
-
-            // Real-time clock fallback: when the setting is enabled but the user
-            // hasn't placed the row in their layout, show it below the configured
-            // rows so enabling the setting always has an immediate effect.
-            if (cfg.Settings.ShowRealTime && !hasRealTimeRow)
-            {
-                string line = loc.Get("TIMER_REAL_TIME") + ":  " + TimeFormatter.Format(state.RealTime);
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-                float w = _rowStyle.CalcSize(new GUIContent(line)).x;
-                if (w > widest) widest = w;
-                y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
-            }
+            // Extras sit below the tallest column, starting at the left edge.
+            float ey = bottomY;
 
             // Timing-standard indicator (R1.4.2): one line directly under the
             // time rows while the plcc timing standard is enabled, so the active
             // timing mode is visible on the HUD.
-            y += DrawPlccModeLine(cfg, loc, layout, x, y);
+            ey += DrawPlccModeLine(cfg, loc, layout, x, ey);
 
             // Current rule tags: one line right under the timer rows listing the
             // enabled tags (localized). Skipped when none are enabled. Rendered
             // before the tag extras and the invalid banner; the marker-edit-mode
             // block is drawn last, at the very bottom of the HUD.
-            y += DrawTagsLine(cfg, loc, layout, x, y);
+            ey += DrawTagsLine(cfg, loc, layout, x, ey);
 
             // Voiceline / checkpoint extras (R3.3.3, R3.6.3) for the active category.
-            y += DrawTagExtras(cfg, state, loc, x, y);
+            ey += DrawTagExtras(cfg, state, loc, x, ey);
 
             // Invalid banner (R5.3.2). Soft flags are NOT part of this banner;
             // they render on their own lines in normal HUD text color below.
@@ -230,13 +203,13 @@ namespace HSRTimer
                 string banner = loc.Get("INVALID_RUN") + ": " + reasons;
                 var content = new GUIContent(banner);
                 _bannerStyle.normal.textColor = Color.red;
-                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, y, _bannerStyle);
-                y += _bannerStyle.CalcSize(content).y + 2f;
+                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, ey, _bannerStyle);
+                ey += _bannerStyle.CalcSize(content).y + 2f;
             }
 
             // Soft flags: normal HUD text with a trigger count, all on one line.
             // Only the individual flag that was newly triggered flashes red.
-            y += DrawSoftFlags(cfg, state, loc, x, y);
+            ey += DrawSoftFlags(cfg, state, loc, x, ey);
 
             // R6.5: show the retry-target-resolution failure in the same red
             // banner style as a run invalid hint. It stays visible until the
@@ -246,16 +219,14 @@ namespace HSRTimer
             {
                 string banner = loc.Get("HUD_INVALID_RETRY_TARGET");
                 _bannerStyle.normal.textColor = Color.red;
-                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, y, _bannerStyle);
-                y += _bannerStyle.CalcSize(new GUIContent(banner)).y + 2f;
+                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, ey, _bannerStyle);
+                ey += _bannerStyle.CalcSize(new GUIContent(banner)).y + 2f;
             }
 
             // R10.4.2: the marker-edit-mode hint is the last line of the timer
             // HUD, and the edit-mode XYZ axis indicator sits directly beneath it.
-            y += DrawMarkerEditModeLine(cfg, loc, x, y);
-            y += DrawMarkerAxisIndicator(cfg, x, y);
-
-            return widest;
+            ey += DrawMarkerEditModeLine(cfg, loc, x, ey);
+            ey += DrawMarkerAxisIndicator(cfg, x, ey);
         }
 
         /// <summary>One line listing the currently enabled rule tags (localized), directly
@@ -442,6 +413,10 @@ namespace HSRTimer
                     label = loc.Get("TIMER_REAL_TIME");
                     value = TimeFormatter.Format(state.RealTime);
                     break;
+                case RowType.PrevRt:
+                    label = loc.Get("TIMER_PREV_RT");
+                    value = TimeFormatter.Format(GameClock.RealTimeAtLastSegmentSeconds(state));
+                    break;
                 case RowType.CurrentSegment:
                     label = loc.Get("TIMER_SEGMENT_TIME");
                     value = TimeFormatter.Format(GameClock.SegmentSeconds(state));
@@ -461,6 +436,10 @@ namespace HSRTimer
                 case RowType.CurrentState:
                     label = loc.Get("TIMER_CURRENT_STATE");
                     value = loc.Get(StateKey(state.Game != null ? state.Game.state : GameState.Inactive));
+                    break;
+                case RowType.WakeUpTime:
+                    label = loc.Get("TIMER_WAKE_UP_TIME");
+                    value = TimeFormatter.FormatWakeUp(GameClock.WakeUpSeconds(state));
                     break;
                 default:
                     label = "";
@@ -551,6 +530,11 @@ namespace HSRTimer
             foreach (var ct in cfg.Layout.CustomTexts)
             {
                 string resolved = TemplateVars.Resolve(ct.Text, gt, rt);
+                // Each custom text carries its own font size (R2.4.1); the shared
+                // dynamic font is scaled per draw, so the size is applied here
+                // rather than in ApplyFontToStyles.
+                int size = ct.FontSize > 0 ? ct.FontSize : _customStyle.fontSize;
+                if (_customStyle.fontSize != size) _customStyle.fontSize = size;
                 DrawGradientLine(resolved, ct.ColorA, ct.ColorB, ct.X, ct.Y, _customStyle);
             }
         }

@@ -41,19 +41,17 @@ namespace HSRTimer
         // ── HUD ──
         public bool ShowHud = true;               // R2.5.1
 
-        // Real-time clock is always active while a run is in progress. It is
-        // shown by default (below Game Time in the default layout); this setting
-        // controls its HUD visibility.
-        public bool ShowRealTime = true;
+        // The Real Time and Wake Up Time rows are no longer separate settings:
+        // they are regular layout rows shown/hidden by placing them in (or
+        // removing them from) a column in the Interface → Timer HUD column
+        // editor. The Real Time clock still always runs in the background.
 
         // Wake Up time is a per-level stat: the time from a wake-up measurement
         // start to the local player leaving the soft/spawn state. By default the
         // measurement restarts on each player respawn / pause-menu checkpoint
         // load / level restart. When OnlyRecordFirstWakeUpTime is enabled, it
         // keeps the original behavior: only the first wake-up after a level
-        // starts is measured. Shown in the right-hand column (the one that also
-        // holds Last Run).
-        public bool ShowWakeUpTime = true;
+        // starts is measured. Shown wherever the WakeUpTime row is placed.
         public bool OnlyRecordFirstWakeUpTime = false;
 
         // Move the game's own top-right Loading/Saving progress indicator to
@@ -150,8 +148,16 @@ namespace HSRTimer
                     case "retry_level_override_enabled": RetryLevelOverrideEnable = ParseBool(value, RetryLevelOverrideEnable); break;
                     case "retry_level_override": RetryLevelOverride = value; break;
                     case "show_hud": ShowHud = ParseBool(value, ShowHud); break;
-                    case "show_real_time": ShowRealTime = ParseBool(value, ShowRealTime); break;
-                    case "show_wake_up_time": ShowWakeUpTime = ParseBool(value, ShowWakeUpTime); break;
+                    case "show_real_time":
+                        // Legacy key (R2.5.3): Real Time is now a column row
+                        // toggle, not a settings toggle. Ignored; dropped on the
+                        // next save since Save() no longer writes it.
+                        break;
+                    case "show_wake_up_time":
+                        // Legacy key (R2.5.4): Wake Up Time is now a column row
+                        // toggle, not a settings toggle. Ignored; dropped on the
+                        // next save since Save() no longer writes it.
+                        break;
                     case "only_record_first_wake_up_time": OnlyRecordFirstWakeUpTime = ParseBool(value, OnlyRecordFirstWakeUpTime); break;
                     case "center_loading_saving": CenterLoadingSaving = ParseBool(value, CenterLoadingSaving); break;
                     case "language": CurrentLang = value; break;
@@ -265,8 +271,6 @@ namespace HSRTimer
                 ["retry_level_override_enabled"] = RetryLevelOverrideEnable ? "true" : "false",
                 ["retry_level_override"] = RetryLevelOverride,
                 ["show_hud"] = ShowHud ? "true" : "false",
-                ["show_real_time"] = ShowRealTime ? "true" : "false",
-                ["show_wake_up_time"] = ShowWakeUpTime ? "true" : "false",
                 ["only_record_first_wake_up_time"] = OnlyRecordFirstWakeUpTime ? "true" : "false",
                 ["center_loading_saving"] = CenterLoadingSaving ? "true" : "false",
                 ["language"] = CurrentLang,

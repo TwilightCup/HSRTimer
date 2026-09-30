@@ -9,11 +9,13 @@ namespace HSRTimer
     {
         GameTime,
         RealTime,
+        PrevRt,
         CurrentSegment,
         TotalAtLastSegment,
         LastSegment,
         LastRun,
         CurrentState,
+        WakeUpTime,
     }
 
     /// <summary>An arbitrary custom text the user can place anywhere (R2.4).</summary>
@@ -24,10 +26,11 @@ namespace HSRTimer
         public string Text = "";
         public Color ColorA = Color.white;
         public Color ColorB = Color.white;
+        public int FontSize = 16;
     }
 
     /// <summary>
-    /// The editable HUD layout: ordered rows of text drawn directly on screen
+    /// The editable HUD layout: ordered columns of text drawn directly on screen
     /// (no window/chrome), the anchor offset and font size for the main block,
     /// and the default two-color gradient. Persisted to layout.ini. Colors are
     /// stored as hex (with optional alpha) so the file is human-editable; parsed
@@ -36,24 +39,65 @@ namespace HSRTimer
     public sealed class LayoutModel
     {
         /// <summary>
-        /// The canonical default row order. This is the single source of truth
-        /// shared by the <see cref="Rows"/> field initializer and
-        /// <see cref="ConfigRepair"/>: adding a new default row (or reordering
-        /// the defaults) is a one-line edit here, and both the fresh-install
-        /// layout and the config-repair target stay in sync automatically.
+        /// The canonical default layout: one ordered row list per column
+        /// (1-based column index). Written to disk exactly once, when the
+        /// config is initialized on a fresh install (see
+        /// <see cref="ConfigService.Load"/>); existing files are never
+        /// auto-modified. Column 1 is the leftmost timer stack; RealTime
+        /// defaults into column 2 with PrevRt (the previous level's Real Time
+        /// snapshot) directly below it; column 3 holds the LastRun /
+        /// WakeUpTime rows (the former "right-hand column").
         /// </summary>
-        public static readonly RowType[] DefaultRows =
+        public static readonly Dictionary<int, RowType[]> DefaultColumns = new Dictionary<int, RowType[]>
         {
-            RowType.GameTime,
-            RowType.RealTime,
-            RowType.CurrentSegment,
-            RowType.TotalAtLastSegment,
-            RowType.LastSegment,
+            { 1, new[] { RowType.GameTime, RowType.CurrentSegment, RowType.TotalAtLastSegment, RowType.LastSegment } },
+            { 2, new[] { RowType.RealTime, RowType.PrevRt } },
+            { 3, new[] { RowType.LastRun, RowType.WakeUpTime } },
         };
 
-        public readonly List<RowType> Rows = new List<RowType>(DefaultRows);
+        /// <summary>
+        /// The HUD layout: per column (1-based column number) a map from
+        /// **row position** (1-based) to row type. Positions set the
+        /// top-to-bottom draw order within the column; columns are drawn
+        /// left-to-right by number. A column with no entries is not displayed,
+        /// and position 0 is never valid (0 means "not in this column").
+        /// </summary>
+        public readonly Dictionary<int, Dictionary<int, RowType>> Columns = CreateDefaultColumns();
 
         public readonly List<CustomText> CustomTexts = new List<CustomText>();
+
+        private static Dictionary<int, Dictionary<int, RowType>> CreateDefaultColumns()
+        {
+            var d = new Dictionary<int, Dictionary<int, RowType>>();
+            foreach (var kv in DefaultColumns)
+            {
+                var rows = new Dictionary<int, RowType>();
+                for (int i = 0; i < kv.Value.Length; i++)
+                    rows[i + 1] = kv.Value[i];
+                d[kv.Key] = rows;
+            }
+            return d;
+        }
+
+        /// <summary>True if <paramref name="row"/> appears at any position in any column.</summary>
+        public bool HasRow(RowType row)
+        {
+            foreach (var col in Columns)
+                foreach (var pos in col.Value)
+                    if (pos.Value == row)
+                        return true;
+            return false;
+        }
+
+        /// <summary>The position of <paramref name="row"/> in a column, or 0 when absent.</summary>
+        public static int PositionOf(Dictionary<int, RowType> rows, RowType row)
+        {
+            if (rows == null) return 0;
+            foreach (var kv in rows)
+                if (kv.Value == row)
+                    return kv.Key;
+            return 0;
+        }
 
         /// <summary>Screen offset (pixels) of the main text block from the top-left.</summary>
         public float OffsetX = 16f;
@@ -84,9 +128,12 @@ namespace HSRTimer
         public void Load()
         {
             CustomTexts.Clear();
-            var rowsByKey = new Dictionary<int, RowType>();
+            var path = PersistenceService.PathFor("layout.ini");
+            bool fileExists = System.IO.File.Exists(path);
+            var columnsByKey = new Dictionary<int, Dictionary<int, RowType>>(); // column → (row index → row type)
+            var legacyRowsByKey = new Dictionary<int, RowType>();
             var tmpTexts = new Dictionary<int, CustomText>();
-            foreach (var p in PersistenceService.Read(PersistenceService.PathFor("layout.ini")))
+            foreach (var p in PersistenceService.Read(path))
             {
                 if (p.Section == "text")
                 {
@@ -101,9 +148,27 @@ namespace HSRTimer
                 }
                 else if (p.Section == "rows")
                 {
+                    // Legacy v1 [rows] section, read for compatibility only:
+                    // old configs keep loading; the list is mapped to
+                    // [column.1] in-memory below and rewritten in the new
+                    // [column.N] format on the next save. No boot-time repair.
                     int idx;
                     if (int.TryParse(p.Key, out idx) && System.Enum.TryParse(p.Value, true, out RowType rt))
-                        rowsByKey[idx] = rt;
+                        legacyRowsByKey[idx] = rt;
+                }
+                else if (p.Section.StartsWith("column."))
+                {
+                    int col;
+                    if (!int.TryParse(p.Section.Substring(7), out col) || col < 1) continue;
+                    int pos;
+                    if (!int.TryParse(p.Key, out pos) || pos < 1 || !System.Enum.TryParse(p.Value, true, out RowType rt)) continue;
+                    Dictionary<int, RowType> rows;
+                    if (!columnsByKey.TryGetValue(col, out rows))
+                    {
+                        rows = new Dictionary<int, RowType>();
+                        columnsByKey[col] = rows;
+                    }
+                    rows[pos] = rt;
                 }
                 else if (p.Section == "leaderboard")
                 {
@@ -134,19 +199,42 @@ namespace HSRTimer
                         case "x": ct.X = ParseFloat(p.Value, ct.X); break;
                         case "y": ct.Y = ParseFloat(p.Value, ct.Y); break;
                         case "text": ct.Text = UnescapeBackslashN(p.Value); break;
+                        case "font_size": ct.FontSize = ParseInt(p.Value, ct.FontSize); break;
                         case "color_a": ct.ColorA = GradientText.ParseColor(p.Value, ct.ColorA); break;
                         case "color_b": ct.ColorB = GradientText.ParseColor(p.Value, ct.ColorB); break;
                     }
                 }
             }
 
-            if (rowsByKey.Count > 0)
+            if (columnsByKey.Count > 0)
             {
-                Rows.Clear();
-                var ordered = new List<int>(rowsByKey.Keys);
-                ordered.Sort();
-                foreach (var idx in ordered) Rows.Add(rowsByKey[idx]);
+                Columns.Clear();
+                foreach (var kv in columnsByKey)
+                    Columns[kv.Key] = kv.Value;
             }
+            else if (legacyRowsByKey.Count > 0)
+            {
+                // Migration (in-memory only): the old single [rows] list
+                // becomes [column.1], renumbered to 1-based positions. The
+                // screen keeps showing exactly what it showed before; nothing
+                // is moved and no empty column is added.
+                Columns.Clear();
+                var rows = new Dictionary<int, RowType>();
+                var ordered = new List<int>(legacyRowsByKey.Keys);
+                ordered.Sort();
+                for (int i = 0; i < ordered.Count; i++)
+                    rows[i + 1] = legacyRowsByKey[ordered[i]];
+                Columns[1] = rows;
+            }
+            else if (fileExists)
+            {
+                // The file exists but contains no row sections — the user has
+                // deliberately emptied the layout (e.g. deleted every column in
+                // the panel). Keep it empty; do not resurrect the defaults.
+                Columns.Clear();
+            }
+            // else: no layout file yet — keep the default columns; the first
+            // run seeds them to disk via ConfigService.Load.
 
             if (tmpTexts.Count > 0)
             {
@@ -173,10 +261,19 @@ namespace HSRTimer
             };
             sections.Add(new KeyValuePair<string, IDictionary<string, string>>("text", text));
 
-            var rows = new Dictionary<string, string>();
-            for (int i = 0; i < Rows.Count; i++)
-                rows[i.ToString()] = Rows[i].ToString();
-            sections.Add(new KeyValuePair<string, IDictionary<string, string>>("rows", rows));
+            // Write exactly the configured columns; no implicit empty columns.
+            // Section keys are 1-based row positions (0 is never written).
+            var colIndices = new List<int>(Columns.Keys);
+            colIndices.Sort();
+            foreach (var col in colIndices)
+            {
+                var positions = new List<int>(Columns[col].Keys);
+                positions.Sort();
+                var rows = new Dictionary<string, string>();
+                foreach (var pos in positions)
+                    rows[pos.ToString(CultureInfo.InvariantCulture)] = Columns[col][pos].ToString();
+                sections.Add(new KeyValuePair<string, IDictionary<string, string>>("column." + col, rows));
+            }
 
             var leaderboard = new Dictionary<string, string>
             {
@@ -199,6 +296,7 @@ namespace HSRTimer
                     ["x"] = ct.X.ToString("F0", CultureInfo.InvariantCulture),
                     ["y"] = ct.Y.ToString("F0", CultureInfo.InvariantCulture),
                     ["text"] = EscapeBackslashN(ct.Text),
+                    ["font_size"] = ct.FontSize.ToString(CultureInfo.InvariantCulture),
                     ["color_a"] = GradientText.ToHex(ct.ColorA),
                     ["color_b"] = GradientText.ToHex(ct.ColorB),
                 }));
@@ -207,7 +305,7 @@ namespace HSRTimer
             PersistenceService.Write(
                 path,
                 sections,
-                "HSRTimer HUD layout. Text is drawn directly on screen (no window).\n# [text] offset_x/offset_y (top-left px), font_size, color_a/color_b;\n# [rows] ordered row types; [leaderboard] shared leaderboard HUD appearance;\n# [custom.<n>] arbitrary on-screen texts (template vars).");
+                "HSRTimer HUD layout. Text is drawn directly on screen (no window).\n# [text] offset_x/offset_y (top-left px), font_size, color_a/color_b;\n# [column.<n>] row types per column: each key is a 1-based row position (drawn top-to-bottom; columns left-to-right by number; empty columns are hidden);\n# [leaderboard] shared leaderboard HUD appearance;\n# [custom.<n>] arbitrary on-screen texts (template vars, own font_size and gradient).");
         }
 
         // ── helpers ──
