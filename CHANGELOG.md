@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - The timer HUD now supports multiple columns: `layout.ini` uses `[column.N]` sections (drawn left-to-right by number, an empty column is hidden), `RealTime` defaults into `[column.2]`, and old `[rows]` configs are migrated automatically to `[column.1]` plus an empty `[column.2]` — RealTime is not moved, so the screen looks the same. The Last Run / Wake Up Time column is always the rightmost one.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.9.0

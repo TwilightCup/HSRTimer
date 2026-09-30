@@ -174,8 +174,10 @@ hsr hud off
 hsr hud on
 hsr layout status
 hsr layout row list
-hsr layout row add CurrentState
-hsr layout row remove 5
+hsr layout row add 1 CurrentState
+hsr layout row remove 1 5
+hsr layout row add 2 RealTime
+hsr layout row clear 2
 hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
 hsr layout set font_size 24
@@ -367,7 +369,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr update check` 报告已最新 / 显示更新版本 / 离线时显示一行错误,`hsr update apply` 安装 DLL(R13)。
 - [ ] `hsr tag enable/disable` 改变启用的标签并持久化。
 - [ ] `hsr set language zh-Hans` 切换界面语言。
-- [ ] `hsr layout row add/remove` 改变 HUD 行。
+- [ ] `hsr layout row list/add/remove/clear` 改变 HUD 行(按列)。
 - [ ] `hsr preset create/save/apply` 完整往返布局 + 标记。
 - [ ] 有分段数据时 `hsr sub status/entries` 正常。
 - [ ] 关卡内 `hsr marker add/list/toggle/pb` 正常。

@@ -100,10 +100,13 @@ font_size = 18
 color_a = FF5272FF
 color_b = FF9A72FF
 
-[rows]
+[column.1]
 0 = GameTime
 1 = CurrentSegment
 2 = LastSegment
+
+[column.2]
+0 = RealTime
 
 [leaderboard]
 font_size = 16
@@ -132,11 +135,16 @@ text = Collection: {collection}
   draggable). `offset_x`/`offset_y` are the pixel offset from the top-left;
   `font_size` is the font size; `color_a`/`color_b` are the default two-color
   gradient (hex, see [HUD.md](HUD.md)).
-- `[rows]` — ordered rows; keys are 0-based indices. Row types: `GameTime`,
-  `RealTime`, `CurrentSegment`, `LastSegment`, `LastRun`, `CurrentState`.
-  `RealTime` is also gated by the `show_real_time` setting (default on).
-  Wake Up Time is not a row type — it renders in the right-hand column next to
-  Last Run and is gated by `show_wake_up_time`.
+- `[column.<n>]` — one column of ordered rows; keys are 0-based indices.
+  Columns are drawn left-to-right by number (`[column.1]` leftmost); an empty
+  column is not displayed, and a missing column is created empty on save, so
+  `[column.1]` / `[column.2]` always exist (`RealTime` defaults into
+  `[column.2]`). Row types: `GameTime`, `RealTime`, `CurrentSegment`,
+  `LastSegment`, `LastRun`, `CurrentState`. `RealTime` is also gated by the
+  `show_real_time` setting (default on). Wake Up Time is not a row type — it
+  renders in the right-hand column next to Last Run (always the rightmost
+  column) and is gated by `show_wake_up_time`. Old `[rows]` configs are
+  migrated automatically to `[column.1]` plus an empty `[column.2]`.
 - `[leaderboard]` — the shared leaderboard HUD (Subsegment / Markers modes).
   `font_size`, `offset_x`, `offset_y`, `color_faster`, `color_slower`,
   `color_tie`, `mode`, and `markers_time_mode` control its appearance and

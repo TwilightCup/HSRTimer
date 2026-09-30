@@ -423,10 +423,12 @@ start when the clock was running was removed: it fired mid-campaign at every
 level boundary and never on EditorPick/Workshop ends, and now `LastRun` updates
 only on these genuine completions.
 
-`LastRun` renders in its own column immediately to the right of the timer stack
-(not inside it, anchored at the main block's widest line), and only while idle
+`LastRun` renders in its own column immediately to the right of the last timer
+column (not inside any configured column, anchored right after the columns'
+rightmost edge), and only while idle
 (`!InSegment && PlayableTicks == 0`) — once a new run starts timing it hides until
-the next completion. That same right-hand column can also show the current level's **Wake Up Time**
+the next completion. That same right-hand column — which is **always the
+rightmost column**, regardless of how many timer columns are configured — can also show the current level's **Wake Up Time**
 as its second row (gated by `show_wake_up_time`), so the per-level value stays
 visible during a run even when `LastRun` is hidden. By default the measurement
 restarts on player respawns, pause-menu checkpoint loads, and pause-menu level
@@ -477,14 +479,20 @@ stored version lies when a user hand-edits the file, whereas cheap structural
 checks self-heal hand-edited corruption and leave clean files untouched. It logs
 one summary line on a repair and is silent on a clean boot.
 
-The first rule, `RepairLayoutRows`, inserts any missing default HUD row when the
-user's row set looks default-derived (`IsDefaultDerived`: the rows equal the
-defaults in order, minus any missing entries). A reordered or extra/duplicate row
-set is treated as hand-customized and left untouched, with an advisory hint. The
-canonical default order lives in one place — `LayoutModel.DefaultRows` — shared by
-the `Rows` field initializer and the repair target, so the two can't drift; adding
-a new default row is a single line there. Adding a new repair concern is one
-method plus one entry in the `ConfigRepair.Rules` array.
+The first rule, `MigrateRowsToColumns`, rewrites a legacy `[rows]` layout.ini
+into the multi-column format (`[column.1]` gets the old rows, plus an empty
+`[column.2]`) — `RealTime` is intentionally not moved. The second rule,
+`RepairLayoutColumns`, inserts any missing default HUD row into `[column.1]` when
+that column looks default-derived (`IsDefaultDerived`: the rows equal the
+defaults in order, minus any missing entries — checked against the legacy flat
+default order so migrated `[rows]` configs are still recognized). A reordered or
+extra/duplicate row set is treated as hand-customized and left untouched, with
+an advisory hint. Later columns are never auto-filled (an empty column is a
+valid configuration). The canonical default layout lives in one place —
+`LayoutModel.DefaultColumns` — shared by the `Columns` field initializer and the
+repair target, so the two can't drift; adding a new default row is a single line
+there. Adding a new repair concern is one method plus one entry in the
+`ConfigRepair.Rules` array.
 
 ## Building
 

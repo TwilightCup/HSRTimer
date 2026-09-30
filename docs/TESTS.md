@@ -252,8 +252,10 @@ hsr hud off
 hsr hud on
 hsr layout status
 hsr layout row list
-hsr layout row add CurrentState
-hsr layout row remove 5
+hsr layout row add 1 CurrentState
+hsr layout row remove 1 5
+hsr layout row add 2 RealTime
+hsr layout row clear 2
 hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
 hsr layout set font_size 24
@@ -509,7 +511,7 @@ Notes:
 - [ ] `hsr update check` reports up to date / shows a newer release / shows a one-line error (offline), and `hsr update apply` installs the DLL (R13).
 - [ ] `hsr tag enable/disable` changes the enabled tags and persists them.
 - [ ] `hsr set language zh-Hans` switches UI language.
-- [ ] `hsr layout row add/remove` changes the HUD rows.
+- [ ] `hsr layout row list/add/remove/clear` changes the HUD rows (per column).
 - [ ] `hsr preset create/save/apply` round-trips layout + markers.
 - [ ] `hsr sub status/entries` works with subsegment data present.
 - [ ] `hsr marker add/list/toggle/pb` works while in a level.

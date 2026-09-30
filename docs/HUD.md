@@ -13,19 +13,49 @@ Each row renders one value:
 | Row type | Shows |
 |----------|-------|
 | `GameTime` | Total game time accumulated this run |
-| `RealTime` | Wall-clock time for the current run (shown by default below Game Time; see below) |
+| `RealTime` | Wall-clock time for the current run (shown by default in the second column; see below) |
 | `CurrentSegment` | Time since entering the current level |
 | `TotalAtLastSegment` | Run total frozen at the moment the last segment completed |
 | `LastSegment` | Duration of the last completed level |
-| `LastRun` | Total time of the last complete run — rendered in its own column immediately to the right of the timer stack (not in it), shown only while idle (hidden once a new run starts timing) |
+| `LastRun` | Total time of the last complete run — rendered in its own column immediately to the right of the last timer column (not in any configured column), shown only while idle (hidden once a new run starts timing) |
 | `CurrentState` | The engine's detected game state (debug) |
 
-Rows are edited in `layout.ini` under `[rows]` (ordered by index). The panel
-height adapts to the number of rows.
+## Columns
+
+Rows are grouped into **columns**. Each `[column.<n>]` section in `layout.ini`
+holds one column's ordered rows (0-based indices inside the column). Columns
+are drawn **left-to-right by their number** — `[column.1]` is the leftmost
+timer column, `[column.2]` the second, and so on — with the whole block anchored
+at `offset_x` / `offset_y`. A column with **no rows is not displayed** and takes
+no space, so an empty `[column.2]` (as created for migrated configs) is simply
+invisible. The default layout is:
+
+```ini
+[column.1]
+0 = GameTime
+1 = CurrentSegment
+2 = TotalAtLastSegment
+3 = LastSegment
+
+[column.2]
+0 = RealTime
+```
+
+`RealTime` defaults into `[column.2]`; the other timer rows default into
+`[column.1]`. A missing column is always created empty, so `[column.1]` and
+`[column.2]` are always present in the file. The **Last Run / Wake Up Time**
+column (see below) is a fixed extra column that is **always the rightmost one**,
+after all configured columns.
+
+> **Migration**: old `layout.ini` files store the rows in a flat `[rows]`
+> section. On the first boot after the upgrade that section is migrated to
+> `[column.1]` and an **empty** `[column.2]` is added — `RealTime` is *not*
+> moved into it, so the screen shows exactly what it showed before.
 
 ## Wake Up Time
 
-The right-hand column (the one that holds **Last Run**) also shows **Wake Up
+The right-hand column (the one that holds **Last Run**, and always the
+rightmost column on screen) also shows **Wake Up
 Time** when enabled. By default it is the time from the most recent
 wake-up-relevant moment to the first time the local player leaves the
 soft/spawn state (`Spawning` / `Unconscious` / `Dead`). The measurement
@@ -55,13 +85,14 @@ wall-clock time for the current run. It starts when the game clock starts,
 continues through level-loading screens and pauses, and stops when the run is
 completed (the final level is passed) or when you leave the run for the menu.
 
-The Real Time row is shown by default directly below **Game Time** in the
-default layout, and the clock is always active. You can hide it from the
+The Real Time row is shown by default in the second column (`[column.2]`,
+directly to the right of **Game Time**) in the default layout, and the clock is
+always active. You can hide it from the
 settings panel's Interface tab (or set `show_real_time = false` in
 `settings.ini`). `RealTime` is also a regular row type: if you move it in
-`[rows]` it appears in your chosen position; if you remove it from the layout
-but leave the setting enabled, it appears below your configured timer rows as a
-convenient fallback.
+`[column.N]` it appears in your chosen position; if you remove it from the
+layout but leave the setting enabled, it appears below your configured timer
+columns as a convenient fallback.
 
 ## Timing-standard indicator
 

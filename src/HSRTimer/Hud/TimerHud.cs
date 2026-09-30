@@ -110,20 +110,22 @@ namespace HSRTimer
                 return;
             }
 
-            float mainBlockWidth = DrawMainBlock(cfg);
+            float columnsRightX = DrawMainBlock(cfg);
 
-            DrawRightColumn(cfg, mainBlockWidth);
+            DrawRightColumn(cfg, columnsRightX);
 
             DrawCustomTexts(cfg);
         }
 
         /// <summary>
-        /// Draw the right-hand column next to the main timer stack. The first row
-        /// is the finished-run total ("LastRun") when visible, and the second row
-        /// (or the only row when no LastRun is available) is the current level's
-        /// Wake Up time, gated by the "Show Wake Up Time" setting.
+        /// Draw the right-hand column immediately to the right of the last
+        /// timer column. The first row is the finished-run total ("LastRun")
+        /// when visible, and the second row (or the only row when no LastRun is
+        /// available) is the current level's Wake Up time, gated by the "Show
+        /// Wake Up Time" setting. This column is always the rightmost one,
+        /// regardless of how many timer columns are configured.
         /// </summary>
-        private void DrawRightColumn(ConfigService cfg, float mainBlockWidth)
+        private void DrawRightColumn(ConfigService cfg, float columnsRightX)
         {
             var state = TimerCore.State;
             if (state == null) return;
@@ -140,9 +142,9 @@ namespace HSRTimer
             var layout = cfg.Layout;
             var loc = cfg.Localization;
 
-            // Column gap next to the main block's widest line; top-aligned with it.
+            // Column gap next to the rightmost timer column; top-aligned with it.
             const float gap = 24f;
-            float x = layout.OffsetX + mainBlockWidth + gap;
+            float x = columnsRightX + gap;
             float y = layout.OffsetY;
 
             if (showLastRun)
@@ -160,9 +162,12 @@ namespace HSRTimer
         }
 
         /// <summary>
-        /// Draw the ordered rows + category extras + invalid banner at the
-        /// anchor. Returns the widest row's width — used to place the LastRun
-        /// column immediately to the right of the timer stack.
+        /// Draw the configured columns left-to-right, then the shared extra
+        /// status lines below the tallest column. Each non-empty column is a
+        /// stack of rows drawn at its own x; an empty column (or one whose rows
+        /// are all hidden) is skipped and takes no space. Returns the x
+        /// coordinate just to the right of the last drawn column — used to
+        /// place the LastRun/Wake-Up-Time column immediately to its right.
         /// </summary>
         private float DrawMainBlock(ConfigService cfg)
         {
@@ -173,54 +178,73 @@ namespace HSRTimer
             var loc = cfg.Localization;
             float x = layout.OffsetX;
             float y = layout.OffsetY;
-            float widest = 0f;
+            const float colGap = 24f;
 
-            // Each configured row. LastRun is NOT drawn here — it renders in its
-            // own right-hand column (see DrawRightColumn) so the finished-run
-            // total doesn't sit in the same column as the live timers. RealTime
-            // is a regular row type but is additionally gated by the ShowRealTime
-            // settings toggle.
-            bool hasRealTimeRow = layout.Rows.Contains(RowType.RealTime);
-            foreach (var row in layout.Rows)
+            // Each configured column, left-to-right by index. LastRun is NOT
+            // drawn in any column — it renders in its own right-hand column
+            // (see DrawRightColumn) so the finished-run total doesn't sit next
+            // to the live timers. RealTime is a regular row type but is
+            // additionally gated by the ShowRealTime settings toggle.
+            bool hasRealTimeRow = layout.HasRow(RowType.RealTime);
+            float rightX = x;
+            float bottomY = y;
+            var colIndices = new List<int>(layout.Columns.Keys);
+            colIndices.Sort();
+            foreach (var col in colIndices)
             {
-                if (row == RowType.LastRun)
-                    continue;
-                if (row == RowType.RealTime && !cfg.Settings.ShowRealTime)
-                    continue;
-                string label, value;
-                GetRow(row, cfg, state, loc, out label, out value);
-                string line = label.Length > 0 ? (label + ":  " + value) : value;
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-                float w = _rowStyle.CalcSize(new GUIContent(line)).x;
-                if (w > widest) widest = w;
-                y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+                var rows = layout.Columns[col];
+                float colX = rightX;
+                float colY = y;
+                float colWidth = 0f;
+                bool anyDrawn = false;
+                foreach (var row in rows)
+                {
+                    if (row == RowType.LastRun)
+                        continue;
+                    if (row == RowType.RealTime && !cfg.Settings.ShowRealTime)
+                        continue;
+                    string label, value;
+                    GetRow(row, cfg, state, loc, out label, out value);
+                    string line = label.Length > 0 ? (label + ":  " + value) : value;
+                    DrawGradientLine(line, layout.ColorA, layout.ColorB, colX, colY, _rowStyle);
+                    var size = _rowStyle.CalcSize(new GUIContent(line));
+                    if (size.x > colWidth) colWidth = size.x;
+                    colY += size.y + 2f;
+                    anyDrawn = true;
+                }
+                if (!anyDrawn)
+                    continue; // empty column (or every row hidden): not displayed
+
+                rightX = colX + colWidth + colGap;
+                if (colY > bottomY) bottomY = colY;
             }
 
+            // Extras sit below the tallest column, starting at the left edge.
+            float ey = bottomY;
+
             // Real-time clock fallback: when the setting is enabled but the user
-            // hasn't placed the row in their layout, show it below the configured
-            // rows so enabling the setting always has an immediate effect.
+            // hasn't placed the row in any column, show it below the columns so
+            // enabling the setting always has an immediate effect.
             if (cfg.Settings.ShowRealTime && !hasRealTimeRow)
             {
                 string line = loc.Get("TIMER_REAL_TIME") + ":  " + TimeFormatter.Format(state.RealTime);
-                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-                float w = _rowStyle.CalcSize(new GUIContent(line)).x;
-                if (w > widest) widest = w;
-                y += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
+                DrawGradientLine(line, layout.ColorA, layout.ColorB, x, ey, _rowStyle);
+                ey += _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
             }
 
             // Timing-standard indicator (R1.4.2): one line directly under the
             // time rows while the plcc timing standard is enabled, so the active
             // timing mode is visible on the HUD.
-            y += DrawPlccModeLine(cfg, loc, layout, x, y);
+            ey += DrawPlccModeLine(cfg, loc, layout, x, ey);
 
             // Current rule tags: one line right under the timer rows listing the
             // enabled tags (localized). Skipped when none are enabled. Rendered
             // before the tag extras and the invalid banner; the marker-edit-mode
             // block is drawn last, at the very bottom of the HUD.
-            y += DrawTagsLine(cfg, loc, layout, x, y);
+            ey += DrawTagsLine(cfg, loc, layout, x, ey);
 
             // Voiceline / checkpoint extras (R3.3.3, R3.6.3) for the active category.
-            y += DrawTagExtras(cfg, state, loc, x, y);
+            ey += DrawTagExtras(cfg, state, loc, x, ey);
 
             // Invalid banner (R5.3.2). Soft flags are NOT part of this banner;
             // they render on their own lines in normal HUD text color below.
@@ -230,13 +254,13 @@ namespace HSRTimer
                 string banner = loc.Get("INVALID_RUN") + ": " + reasons;
                 var content = new GUIContent(banner);
                 _bannerStyle.normal.textColor = Color.red;
-                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, y, _bannerStyle);
-                y += _bannerStyle.CalcSize(content).y + 2f;
+                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, ey, _bannerStyle);
+                ey += _bannerStyle.CalcSize(content).y + 2f;
             }
 
             // Soft flags: normal HUD text with a trigger count, all on one line.
             // Only the individual flag that was newly triggered flashes red.
-            y += DrawSoftFlags(cfg, state, loc, x, y);
+            ey += DrawSoftFlags(cfg, state, loc, x, ey);
 
             // R6.5: show the retry-target-resolution failure in the same red
             // banner style as a run invalid hint. It stays visible until the
@@ -246,16 +270,16 @@ namespace HSRTimer
             {
                 string banner = loc.Get("HUD_INVALID_RETRY_TARGET");
                 _bannerStyle.normal.textColor = Color.red;
-                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, y, _bannerStyle);
-                y += _bannerStyle.CalcSize(new GUIContent(banner)).y + 2f;
+                DrawGradientLine(banner, Color.red, new Color(1f, 0.4f, 0.4f, 1f), x, ey, _bannerStyle);
+                ey += _bannerStyle.CalcSize(new GUIContent(banner)).y + 2f;
             }
 
             // R10.4.2: the marker-edit-mode hint is the last line of the timer
             // HUD, and the edit-mode XYZ axis indicator sits directly beneath it.
-            y += DrawMarkerEditModeLine(cfg, loc, x, y);
-            y += DrawMarkerAxisIndicator(cfg, x, y);
+            ey += DrawMarkerEditModeLine(cfg, loc, x, ey);
+            ey += DrawMarkerAxisIndicator(cfg, x, ey);
 
-            return widest;
+            return rightX;
         }
 
         /// <summary>One line listing the currently enabled rule tags (localized), directly
