@@ -2,17 +2,20 @@
 
 This file contains user-facing release notes for HSRTimer. Only changes that plugin users can observe belong here.
 
-## 0.0.0
+## 1.10.0
 
-- **Release Date:** Unreleased
-- **Highlights:** _To be filled during version branch preparation._
+- **Release Date:** _30 Sep 2026_
+- **Highlights:**
+  - Added a **Prev RT** HUD row showing the Real Time at the previous level's completion.
+  - Reworked the settings panel's **Interface** page into sub-pages: **Timer HUD** now holds the HUD settings and a per-column editor for the new multi-column timer HUD.
+  - Added **Interface → Leaderboard** (moved out of its own top-level tab) and **Interface → Custom Text** sub-pages.
+  - Deleting a preset now asks for confirmation.
 - **Details:**
   - Added a **Prev RT** HUD row (Chinese: `上关RT`) showing the Real Time value frozen at the moment the previous level completed — the real-time counterpart of the "Total at Last Segment" row. It defaults directly below **Real Time** in the second column.
   - The timer HUD now supports multiple columns: `layout.ini` uses `[column.N]` sections (drawn left-to-right by number, an empty column is hidden) where each key is the row's 1-based position, and `RealTime` defaults into `[column.2]`. Every row type — including **Real Time**, **Last Run** and **Wake Up Time** — is a regular row you can place in any column; the old `show_real_time` / `show_wake_up_time` toggles are gone. The settings panel's **Interface** tab now opens a **Timer HUD** sub-page (Chinese: `计时器HUD`, with a **Back** button) holding the HUD general settings and a per-column editor: each **Column N** dropdown lists every row type with an integer **position** field (`0` hides the row, `N > 0` places it at the N-th line, so the same field enables and orders), with a per-column **Delete** button and a **New column** button at the bottom. Old `[rows]` configs still load but are no longer migrated or auto-repaired at boot; the default layout (now including a third column with `LastRun` / `WakeUpTime`) is written once on a fresh install.
   - Deleting a preset now asks for confirmation: the **Delete preset** button expands into a **Confirm delete** / **Cancel** pair, and the confirmation is dismissed when you switch tabs or close/reopen the settings panel.
   - The settings panel's **Leaderboard** tab is now the **Interface → Leaderboard** sub-page (Chinese: `界面 → 排行榜`), opened by a **Leaderboard** button next to **Timer HUD** and closed with a **Back** button. Every leaderboard option — content mode, HUD size/offset, entry colors, marker time display, and the subsegment source toggles — is unchanged and still applies live; the separate top-level tab is gone.
   - Added an **Interface → Custom Text** sub-page (Chinese: `界面 → 自定义文本`) for editing the on-screen custom texts (`layout.ini` `[custom.<n>]`). Each text is a collapsible dropdown holding its **Content** box (template variables such as `{gametime}` / `{date}` / `{version}` substitute live), a **Font size** slider, **Offset X** / **Offset Y**, and its two-color gradient, plus a **Delete** button with confirmation. The page ends with a **New text** button that appends an empty text and opens it. The `hsr layout text` console command gained `set <index> <x|y|text|font_size|color_a|color_b> <value>` for the same edits.
-- **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.9.0
 
