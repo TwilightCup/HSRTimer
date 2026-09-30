@@ -139,6 +139,7 @@ Place any number of arbitrary texts at fixed screen coordinates:
 x = 400
 y = 50
 text = {date} {time}
+font_size = 16
 color_a = FFFFFFFF
 color_b = CCCCCCCF
 ```
@@ -173,8 +174,9 @@ offset_y = 16   # pixels from the top edge
 font_size = 18  # font size
 ```
 
-Custom texts (`[custom.<n>]`) each have their own absolute `(x, y)` and so can
-appear anywhere on screen regardless of the main block's offset.
+Custom texts (`[custom.<n>]`) each have their own absolute `(x, y)` and
+`font_size`, so they can appear anywhere on screen at any size regardless of the
+main block's offset.
 
 ## Show / hide
 

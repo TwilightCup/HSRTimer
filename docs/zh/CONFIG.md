@@ -102,6 +102,7 @@ markers_time_mode = Relative
 x = 400
 y = 50
 text = {date} {time}
+font_size = 16
 color_a = FFFFFFFF
 color_b = CCCCCCCF
 
@@ -114,7 +115,7 @@ text = Collection: {collection}
 - `[text]` —— 主文本块直接绘制在屏幕上(无窗口、不可拖动)。`offset_x`/`offset_y` 为距屏幕左上角的像素偏移;`font_size` 为字号;`color_a`/`color_b` 为默认双色渐变(十六进制,见 [HUD.md](HUD.md))。
 - `[column.<n>]` —— 一列的若干行;每个键是该行在列内的 **1 基位置**(自上而下绘制;位置不可重复,永远不会写入 `0`)。列按编号从左到右绘制(`[column.1]` 最左);空列不显示。默认文件(首次安装时写入一次)含 `[column.1]`(`GameTime` / `CurrentSegment` / `TotalAtLastSegment` / `LastSegment`)、`[column.2]`(`RealTime` / `PrevRt`,`PrevRt` 位于 `RealTime` 正下方)与 `[column.3]`(`LastRun` / `WakeUpTime`)。行类型:`GameTime`、`RealTime`、`PrevRt`、`CurrentSegment`、`TotalAtLastSegment`、`LastSegment`、`LastRun`、`WakeUpTime`、`CurrentState`。**所有行类型 —— 包括 `RealTime`、`LastRun` 与 `WakeUpTime` —— 都是普通行**:显示在你放置它们的列中,因此旧的 `show_real_time` / `show_wake_up_time` 设置已移除。旧 `[rows]` 配置仍可加载(在内存中映射到 `[column.1]`),并在下次保存时改写为 `[column.N]` 格式;启动时不再做任何迁移或自动修改。
 - `[leaderboard]` —— 共享排行榜 HUD（分段对比 / 标记模式）。`font_size`、`offset_x`、`offset_y`、`color_faster`、`color_slower`、`color_tie`、`mode`、`markers_time_mode` 控制其外观与显示模式。`offset_y` 相对屏幕垂直中心的固定顶部锚点；内容向下延伸。
-- `[custom.<n>]` —— 位于 `(x, y)` 的任意屏上文本,各自带渐变。模板变量:`{date}`、`{time}`、`{version}`、`{collection}`、`{category}`、`{gametime}`、`{realtime}`。
+- `[custom.<n>]` —— 位于 `(x, y)` 的任意屏上文本,各自带渐变与字号(`font_size`,默认 `16`)。模板变量:`{date}`、`{time}`、`{version}`、`{collection}`、`{category}`、`{gametime}`、`{realtime}`。
 
 整个计时器的显示/隐藏由 `settings.ini` 中的 `show_hud`(及切换面板键)控制,不在 `layout.ini` 中。
 

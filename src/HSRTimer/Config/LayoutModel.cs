@@ -26,6 +26,7 @@ namespace HSRTimer
         public string Text = "";
         public Color ColorA = Color.white;
         public Color ColorB = Color.white;
+        public int FontSize = 16;
     }
 
     /// <summary>
@@ -198,6 +199,7 @@ namespace HSRTimer
                         case "x": ct.X = ParseFloat(p.Value, ct.X); break;
                         case "y": ct.Y = ParseFloat(p.Value, ct.Y); break;
                         case "text": ct.Text = UnescapeBackslashN(p.Value); break;
+                        case "font_size": ct.FontSize = ParseInt(p.Value, ct.FontSize); break;
                         case "color_a": ct.ColorA = GradientText.ParseColor(p.Value, ct.ColorA); break;
                         case "color_b": ct.ColorB = GradientText.ParseColor(p.Value, ct.ColorB); break;
                     }
@@ -294,6 +296,7 @@ namespace HSRTimer
                     ["x"] = ct.X.ToString("F0", CultureInfo.InvariantCulture),
                     ["y"] = ct.Y.ToString("F0", CultureInfo.InvariantCulture),
                     ["text"] = EscapeBackslashN(ct.Text),
+                    ["font_size"] = ct.FontSize.ToString(CultureInfo.InvariantCulture),
                     ["color_a"] = GradientText.ToHex(ct.ColorA),
                     ["color_b"] = GradientText.ToHex(ct.ColorB),
                 }));
@@ -302,7 +305,7 @@ namespace HSRTimer
             PersistenceService.Write(
                 path,
                 sections,
-                "HSRTimer HUD layout. Text is drawn directly on screen (no window).\n# [text] offset_x/offset_y (top-left px), font_size, color_a/color_b;\n# [column.<n>] row types per column: each key is a 1-based row position (drawn top-to-bottom; columns left-to-right by number; empty columns are hidden);\n# [leaderboard] shared leaderboard HUD appearance;\n# [custom.<n>] arbitrary on-screen texts (template vars).");
+                "HSRTimer HUD layout. Text is drawn directly on screen (no window).\n# [text] offset_x/offset_y (top-left px), font_size, color_a/color_b;\n# [column.<n>] row types per column: each key is a 1-based row position (drawn top-to-bottom; columns left-to-right by number; empty columns are hidden);\n# [leaderboard] shared leaderboard HUD appearance;\n# [custom.<n>] arbitrary on-screen texts (template vars, own font_size and gradient).");
         }
 
         // ── helpers ──

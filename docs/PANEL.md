@@ -134,12 +134,12 @@ HSRTimer saves.
   (the `[custom.<n>]` entries in `layout.ini`) is listed as a collapsible
   dropdown; expanding one shows all of its configuration: the **Content** text
   input (template variables such as `{gametime}`, `{date}`, `{version}`,
-  `{collection}`, `{category}` are substituted live), the **Offset X** /
-  **Offset Y** position fields, and the two-color gradient (**Color A** /
-  **Color B**) with per-channel RGBA sliders. Each dropdown has a **Delete**
-  button (with confirmation, like the column and marker editors), and the page
-  ends with a **New text** button that appends an empty text set to `(0, 0)`
-  and opens it.
+  `{collection}`, `{category}` are substituted live), a **Font size** slider,
+  the **Offset X** / **Offset Y** position fields, and the two-color gradient
+  (**Color A** / **Color B**) with per-channel RGBA sliders. Each dropdown has a
+  **Delete** button (with confirmation, like the column and marker editors), and
+  the page ends with a **New text** button that appends an empty text set to
+  `(0, 0)` and opens it.
 
 ## Category
 

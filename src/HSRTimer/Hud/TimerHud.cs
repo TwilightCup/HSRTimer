@@ -530,6 +530,11 @@ namespace HSRTimer
             foreach (var ct in cfg.Layout.CustomTexts)
             {
                 string resolved = TemplateVars.Resolve(ct.Text, gt, rt);
+                // Each custom text carries its own font size (R2.4.1); the shared
+                // dynamic font is scaled per draw, so the size is applied here
+                // rather than in ApplyFontToStyles.
+                int size = ct.FontSize > 0 ? ct.FontSize : _customStyle.fontSize;
+                if (_customStyle.fontSize != size) _customStyle.fontSize = size;
                 DrawGradientLine(resolved, ct.ColorA, ct.ColorB, ct.X, ct.Y, _customStyle);
             }
         }

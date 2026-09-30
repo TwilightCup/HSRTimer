@@ -744,9 +744,11 @@ namespace HSRTimer
             if (!expanded)
                 return;
 
-            // All per-text configuration: content (template vars allowed), screen
-            // position, and the two-color gradient (single color when A == B).
+            // All per-text configuration: content (template vars allowed), font
+            // size, screen position, and the two-color gradient (single color when
+            // A == B).
             ct.Text = TextFieldRow(loc.Get("CUSTOM_TEXT_CONTENT"), ct.Text, 300f);
+            ct.FontSize = Mathf.Clamp(Mathf.RoundToInt(SliderRow(loc.Get("PANEL_FONT_SIZE"), ct.FontSize, 8, 72)), 8, 72);
             ct.X = FloatFieldRow(loc.Get("PANEL_OFFSET_X"), ct.X);
             ct.Y = FloatFieldRow(loc.Get("PANEL_OFFSET_Y"), ct.Y);
             ColorRow(loc, "PANEL_COLOR_A", ct.ColorA, c => ct.ColorA = c);

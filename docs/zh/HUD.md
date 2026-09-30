@@ -86,6 +86,7 @@ color_b = FF9A72FF   # 结束色
 x = 400
 y = 50
 text = {date} {time}
+font_size = 16
 color_a = FFFFFFFF
 color_b = CCCCCCCF
 ```
@@ -115,7 +116,7 @@ offset_y = 16   # 距顶部的像素
 font_size = 18  # 字号
 ```
 
-自定义文本(`[custom.<n>]`)各自有绝对坐标 `(x, y)`,因此可出现在屏幕任意位置,不受主文本块偏移影响。
+自定义文本(`[custom.<n>]`)各自有绝对坐标 `(x, y)` 与 `font_size` 字号,因此可出现在屏幕任意位置、任意大小,不受主文本块偏移影响。
 
 ## 显示 / 隐藏
 

@@ -273,6 +273,7 @@ hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
 hsr layout text set 0 x 320
 hsr layout text set 0 y 240
+hsr layout text set 0 font_size 24
 hsr layout text set 0 text "Level: {category}"
 hsr layout text set 0 color_a 00FF00FF
 hsr layout text set 0 color_b 0000FFFF
@@ -291,8 +292,8 @@ are `LastRun` and `WakeUpTime` — every row type is a regular column row now, a
 longer lists them). `hsr layout row add <column> <type> [position]` appends at
 the end when the position is omitted; `hsr layout column new` appends an empty
 column and `hsr layout column remove <n>` deletes one. `hsr layout text set
-<index> <x|y|text|color_a|color_b> <value>` edits one field of an existing
-custom text (the text value may contain spaces).
+<index> <x|y|text|font_size|color_a|color_b> <value>` edits one field of an
+existing custom text (the text value may contain spaces).
 
 The settings panel's **Interface** page mirrors this editor: **Center
 Loading/Saving** at the top, then the **Timer HUD** button (Chinese:
@@ -305,8 +306,8 @@ bottom. The same page also has a **Leaderboard** button that opens the shared
 leaderboard HUD sub-page (content mode, HUD size/offset, entry colors, marker
 time display, and the subsegment source toggles) and a **Custom Text** button
 (Chinese: `自定义文本`) that opens a sub-page listing every custom text as a
-collapsible dropdown (Content box, Offset X/Y, Color A/B, **Delete** with
-confirmation) plus a **New text** button at the bottom, each with a **Back**
+collapsible dropdown (Content box, Font size, Offset X/Y, Color A/B, **Delete**
+with confirmation) plus a **New text** button at the bottom, each with a **Back**
 button at the top.
 
 ### 5. Settings panel / general settings
@@ -556,7 +557,7 @@ Notes:
 - [ ] `hsr set language zh-Hans` switches UI language.
 - [ ] `hsr layout row list/add/remove/clear` changes the HUD rows (per 1-based position), including adding `PrevRt`, `LastRun` and `WakeUpTime`.
 - [ ] `hsr layout column new/remove` appends/deletes columns, and `hsr set show_real_time` / `show_wake_up_time` are no longer accepted (the rows are column positions now).
-- [ ] `hsr layout text add/list/set/remove/clear` manages custom texts; the panel's **Interface → Custom Text** sub-page lists each text as a dropdown (content, offsets, colors) with a **Delete** (confirm) and a **New text** button.
+- [ ] `hsr layout text add/list/set/remove/clear` manages custom texts; the panel's **Interface → Custom Text** sub-page lists each text as a dropdown (content, font size, offsets, colors) with a **Delete** (confirm) and a **New text** button.
 - [ ] `hsr preset create/save/apply` round-trips layout + markers.
 - [ ] `hsr sub status/entries` works with subsegment data present.
 - [ ] `hsr marker add/list/toggle/pb` works while in a level.

@@ -852,7 +852,7 @@ namespace HSRTimer
                 sb.Append(" none");
             else
                 for (int i = 0; i < l.CustomTexts.Count; i++)
-                    sb.Append(' ').Append(i).Append("=\"").Append(l.CustomTexts[i].Text).Append("\"@(").Append(l.CustomTexts[i].X).Append(',').Append(l.CustomTexts[i].Y).Append(')');
+                    sb.Append(' ').Append(i).Append("=\"").Append(l.CustomTexts[i].Text).Append("\"@(").Append(l.CustomTexts[i].X).Append(',').Append(l.CustomTexts[i].Y).Append(")size=").Append(l.CustomTexts[i].FontSize);
             sb.AppendLine();
             sb.AppendLine($"leaderboard: fontSize={l.LeaderboardFontSize} offsetX={l.LeaderboardOffsetX} offsetY={l.LeaderboardOffsetY} mode={l.LeaderboardMode} markersTimeMode={l.LeaderboardMarkersTimeMode}");
             Print(sb.ToString());
@@ -1009,7 +1009,7 @@ namespace HSRTimer
         private static void CmdLayoutText(ConfigService cfg, List<string> args)
         {
             var l = cfg.Layout;
-            const string usage = "Usage: hsr layout text <list|add <x> <y> <text...>|set <index> <x|y|text|color_a|color_b> <value>|remove <index>|clear>";
+            const string usage = "Usage: hsr layout text <list|add <x> <y> <text...>|set <index> <x|y|text|font_size|color_a|color_b> <value>|remove <index>|clear>";
             if (args.Count == 0) { Print(usage); return; }
             string sub = args[0].ToLowerInvariant();
             switch (sub)
@@ -1019,7 +1019,7 @@ namespace HSRTimer
                     for (int i = 0; i < l.CustomTexts.Count; i++)
                     {
                         var t = l.CustomTexts[i];
-                        sb.AppendLine($"{i}: \"{t.Text}\" @({t.X},{t.Y}) {GradientText.ToHex(t.ColorA)}/{GradientText.ToHex(t.ColorB)}");
+                        sb.AppendLine($"{i}: \"{t.Text}\" @({t.X},{t.Y}) size={t.FontSize} {GradientText.ToHex(t.ColorA)}/{GradientText.ToHex(t.ColorB)}");
                     }
                     Print(sb.Length == 0 ? "No custom texts configured." : sb.ToString());
                     return;
@@ -1045,7 +1045,7 @@ namespace HSRTimer
                         || !int.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int setIdx)
                         || setIdx < 0 || setIdx >= l.CustomTexts.Count)
                     {
-                        Print("Usage: hsr layout text set <index> <x|y|text|color_a|color_b> <value>");
+                        Print("Usage: hsr layout text set <index> <x|y|text|font_size|color_a|color_b> <value>");
                         return;
                     }
                     var target = l.CustomTexts[setIdx];
@@ -1072,6 +1072,14 @@ namespace HSRTimer
                         case "text":
                             target.Text = setValue;
                             break;
+                        case "font_size":
+                            if (!int.TryParse(setValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int nSize) || nSize <= 0)
+                            {
+                                Print("font_size must be a positive integer.");
+                                return;
+                            }
+                            target.FontSize = nSize;
+                            break;
                         case "color_a":
                         case "color_b":
                             if (!GradientText.TryParseColor(setValue, out Color parsedColor))
@@ -1083,7 +1091,7 @@ namespace HSRTimer
                             else target.ColorB = parsedColor;
                             break;
                         default:
-                            Print("Usage: hsr layout text set <index> <x|y|text|color_a|color_b> <value>");
+                            Print("Usage: hsr layout text set <index> <x|y|text|font_size|color_a|color_b> <value>");
                             return;
                     }
                     cfg.SaveSettings();

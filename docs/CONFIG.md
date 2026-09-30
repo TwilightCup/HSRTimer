@@ -123,6 +123,7 @@ markers_time_mode = Relative
 x = 400
 y = 50
 text = {date} {time}
+font_size = 16
 color_a = FFFFFFFF
 color_b = CCCCCCCF
 
@@ -156,7 +157,8 @@ text = Collection: {collection}
   `color_tie`, `mode`, and `markers_time_mode` control its appearance and
   display mode. `offset_y` is relative to the fixed top anchor at the screen
   center; content extends downward.
-- `[custom.<n>]` — arbitrary on-screen texts at `(x, y)` with their own gradient.
+- `[custom.<n>]` — arbitrary on-screen texts at `(x, y)` with their own gradient
+  and font size (`font_size`, default `16`).
   Template variables: `{date}`, `{time}`, `{version}`, `{collection}`,
   `{category}`, `{gametime}`, `{realtime}`.
 
