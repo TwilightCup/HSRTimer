@@ -104,7 +104,7 @@ LcIntegration.cs          可选的 LevelCollections 软集成
 
 引擎的游戏时钟是**整数物理帧 tick 计数器**,而非 `double` 秒累加器:
 
-- `RunState.PlayableTicks`(`ulong`)统计可游玩 `FixedUpdate` 帧数。所有分段快照(`SegmentStartTicks`、`LastSegmentTicks`、`TotalAtLastSegmentTicks`、`LastRunTicks`、`WakeUpTicks`)都是整数 tick。分段时间即纯整数差 `PlayableTicks - SegmentStartTicks`。
+- `RunState.PlayableTicks`(`ulong`)统计可游玩 `FixedUpdate` 帧数。所有分段快照(`SegmentStartTicks`、`LastSegmentTicks`、`TotalAtLastSegmentTicks`、`LastRunTicks`、`WakeUpTicks`)都是整数 tick。唯一例外是"上关RT"快照(`RunState.RealTimeAtLastSegment`):它定格的是墙钟 `RunState.RealTime`(本身就是秒),而非 tick。分段时间即纯整数差 `PlayableTicks - SegmentStartTicks`。
 - `RunState.PauseAccum`(`double`)是唯一非 tick 分量:暂停会停止 `FixedUpdate`,因此它按墙钟 `unscaledDeltaTime` 累计(R1.8.3)。
 - `Core/GameClock.cs` 是**唯一**读取 `Time.fixedDeltaTime` 的地方。它以一次乘法完成 tick→秒换算(`Seconds(ticks, pauseAccum)`),因此同一 tick 数永远得到同一秒值(无逐帧浮点累积漂移)。所有显示与持久化(HUD 行、`t_ms`、PB 比较)都经它换算;引擎每 tick 还会回填 `RunState.GameTimeSeconds` 缓存供只读消费方使用。
 
@@ -129,6 +129,8 @@ plcc 标准下 `Game.EnterPassZone` / `Game.Fall` hook 仅锁存 `LevelPassed` �
 ### 现实时间计时器(R1.10)
 
 与 tick 游戏时钟分开,`RunState.RealTime` 是墙钟计时器:它在整个运行的第一个可玩分段开始时启动,只要 `RunState.RealTimeActive` 为真,就在 `TimerCore.Update` 中用 `Time.unscaledDeltaTime` 累计。由于它不受 `PlayingLevel` 门槛限制,因此能穿过 `LoadingLevel` 加载屏与暂停继续前进。它在 `TimerCore.EndSegment` 记录整局完成(R1.6)的同一时刻停表并定格;当本局退出到菜单/大厅(重试除外)时也会停止,避免在空闲界面里暗中累计。整局重置与一键重试会把它与活动游戏计时器一并清零。HUD 通过 `show_real_time` 默认在游戏总时间下方显示该行,但无论是否显示,时钟都保持后台活跃。
+
+**上关RT(`RunState.RealTimeAtLastSegment`)** 是 `TotalAtLastSegment` 的现实时间对应物:`RunState.EndSegment` 仅在分段 `completed` 时,把当前的 `RealTime` 值定格进 `RealTimeAtLastSegment`,于是 HUD 行显示上一关结束时整局累计的现实时间(R1.10.7)。它与 `TotalAtLastSegmentTicks` 走相同的清零路径(自动重置、从菜单开始新局、手动重置),重试保留。默认显示在第二列 `RealTime` 正下方的行。
 
 ## 为什么重试先卸载再重新启动关卡
 
@@ -192,11 +194,11 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 
 关卡离开 `PlayingLevel` 不一定是完成 —— 可能是中途退出(`Esc → Exit → PauseLeave`),而且**Workshop/EditorPick 关卡的完成与中途退出走的是同一条 `PauseLeave` 路径**。因此仅凭状态转换无法区分二者。`RunState.LevelPassed` 就是这个信号:引擎每物理帧把 `Game.passedLevel` 锁存进 `LevelPassed`(取或,一旦进入通关区就保持为真 —— 游戏在完成/离开流程中、状态翻转*之前*就清掉了 `passedLevel`,所以必须在之前读到它)。`LevelPassed` 在分段开始时复位。
 
-`EndSegment(completed: LevelPassed)` 只在 `completed` 为真时才记录 `LastSegmentTicks`/`TotalAtLastSegmentTicks`、tag 的 `OnLevelExit` 完成校验(R4.2、语音线)以及 LC 最后一关的 `LastRun` 捕获。中途退出(或重试,此时 `LevelPassed` 为假)不会改动上一段尝试的 `LastSegmentTicks`/`TotalAtLastSegmentTicks` —— 这正是想要的行为:"上一段"参照值反映的是上一关**打完**的成绩,而不是半途走出去的那一关。注意 `PlayingLevel → LoadingLevel`(内置关卡的 `StartNextLevel` 重载)本质上就是完成,且该处 `LevelPassed` 由更早的 `EnterPassZone` 置真。
+`EndSegment(completed: LevelPassed)` 只在 `completed` 为真时才记录 `LastSegmentTicks`/`TotalAtLastSegmentTicks`(以及"上关RT"快照 `RealTimeAtLastSegment`)、tag 的 `OnLevelExit` 完成校验(R4.2、语音线)以及 LC 最后一关的 `LastRun` 捕获。中途退出(或重试,此时 `LevelPassed` 为假)不会改动上一段尝试的 `LastSegmentTicks`/`TotalAtLastSegmentTicks`/`RealTimeAtLastSegment` —— 这正是想要的行为:"上一段"参照值反映的是上一关**打完**的成绩,而不是半途走出去的那一关。注意 `PlayingLevel → LoadingLevel`(内置关卡的 `StartNextLevel` 重载)本质上就是完成,且该处 `LevelPassed` 由更早的 `EnterPassZone` 置真。
 
 ## 为什么自动重置与菜单进入会清零"上一段"快照
 
-`LastSegmentTicks` 与 `TotalAtLastSegmentTicks` 是最近完成分段的参照值,`LastRunTicks` 是上一次完整整局的总时间。**自动重置(R1.7)会清零实时计时器与两个"上一段"快照**,使退出到菜单后呈现新的分段基线,同时保留 `LastRunTicks` 作为上一次完整成绩的参照(R1.7.4)。手动重置键则清零全部三个快照(R1.7.1)。
+`LastSegmentTicks`、`TotalAtLastSegmentTicks` 与 `RealTimeAtLastSegment` 是最近完成分段的参照值,`LastRunTicks` 是上一次完整整局的总时间。**自动重置(R1.7)会清零实时计时器与两个"上一段"快照**(以及共享同一生命周期的"上关RT"快照),使退出到菜单后呈现新的分段基线,同时保留 `LastRunTicks` 作为上一次完整成绩的参照(R1.7.4)。手动重置键则清零它们全部(R1.7.1)。
 
 `RunState.Reset(bool keepLastValues, bool keepLastRun)` 区分这两个关注点。自动重置与菜单进入路径使用 `DoFullReset(keepLastValues: false, keepLastRun: true)`;手动重置键使用 `DoFullReset(keepLastValues: false, keepLastRun: false)`。
 
@@ -220,7 +222,7 @@ R6.2 要求一次**完整的异步关卡重载**,含空过渡场景(R6.2.1.3)。
 
 设计:**每次启动做幂等的结构性检查,仅在确有改动时写盘**(由一个 dirty 标志门控的 `ConfigService.SaveSettings`)。不引入配置版本号——一旦用户手工编辑文件,存储的版本号就会失真;而廉价的结构性检查能自愈手工编辑造成的损坏,且对干净文件零改动。修复时输出一行汇总日志,干净启动时静默。
 
-第一条规则 `MigrateRowsToColumns` 把遗留的 `[rows]` 版 `layout.ini` 改写为多列格式(`[column.1]` 承接旧行,并新建一个空的 `[column.2]`)——`RealTime` 刻意不移入。第二条规则 `RepairLayoutColumns`:当第 1 列看起来是"默认派生"时(`IsDefaultDerived`:该列等于按默认顺序排列、扣除缺失项后的默认集——校验按旧版扁平默认顺序进行,以便迁移后的 `[rows]` 配置仍能被识别),插入任何缺失的默认 HUD 行。被重排、含额外或重复行的集合视为手工自定义,原样保留并仅给出提示。后续列从不自动填充(空列是合法配置)。规范的默认布局只有一个出处——`LayoutModel.DefaultColumns`,被 `Columns` 字段初始化器与修复目标共用,二者不会漂移;新增默认行只需在此改一行。新增一个修复关注点只需写一个方法并在 `ConfigRepair.Rules` 数组加一项。
+第一条规则 `MigrateRowsToColumns` 把遗留的 `[rows]` 版 `layout.ini` 改写为多列格式(`[column.1]` 承接旧行,并新建一个空的 `[column.2]`)——`RealTime` 刻意不移入。第二条规则 `RepairLayoutColumns`:当第 1 列看起来是"默认派生"时(`IsDefaultDerived`:该列等于按默认顺序排列、扣除缺失项后的默认集——校验按旧版扁平默认顺序进行,以便迁移后的 `[rows]` 配置仍能被识别),插入任何缺失的默认 HUD 行。被重排、含额外或重复行的集合视为手工自定义,原样保留并仅给出提示。第三条规则 `RepairLayoutColumn2` 对现实时间行的家(`[column.2]`)做同样的事:**非空**且默认派生的第 2 列(例如仅 `RealTime`)会被补入其下的新默认行 `PrevRt`,而空的第 2 列——这是合法配置,也是 `[rows]` 迁移刻意产出的形态——绝不自动填充。后续列从不自动填充。规范的默认布局只有一个出处——`LayoutModel.DefaultColumns`,被 `Columns` 字段初始化器与修复目标共用,二者不会漂移;新增默认行只需在此改一行。新增一个修复关注点只需写一个方法并在 `ConfigRepair.Rules` 数组加一项。
 
 ## 构建
 

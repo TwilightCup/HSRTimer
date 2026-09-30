@@ -77,6 +77,16 @@ namespace HSRTimer
         /// <summary>Pause wall time at the instant the last segment ended.</summary>
         public double TotalAtLastSegmentPause;
 
+        /// <summary>
+        /// Snapshot of <see cref="RealTime"/> at the instant the most recently
+        /// completed segment ended, or null. The real-time counterpart of
+        /// <see cref="TotalAtLastSegmentTicks"/> (the run's game-time total at
+        /// that moment): like it, this is the run's cumulative real time frozen
+        /// at the previous level's end — not the segment's own real duration.
+        /// Snapshotted in <see cref="EndSegment"/>.
+        /// </summary>
+        public double? RealTimeAtLastSegment;
+
         /// <summary>Total game ticks of the most recently completed run, or null.</summary>
         public ulong? LastRunTicks;
 
@@ -312,6 +322,7 @@ namespace HSRTimer
                 LastSegmentPause = 0d;
                 TotalAtLastSegmentTicks = null;
                 TotalAtLastSegmentPause = 0d;
+                RealTimeAtLastSegment = null;
             }
             if (!keepLastRun)
             {
@@ -401,6 +412,7 @@ namespace HSRTimer
                 LastSegmentPause = endPause >= SegmentStartPause ? endPause - SegmentStartPause : 0d;
                 TotalAtLastSegmentTicks = endTicks;
                 TotalAtLastSegmentPause = endPause;
+                RealTimeAtLastSegment = RealTime;
             }
             PlayableTicks = endTicks;
             PauseAccum = endPause;

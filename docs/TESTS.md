@@ -117,6 +117,13 @@ an active segment with a local player and is a no-op for clients / during
 replays. **Subsegment and marker PBs are deliberately not written** (it is a
 test pass), so real PB files stay untouched.
 
+**Prev RT (R1.10.7).** After a level completes, `hsr status` shows a frozen
+`prevRt=` (the Real Time value at that level's end) and the HUD's `Prev Rt`
+row (Chinese `上关RT`) updates to the same value — the run's cumulative Real
+Time, not the level's own duration. Before the first completed level it reads
+`--` (unset). It is cleared by `hsr reset` and by leaving to the menu, but
+kept across `hsr retry`.
+
 `hsr pass real` exercises the actual trigger chain instead of forcing the
 flag: it zeroes the player's momentum (linear + angular on every body part),
 releases both hand grabs, and teleports the local player to the center of the
@@ -255,6 +262,7 @@ hsr layout row list
 hsr layout row add 1 CurrentState
 hsr layout row remove 1 5
 hsr layout row add 2 RealTime
+hsr layout row add 2 PrevRt
 hsr layout row clear 2
 hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
@@ -264,7 +272,9 @@ hsr layout set color_a FF0000FF
 ```
 
 The HUD should update on the next frame and the changes should persist to
-`layout.ini`.
+`layout.ini`. `PrevRt` is a valid row type for `hsr layout row add` (the
+previous level's Real Time snapshot; it shows `--:--` until the first level is
+completed).
 
 ### 5. Settings panel / general settings
 
@@ -503,7 +513,7 @@ Notes:
 - [ ] Timing standard toggle: with `use_plcc_timing_standard` off (default), `hsr clock history` shows the `pass` line carrying the end tick; after `hsr set use_plcc_timing_standard true` (`hsr status` shows `plccTiming=True`) it shows both a `pass` line (the `Game.Fall` frame, observation only) and a `leave` line carrying the end tick, with `leave tick − pass tick` ≈ 1 physics tick (the render-frame delay), and both modes record identical `dur=` for identical runs. With the setting on, the timer HUD shows the `plcc timing mode` line under the time rows; it hides again when the setting is off (R2.6.1).
 - [ ] Timing standard lock (R1.4.2a): while a run is in progress (`realTimeActive=True`, including between levels and paused) `hsr set use_plcc_timing_standard true|false` is refused with the locked message and `hsr get` is unchanged; after the run ends (`realTimeActive=False`, e.g. back at the main menu) or after `hsr reset` the same `hsr set` succeeds. In the settings panel the toggle is greyed out and its note reads "Locked while a run is in progress…" during a run, and interactive again outside one.
 - [ ] `hsr retry` reloads the current level (or the configured override).
-- [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
+- [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment, a frozen `prevRt` (the Real Time at that level's end) and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
 - [ ] `hsr pass real` teleports the player into the pass zone and the game's own trigger flow completes the level (with `LevelPassed` latched); PBs still not written.
 - [ ] `hsr hud off/on` hides/shows the timer HUD.
 - [ ] `hsr panel open/close` opens/closes the settings panel.
@@ -511,7 +521,7 @@ Notes:
 - [ ] `hsr update check` reports up to date / shows a newer release / shows a one-line error (offline), and `hsr update apply` installs the DLL (R13).
 - [ ] `hsr tag enable/disable` changes the enabled tags and persists them.
 - [ ] `hsr set language zh-Hans` switches UI language.
-- [ ] `hsr layout row list/add/remove/clear` changes the HUD rows (per column).
+- [ ] `hsr layout row list/add/remove/clear` changes the HUD rows (per column), including adding `PrevRt`.
 - [ ] `hsr preset create/save/apply` round-trips layout + markers.
 - [ ] `hsr sub status/entries` works with subsegment data present.
 - [ ] `hsr marker add/list/toggle/pb` works while in a level.

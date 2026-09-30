@@ -107,6 +107,7 @@ color_b = FF9A72FF
 
 [column.2]
 0 = RealTime
+1 = PrevRt
 
 [leaderboard]
 font_size = 16
@@ -138,13 +139,16 @@ text = Collection: {collection}
 - `[column.<n>]` — one column of ordered rows; keys are 0-based indices.
   Columns are drawn left-to-right by number (`[column.1]` leftmost); an empty
   column is not displayed, and a missing column is created empty on save, so
-  `[column.1]` / `[column.2]` always exist (`RealTime` defaults into
-  `[column.2]`). Row types: `GameTime`, `RealTime`, `CurrentSegment`,
+  `[column.1]` / `[column.2]` always exist (`RealTime` and `PrevRt` default into
+  `[column.2]`, with `PrevRt` directly below `RealTime`). Row types: `GameTime`,
+  `RealTime`, `PrevRt`, `CurrentSegment`,
   `LastSegment`, `LastRun`, `CurrentState`. `RealTime` is also gated by the
   `show_real_time` setting (default on). Wake Up Time is not a row type — it
   renders in the right-hand column next to Last Run (always the rightmost
   column) and is gated by `show_wake_up_time`. Old `[rows]` configs are
-  migrated automatically to `[column.1]` plus an empty `[column.2]`.
+  migrated automatically to `[column.1]` plus an empty `[column.2]`; a
+  non-empty default-derived `[column.2]` is auto-completed with `PrevRt` on the
+  next boot (an empty one is left alone).
 - `[leaderboard]` — the shared leaderboard HUD (Subsegment / Markers modes).
   `font_size`, `offset_x`, `offset_y`, `color_faster`, `color_slower`,
   `color_tie`, `mode`, and `markers_time_mode` control its appearance and

@@ -142,6 +142,9 @@ The engine's game clock is an **integer physics-tick counter**, not a
 - `RunState.PlayableTicks` (`ulong`) counts playable `FixedUpdate` frames. Every
   segment snapshot (`SegmentStartTicks`, `LastSegmentTicks`,
   `TotalAtLastSegmentTicks`, `LastRunTicks`, `WakeUpTicks`) is an integer tick.
+  The one exception is the "Prev RT" snapshot
+  (`RunState.RealTimeAtLastSegment`): it freezes the wall-clock
+  `RunState.RealTime` (already seconds), not a tick.
   Segment duration is the pure integer difference
   `PlayableTicks - SegmentStartTicks`.
 - `RunState.PauseAccum` (`double`) is the one non-tick component: pausing halts
@@ -214,6 +217,15 @@ is recorded (R1.6), and also stopped when the run exits to a menu or lobby
 (unless a retry is in progress) so it does not silently count idle time. Full resets and one-key retries zero it along with the live
 game timers. The HUD shows the row by default below Game Time through
 `show_real_time`; the clock remains active regardless of that display setting.
+
+**Prev RT (`RunState.RealTimeAtLastSegment`)** is the real-time counterpart of
+`TotalAtLastSegment`: in `RunState.EndSegment` (only when the segment
+`completed`), the current `RealTime` value is frozen into
+`RealTimeAtLastSegment`, so the HUD row shows the run's cumulative real time at
+the moment the previous level ended (R1.10.7). It is reset/cleared by the same
+paths as `TotalAtLastSegmentTicks` (auto-reset, new run from the menu, manual
+reset) and preserved across retries. It defaults to the row directly below
+`RealTime` in the second column.
 
 ## Why retry unloads then re-launches the level
 
@@ -390,11 +402,12 @@ each physics tick the engine latches `Game.passedLevel` into `LevelPassed`
 `passedLevel` itself during the completion/leave flow, before the state flips,
 so the latch must read it beforehand). `LevelPassed` is reset on segment start.
 
-`EndSegment(completed: LevelPassed)` records `LastSegmentTicks`/`TotalAtLastSegmentTicks`,
+`EndSegment(completed: LevelPassed)` records `LastSegmentTicks`/`TotalAtLastSegmentTicks`
+(and the "Prev RT" snapshot `RealTimeAtLastSegment`),
 the tag `OnLevelExit` completion checks (R4.2,
 voiceline), and the LC last-level `LastRun` capture **only when `completed`**.
 A mid-level quit (or a retry, where `LevelPassed` is false) leaves the previous
-attempt's `LastSegmentTicks`/`TotalAtLastSegmentTicks` untouched — exactly the desired
+attempt's `LastSegmentTicks`/`TotalAtLastSegmentTicks`/`RealTimeAtLastSegment` untouched — exactly the desired
 behavior: the "last segment" reference reflects the last level you *finished*,
 not one you walked out of. Note the `PlayingLevel → LoadingLevel` edge (a
 built-in level's `StartNextLevel` reload) is inherently a completion, and there
@@ -446,12 +459,13 @@ active — appearing in Credits mid-collection is just an ordinary level), so
 
 ## Why auto-reset and menu entry clear the last-segment snapshots
 
-`LastSegmentTicks` and `TotalAtLastSegmentTicks` are HUD reference values for the most
+`LastSegmentTicks`, `TotalAtLastSegmentTicks` and `RealTimeAtLastSegment` are HUD reference values for the most
 recent completed segment, while `LastRunTicks` is the last completed run's total.
-**Auto-reset (R1.7) clears the live timers and the two last-segment snapshots**,
+**Auto-reset (R1.7) clears the live timers and the two last-segment snapshots**
+(plus the Prev RT snapshot, which shares their lifecycle),
 so leaving to the menu presents a fresh segment baseline, while keeping
 `LastRunTicks` as the previous completed-run reference (R1.7.4). The manual reset key
-clears all three snapshots (R1.7.1).
+clears them all (R1.7.1).
 
 `RunState.Reset(bool keepLastValues, bool keepLastRun)` keeps these concerns
 separate. The auto-reset and menu-entry paths use
@@ -487,8 +501,12 @@ that column looks default-derived (`IsDefaultDerived`: the rows equal the
 defaults in order, minus any missing entries — checked against the legacy flat
 default order so migrated `[rows]` configs are still recognized). A reordered or
 extra/duplicate row set is treated as hand-customized and left untouched, with
-an advisory hint. Later columns are never auto-filled (an empty column is a
-valid configuration). The canonical default layout lives in one place —
+an advisory hint. The third rule, `RepairLayoutColumn2`, does the same for the
+real-time rows' home (`[column.2]`): a **non-empty**, default-derived column 2
+(e.g. just `RealTime`) is completed with the new `PrevRt` default below it,
+while an empty column 2 — a valid configuration, and what the `[rows]`
+migration deliberately creates — is never auto-filled. Later columns are never
+auto-filled. The canonical default layout lives in one place —
 `LayoutModel.DefaultColumns` — shared by the `Columns` field initializer and the
 repair target, so the two can't drift; adding a new default row is a single line
 there. Adding a new repair concern is one method plus one entry in the

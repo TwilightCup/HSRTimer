@@ -98,6 +98,11 @@ hsr pass real              # 传送到判定箱,让游戏自身完成过关
 本地玩家,客户端与回放播放期间为无效操作。**subsegment 与 marker 的 PB 不会写入**
 (这是测试过关),真实的 PB 文件保持不变。
 
+**上关RT(R1.10.7)。** 过关后,`hsr status` 应显示定格的 `prevRt=`(该关结束时
+的现实时间),HUD 的 `Prev Rt` 行(中文 `上关RT`)更新为同一值 —— 这是整局累计的
+现实时间,而非该关自身用时。首个关卡完成前为 `--`(未设置)。`hsr reset` 与退出到
+菜单会清零它;`hsr retry` 保留。
+
 `hsr pass real` 走真实的触发器链路而不是直接置标志:它把玩家动量清零
 (所有身体部件的线速度与角速度)、取消双手抓取,并把本地玩家传送到本关
 `LevelPassTrigger`(通关判定箱)的中心。随后由游戏自身流程接管 —— 判定箱触发
@@ -177,6 +182,7 @@ hsr layout row list
 hsr layout row add 1 CurrentState
 hsr layout row remove 1 5
 hsr layout row add 2 RealTime
+hsr layout row add 2 PrevRt
 hsr layout row clear 2
 hsr layout text add 20 400 "Hello {gametime}"
 hsr layout text list
@@ -185,7 +191,7 @@ hsr layout set offset_x 30
 hsr layout set color_a FF0000FF
 ```
 
-HUD 应在下一帧生效,且改动持久化到 `layout.ini`。
+HUD 应在下一帧生效,且改动持久化到 `layout.ini`。`PrevRt` 是 `hsr layout row add` 的合法行类型(上一关的现实时间快照;首关完成前显示 `--:--`)。
 
 ### 5. 设置面板 / 常规设置
 
@@ -361,7 +367,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] 计时标准开关:关闭 `use_plcc_timing_standard`(默认)时,`hsr clock history` 由 `pass` 行携带终点 tick;`hsr set use_plcc_timing_standard true` 后(`hsr status` 显示 `plccTiming=True`)会同时出现 `pass` 行(`Game.Fall` 帧,仅观测)与携带终点 tick 的 `leave` 行,且 `leave tick − pass tick` ≈ 1 个物理帧(渲染帧延迟),两种模式下相同操作的 `dur=` 均一致。开启期间计时器 HUD 在时间行下方显示 `plcc计时模式` 一行;关闭后该行消失(R2.6.1)。
 - [ ] 计时标准开关整局锁定(R1.4.2a):本局运行中(`realTimeActive=True`,含两关之间与暂停)`hsr set use_plcc_timing_standard true|false` 会被拒绝并打印锁定说明,`hsr get` 取值不变;本局结束后(`realTimeActive=False`,例如回到主菜单)或执行 `hsr reset` 后同一条 `hsr set` 成功。设置面板中该开关在本局期间变灰、提示文字为"整局运行中不可切换",离开本局后恢复可交互。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
-- [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
+- [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段、定格的 `prevRt`(该关结束时的现实时间)与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
 - [ ] `hsr pass real` 把玩家传送到判定箱,由游戏自身的触发器链路完成过关(且 `LevelPassed` 已锁定);PB 同样不写入。
 - [ ] `hsr hud off/on` 隐藏 / 显示计时 HUD。
 - [ ] `hsr panel open/close` 打开 / 关闭设置面板。
@@ -369,7 +375,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr update check` 报告已最新 / 显示更新版本 / 离线时显示一行错误,`hsr update apply` 安装 DLL(R13)。
 - [ ] `hsr tag enable/disable` 改变启用的标签并持久化。
 - [ ] `hsr set language zh-Hans` 切换界面语言。
-- [ ] `hsr layout row list/add/remove/clear` 改变 HUD 行(按列)。
+- [ ] `hsr layout row list/add/remove/clear` 改变 HUD 行(按列),含添加 `PrevRt`。
 - [ ] `hsr preset create/save/apply` 完整往返布局 + 标记。
 - [ ] 有分段数据时 `hsr sub status/entries` 正常。
 - [ ] 关卡内 `hsr marker add/list/toggle/pb` 正常。

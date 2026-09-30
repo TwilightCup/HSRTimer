@@ -9,6 +9,7 @@ namespace HSRTimer
     {
         GameTime,
         RealTime,
+        PrevRt,
         CurrentSegment,
         TotalAtLastSegment,
         LastSegment,
@@ -43,24 +44,28 @@ namespace HSRTimer
         /// the defaults) is a one-line edit here, and both the fresh-install
         /// layout and the config-repair target stay in sync automatically.
         /// Column 1 is the leftmost timer stack; RealTime defaults into
-        /// column 2.
+        /// column 2 with PrevRt (the previous level's Real Time snapshot)
+        /// directly below it.
         /// </summary>
         public static readonly Dictionary<int, RowType[]> DefaultColumns = new Dictionary<int, RowType[]>
         {
             { 1, new[] { RowType.GameTime, RowType.CurrentSegment, RowType.TotalAtLastSegment, RowType.LastSegment } },
-            { 2, new[] { RowType.RealTime } },
+            { 2, new[] { RowType.RealTime, RowType.PrevRt } },
         };
 
         /// <summary>
         /// The pre-columns default row order (the v1 <c>[rows]</c> layout, with
         /// RealTime at index 1). Kept so <see cref="ConfigRepair"/> can recognize
         /// legacy default-derived configs after their <c>[rows]</c> section is
-        /// migrated to <c>[column.1]</c> and still auto-insert newer default rows.
+        /// migrated to <c>[column.1]</c> and still auto-insert newer default rows
+        /// (PrevRt sits right after RealTime, matching its "below RealTime"
+        /// position in the fresh default column 2).
         /// </summary>
         public static readonly RowType[] LegacyDefaultRows =
         {
             RowType.GameTime,
             RowType.RealTime,
+            RowType.PrevRt,
             RowType.CurrentSegment,
             RowType.TotalAtLastSegment,
             RowType.LastSegment,

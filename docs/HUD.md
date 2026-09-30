@@ -14,6 +14,7 @@ Each row renders one value:
 |----------|-------|
 | `GameTime` | Total game time accumulated this run |
 | `RealTime` | Wall-clock time for the current run (shown by default in the second column; see below) |
+| `PrevRt` | **Prev RT**: the Real Time clock value frozen at the moment the previous level completed — the real-time counterpart of `TotalAtLastSegment` (a cumulative snapshot of the run, not that level's own real duration). Defaults directly below `RealTime` in the second column |
 | `CurrentSegment` | Time since entering the current level |
 | `TotalAtLastSegment` | Run total frozen at the moment the last segment completed |
 | `LastSegment` | Duration of the last completed level |
@@ -39,10 +40,12 @@ invisible. The default layout is:
 
 [column.2]
 0 = RealTime
+1 = PrevRt
 ```
 
-`RealTime` defaults into `[column.2]`; the other timer rows default into
-`[column.1]`. A missing column is always created empty, so `[column.1]` and
+`RealTime` and `PrevRt` default into `[column.2]` (`PrevRt` directly below
+`RealTime`); the other timer rows default into `[column.1]`. A missing column is
+always created empty, so `[column.1]` and
 `[column.2]` are always present in the file. The **Last Run / Wake Up Time**
 column (see below) is a fixed extra column that is **always the rightmost one**,
 after all configured columns.
@@ -50,7 +53,10 @@ after all configured columns.
 > **Migration**: old `layout.ini` files store the rows in a flat `[rows]`
 > section. On the first boot after the upgrade that section is migrated to
 > `[column.1]` and an **empty** `[column.2]` is added — `RealTime` is *not*
-> moved into it, so the screen shows exactly what it showed before.
+> moved into it, so the screen shows exactly what it showed before. Existing
+> configs that already have a default-derived second column (`RealTime` only)
+> receive `PrevRt` automatically on the next boot; an empty second column is
+> left alone.
 
 ## Wake Up Time
 
@@ -93,6 +99,15 @@ settings panel's Interface tab (or set `show_real_time = false` in
 `[column.N]` it appears in your chosen position; if you remove it from the
 layout but leave the setting enabled, it appears below your configured timer
 columns as a convenient fallback.
+
+**Prev RT (`PrevRt`)** shows the Real Time clock value frozen at the moment the
+previous level completed (the same moment `TotalAtLastSegment` freezes the game
+time, R1.4.1). Like that row it is a cumulative snapshot of the whole run at
+that instant — not the previous level's own real duration — so it ticks up
+across the run and updates once per completed level. It is `--:--` before the
+first level is completed and is cleared by the same resets that clear
+`TotalAtLastSegment` (auto-reset, a new run from the menu, and the manual reset;
+a one-key retry keeps it).
 
 ## Timing-standard indicator
 

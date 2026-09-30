@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - Added a **Prev RT** HUD row (Chinese: `上关RT`) showing the Real Time value frozen at the moment the previous level completed — the real-time counterpart of the "Total at Last Segment" row. It defaults directly below **Real Time** in the second column, and existing default-derived layouts receive it automatically on the next boot.
   - The timer HUD now supports multiple columns: `layout.ini` uses `[column.N]` sections (drawn left-to-right by number, an empty column is hidden), `RealTime` defaults into `[column.2]`, and old `[rows]` configs are migrated automatically to `[column.1]` plus an empty `[column.2]` — RealTime is not moved, so the screen looks the same. The Last Run / Wake Up Time column is always the rightmost one.
 - **Contributors:** _To be filled from PRs merged into dev._
 

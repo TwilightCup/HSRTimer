@@ -39,6 +39,7 @@ namespace HSRTimer
         {
             MigrateRowsToColumns,
             RepairLayoutColumns,
+            RepairLayoutColumn2,
             MigrateLeaderboardFromSettings,
         };
 
@@ -239,10 +240,12 @@ namespace HSRTimer
         /// order is left untouched).
         /// </summary>
         /// <remarks>
-        /// Only <c>[column.1]</c> is repaired. Later columns are never
-        /// auto-filled: an empty column is a valid configuration (it is simply
-        /// not displayed), and the legacy <c>[rows]</c> migration deliberately
-        /// creates an empty <c>[column.2]</c> without moving RealTime into it.
+        /// Only <c>[column.1]</c> is repaired by this rule. Column 2 is handled
+        /// separately by <see cref="RepairLayoutColumn2"/> (the real-time rows'
+        /// home), and later columns are never auto-filled: an empty column is a
+        /// valid configuration (it is simply not displayed), and the legacy
+        /// <c>[rows]</c> migration deliberately creates an empty
+        /// <c>[column.2]</c> without moving RealTime into it.
         /// The default-derived check runs against
         /// <see cref="LayoutModel.LegacyDefaultRows"/> (the pre-columns default
         /// order, RealTime at index 1) so both fresh default column-1 layouts
@@ -320,6 +323,52 @@ namespace HSRTimer
             }
 
             summary = "layout column 1: added missing default row(s) " + Join(missing);
+            return true;
+        }
+
+        /// <summary>
+        /// Ensure the second column's default rows are present — currently the
+        /// "Real Time + Prev RT" pair. Column 2 is the home of the real-time
+        /// rows (R2.2.4), so a new default row there ships with the same
+        /// auto-insert for existing users that column 1 gets. Unlike column 1
+        /// this rule deliberately **never auto-fills an empty column 2**: an
+        /// empty column is a valid configuration (hidden, and the legacy
+        /// <c>[rows]</c> migration creates it empty on purpose), so only a
+        /// non-empty, default-derived column 2 (a subset of the defaults in
+        /// order — e.g. just <c>RealTime</c>) is rebuilt to the canonical list.
+        /// A reordered/extra/duplicate row set is treated as hand-customized
+        /// and left untouched with an advisory hint, mirroring column 1.
+        /// </summary>
+        private static bool RepairLayoutColumn2(ConfigService cfg, out string summary)
+        {
+            summary = null;
+            var layout = cfg.Layout;
+            List<RowType> col;
+            if (!layout.Columns.TryGetValue(2, out col) || col == null || col.Count == 0)
+                return false; // empty column 2 is a valid configuration — never auto-fill
+            var defaults = LayoutModel.DefaultColumns[2];
+
+            var present = new HashSet<RowType>(col);
+            var missing = new List<RowType>();
+            foreach (var r in defaults)
+                if (!present.Contains(r))
+                    missing.Add(r);
+
+            if (missing.Count == 0)
+                return false; // clean
+
+            if (!IsDefaultDerived(col, defaults))
+            {
+                summary = "layout column 2: a default row is missing (" + Join(missing) +
+                          ") but the row order looks custom; left unchanged. Add it manually in layout.ini [column.2] if wanted.";
+                return false;
+            }
+
+            col.Clear();
+            foreach (var r in defaults)
+                col.Add(r);
+
+            summary = "layout column 2: added missing default row(s) " + Join(missing);
             return true;
         }
 

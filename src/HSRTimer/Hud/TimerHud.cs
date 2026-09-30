@@ -466,6 +466,10 @@ namespace HSRTimer
                     label = loc.Get("TIMER_REAL_TIME");
                     value = TimeFormatter.Format(state.RealTime);
                     break;
+                case RowType.PrevRt:
+                    label = loc.Get("TIMER_PREV_RT");
+                    value = TimeFormatter.Format(GameClock.RealTimeAtLastSegmentSeconds(state));
+                    break;
                 case RowType.CurrentSegment:
                     label = loc.Get("TIMER_SEGMENT_TIME");
                     value = TimeFormatter.Format(GameClock.SegmentSeconds(state));

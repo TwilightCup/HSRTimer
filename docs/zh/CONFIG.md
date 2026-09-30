@@ -86,6 +86,7 @@ color_b = FF9A72FF
 
 [column.2]
 0 = RealTime
+1 = PrevRt
 
 [leaderboard]
 font_size = 16
@@ -111,7 +112,7 @@ text = Collection: {collection}
 ```
 
 - `[text]` —— 主文本块直接绘制在屏幕上(无窗口、不可拖动)。`offset_x`/`offset_y` 为距屏幕左上角的像素偏移;`font_size` 为字号;`color_a`/`color_b` 为默认双色渐变(十六进制,见 [HUD.md](HUD.md))。
-- `[column.<n>]` —— 一列有序行;键为列内从 0 开始的索引。列按编号从左到右绘制(`[column.1]` 最左);空列不显示,缺失的列在保存时会被创建为空列,因此 `[column.1]` / `[column.2]` 始终存在(`RealTime` 默认放进 `[column.2]`)。行类型:`GameTime`、`RealTime`、`CurrentSegment`、`LastSegment`、`LastRun`、`CurrentState`。`RealTime` 还受 `show_real_time` 设置控制(默认开启)。起身时间不是行类型 —— 它显示在“上一局游戏时间”旁边的右侧列(始终为最右侧列),由 `show_wake_up_time` 控制。旧 `[rows]` 配置会自动迁移到 `[column.1]` 并新建空的 `[column.2]`。
+- `[column.<n>]` —— 一列有序行;键为列内从 0 开始的索引。列按编号从左到右绘制(`[column.1]` 最左);空列不显示,缺失的列在保存时会被创建为空列,因此 `[column.1]` / `[column.2]` 始终存在(`RealTime` 与 `PrevRt` 默认放进 `[column.2]`,`PrevRt` 位于 `RealTime` 正下方)。行类型:`GameTime`、`RealTime`、`PrevRt`、`CurrentSegment`、`LastSegment`、`LastRun`、`CurrentState`。`RealTime` 还受 `show_real_time` 设置控制(默认开启)。起身时间不是行类型 —— 它显示在“上一局游戏时间”旁边的右侧列(始终为最右侧列),由 `show_wake_up_time` 控制。旧 `[rows]` 配置会自动迁移到 `[column.1]` 并新建空的 `[column.2]`;非空且默认派生的 `[column.2]` 会在下次启动时自动补入 `PrevRt`(空的不填充)。
 - `[leaderboard]` —— 共享排行榜 HUD（分段对比 / 标记模式）。`font_size`、`offset_x`、`offset_y`、`color_faster`、`color_slower`、`color_tie`、`mode`、`markers_time_mode` 控制其外观与显示模式。`offset_y` 相对屏幕垂直中心的固定顶部锚点；内容向下延伸。
 - `[custom.<n>]` —— 位于 `(x, y)` 的任意屏上文本,各自带渐变。模板变量:`{date}`、`{time}`、`{version}`、`{collection}`、`{category}`、`{gametime}`、`{realtime}`。
 
