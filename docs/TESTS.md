@@ -68,7 +68,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 The command uses snake_case versions of the public fields in `SettingsModel`
 and `LayoutModel`. Common examples:
 
-- `auto_reset`, `use_plcc_timing_standard`, `restart_clears_forgivable`, `retry_min_dwell`
+- `auto_reset`, `restart_clears_forgivable`, `retry_min_dwell`
 - `retry_level_override_enabled`, `retry_level_override`
 - `show_hud`
 - `only_record_first_wake_up_time`, `center_loading_saving`, `language`
@@ -137,63 +137,23 @@ latched, the level's pass trigger could not be entered (collider/tag/layout).
 (`playableTicks`, `segmentStartTicks`, `pendingEndTicks`, …). `hsr clock
 history` lists each segment start/end tick. Both boundaries are latched by
 authoritative hooks, so they do not depend on the polling loop's cadence or on
-Unity script execution order: `load` is the `Game.AfterLoad` start tick. Which
-hook provides the **end** tick depends on the `use_plcc_timing_standard`
-setting (default off):
-- **Off (default, legacy)** — the `pass` line (the `Game.Fall` pass detection)
-  carries the latched end tick, including the pass frame itself.
-- **On (plcc timing standard)** — a `leave` line (`Game.BeginLoadLevel` /
-  `Game.AfterUnload`) carries the end tick — the moment the game leaves
-  `PlayingLevel`, the same criterion the plcc Timer uses.
+Unity script execution order: `load` is the `Game.AfterLoad` start tick and
+`pass` (the `Game.Fall` pass detection) carries the latched end tick, including
+the pass frame itself — the sole authoritative segment end (R1.4.2).
 
 `hsr clock clear` resets the history before a measurement run. Each history
 `end` line carries `src=hook` when a latched end tick was used and `step=`, the
 global physics step on which the poll consumed it; the segment value therefore
 stays independent of poll timing.
 
-The `pass` line is written in **both** modes: it is the `Game.Fall` pass
-detection tick (with `processed=` telling whether the engine's `FixedUpdate` had
-already run for that physics step). In plcc mode it is emitted before the
-already-latched early return, so it never decides the end tick — but because it
-is a pure observation of the `Game.Fall` frame, `hsr clock history` under the
-plcc standard shows `pass` (the pass detection) → `leave` (the game left
-`PlayingLevel`) → `end`, and `leave tick − pass tick` is exactly the extra
-render-frame delay the plcc criterion adds. A `zone` line marks
-`Game.EnterPassZone` (which normally latches `LevelPassed` *before* `Game.Fall`
-runs, so in plcc mode the observation `pass` line, not the completion-latch one,
-is the line that fires). In the legacy mode `pass` *is* the end tick; under the
-plcc standard `leave` is.
+The `pass` line is the `Game.Fall` pass detection tick carrying the latched end
+tick; it *is* the end tick. A `zone` line marks `Game.EnterPassZone`, which
+normally latches `LevelPassed` *before* `Game.Fall` runs.
 
 The start side works the same way: `load` is the `Game.AfterLoad` hook frame
 (the authoritative segment start) and the following `start` line is the polling
 loop consuming that latch. A `start tick` equal to `load tick` with a larger
 `step=` proves the start boundary no longer depends on when the poll noticed it.
-
-**Timing standard toggle.** The setting lives in the settings panel under
-**General → Timing** ("Use plcc timing standard", the first row of the Timing
-section) and in `settings.ini` as `use_plcc_timing_standard`. Toggle it with the
-console and confirm `hsr status` reports the active mode:
-`hsr set use_plcc_timing_standard true` / `false`, then
-`hsr status` → `plccTiming=True|False`. The change applies immediately (the
-engine re-reads it every tick); no reset or retry is needed. With the setting
-off, repeated passes end on the `pass` tick; with it on they end on the `leave`
-tick — in both modes `hsr clock history` must record identical `dur=` for
-identical repeated runs (R1.11.8). While the setting is on, the timer HUD shows
-a `plcc timing mode` line (Chinese: `plcc计时模式`) directly under the time
-rows; it disappears again when the setting is turned off (R2.6.1).
-
-**Locked for the whole run (R1.4.2a).** A run in progress pins the standard, so
-the option cannot be switched anywhere inside it — including between levels and
-while paused: while `hsr status` shows `realTimeActive=True` the settings
-panel's toggle is greyed out and its note reads "Locked while a run is in
-progress…", and `hsr set use_plcc_timing_standard` prints `Cannot change
-use_plcc_timing_standard while a run is in progress. Reset the run or leave the
-level first.` without changing the value (verify with
-`hsr get use_plcc_timing_standard`). The lock spans the run's first playable
-segment through all cross-level loading and pauses; it clears when the run
-completes, when the player returns to the menu/lobby
-(`realTimeActive=False`), or after `hsr reset`. The lock is a guard only — the
-engine still re-reads the setting every tick.
 
 ### 2. Validity flags (R5)
 
@@ -544,8 +504,7 @@ Notes:
 - [ ] `hsr status` shows plausible live values while in a level.
 - [ ] `hsr reset` zeroes timers and clears flags.
 - [ ] `hsr clock` shows integer ticks and `hsr clock history` records identical `dur=` for repeated identical runs (R1.11).
-- [ ] Timing standard toggle: with `use_plcc_timing_standard` off (default), `hsr clock history` shows the `pass` line carrying the end tick; after `hsr set use_plcc_timing_standard true` (`hsr status` shows `plccTiming=True`) it shows both a `pass` line (the `Game.Fall` frame, observation only) and a `leave` line carrying the end tick, with `leave tick − pass tick` ≈ 1 physics tick (the render-frame delay), and both modes record identical `dur=` for identical runs. With the setting on, the timer HUD shows the `plcc timing mode` line under the time rows; it hides again when the setting is off (R2.6.1).
-- [ ] Timing standard lock (R1.4.2a): while a run is in progress (`realTimeActive=True`, including between levels and paused) `hsr set use_plcc_timing_standard true|false` is refused with the locked message and `hsr get` is unchanged; after the run ends (`realTimeActive=False`, e.g. back at the main menu) or after `hsr reset` the same `hsr set` succeeds. In the settings panel the toggle is greyed out and its note reads "Locked while a run is in progress…" during a run, and interactive again outside one.
+- [ ] `hsr clock history` shows the `pass` line (the `Game.Fall` pass detection) carrying the end tick, with `zone` marking `Game.EnterPassZone` and `end` closing the segment; repeated identical runs record identical `dur=` (R1.11.8).
 - [ ] `hsr retry` reloads the current level (or the configured override).
 - [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment, a frozen `prevRt` (the Real Time at that level's end) and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
 - [ ] `hsr pass real` teleports the player into the pass zone and the game's own trigger flow completes the level (with `LevelPassed` latched); PBs still not written.

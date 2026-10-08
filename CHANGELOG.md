@@ -7,6 +7,7 @@ This file contains user-facing release notes for HSRTimer. Only changes that plu
 - **Release Date:** Unreleased
 - **Highlights:** _To be filled during version branch preparation._
 - **Details:**
+  - Removed the **"Use plcc timing standard"** option (and its HUD indicator line): a segment now always ends at the game's `Game.Fall` pass detection, the sole timing standard. The settings-panel toggle and the `hsr set use_plcc_timing_standard` console command are gone, and any `use_plcc_timing_standard` key left in `settings.ini` is ignored.
 - **Contributors:** _To be filled from PRs merged into dev._
 
 ## 1.10.0

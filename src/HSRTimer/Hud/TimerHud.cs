@@ -181,11 +181,6 @@ namespace HSRTimer
             // Extras sit below the tallest column, starting at the left edge.
             float ey = bottomY;
 
-            // Timing-standard indicator (R1.4.2): one line directly under the
-            // time rows while the plcc timing standard is enabled, so the active
-            // timing mode is visible on the HUD.
-            ey += DrawPlccModeLine(cfg, loc, layout, x, ey);
-
             // Current rule tags: one line right under the timer rows listing the
             // enabled tags (localized). Skipped when none are enabled. Rendered
             // before the tag extras and the invalid banner; the marker-edit-mode
@@ -237,21 +232,6 @@ namespace HSRTimer
             if (cfg == null || cfg.EnabledTags == null || cfg.EnabledTags.Tags.Count == 0)
                 return 0f;
             string line = loc.Get("HUD_TAGS_LABEL") + ":  " + TemplateVars.CategoryName(cfg);
-            DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
-            return _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
-        }
-
-        /// <summary>
-        /// One line directly under the time rows shown only while the plcc timing
-        /// standard is enabled ("Use plcc timing standard", R1.4.2), so the HUD
-        /// reflects the active timing mode. Returns the vertical space consumed
-        /// (0 when the option is off, so the line is omitted entirely).
-        /// </summary>
-        private float DrawPlccModeLine(ConfigService cfg, LocalizationService loc, LayoutModel layout, float x, float y)
-        {
-            if (cfg.Settings == null || !cfg.Settings.UsePlccTimingStandard)
-                return 0f;
-            string line = loc.Get("HUD_PLCC_TIMING_MODE");
             DrawGradientLine(line, layout.ColorA, layout.ColorB, x, y, _rowStyle);
             return _rowStyle.CalcSize(new GUIContent(line)).y + 2f;
         }

@@ -163,7 +163,7 @@ namespace HSRTimer
 
             if (state != null)
             {
-                sb.AppendLine($"segment={state.InSegment} timing={state.TimingActive} plccTiming={s.UsePlccTimingStandard} retrying={state.Retrying} realTimeActive={state.RealTimeActive}");
+                sb.AppendLine($"segment={state.InSegment} timing={state.TimingActive} retrying={state.Retrying} realTimeActive={state.RealTimeActive}");
                 sb.AppendLine($"gameTime={FormatNumber(state.GameTimeSeconds)} segmentTime={FormatNumber(GameClock.SegmentSeconds(state))} realTime={FormatNumber(state.RealTime)}");
                 sb.AppendLine($"lastSegment={FormatNullable(GameClock.LastSegmentSeconds(state))} totalAtLastSegment={FormatNullable(GameClock.TotalAtLastSegmentSeconds(state))} prevRt={FormatNullable(GameClock.RealTimeAtLastSegmentSeconds(state))} lastRun={FormatNullable(GameClock.LastRunSeconds(state))} wakeUp={FormatNullable(GameClock.WakeUpSeconds(state))}");
                 sb.AppendLine($"level={state.CurrentLevelNumber} type={state.CurrentLevelType} cp={(game != null ? game.currentCheckpointNumber : -1)} prevCp={state.PrevCheckpoint} maxCp={state.MaxCheckpointThisLevel} campaignRetryLevel={state.CampaignRetryLevel}");
@@ -355,17 +355,6 @@ namespace HSRTimer
             if (!TryFindField(key, out FieldInfo field, out object owner))
             {
                 Print($"Unknown HSRTimer key: {key}. Try 'hsr keys' or 'hsr get all'.");
-                return;
-            }
-
-            // The timing standard picks which event ends a segment, so changing
-            // it mid-run would let one run straddle two standards; it is locked
-            // for the whole run (the settings panel disables the same toggle).
-            if (ReferenceEquals(owner, cfg.Settings)
-                && Normalize(field.Name) == "useplcctimingstandard"
-                && TimerCore.IsTimingStandardLocked)
-            {
-                Print("Cannot change use_plcc_timing_standard while a run is in progress. Reset the run or leave the level first.");
                 return;
             }
 

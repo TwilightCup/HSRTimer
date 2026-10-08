@@ -106,14 +106,6 @@ first level is completed and is cleared by the same resets that clear
 `TotalAtLastSegment` (auto-reset, a new run from the menu, and the manual reset;
 a one-key retry keeps it).
 
-## Timing-standard indicator
-
-While the **"Use plcc timing standard"** option (R1.4.2) is enabled, the HUD
-shows one line **`plcc timing mode`** (Chinese: `plcc计时模式`) directly under
-the time rows, so the active timing mode is visible on screen. The line is
-drawn in the same two-color gradient as the timer rows and is omitted entirely
-when the option is off (the default).
-
 ## Colors & gradient
 
 The default text gradient is a two-color left→-right blend. Specify each color
