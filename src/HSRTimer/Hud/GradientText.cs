@@ -68,8 +68,9 @@ namespace HSRTimer
     }
 
     /// <summary>
-    /// Formats durations for the HUD. Speedrun-style: HH:MM:SS for >= 1 hour,
-    /// MM:SS.mmm otherwise. Negative or unset values render as "--:--".
+    /// Formats durations for the HUD. Speedrun-style: MM:SS.mmm under one hour,
+    /// H:MM:SS.mmm at or over one hour (the millisecond field is kept even for
+    /// hour-length runs). Negative or unset values render as "--:--".
     /// <para>
     /// With <see cref="FrameTiming"/> on (the "Force frame timing" option,
     /// R1.12/R2.6) every duration renders as an integer physics-frame count with
@@ -143,8 +144,9 @@ namespace HSRTimer
 
         /// <summary>
         /// Format a duration for an explicit mode. <paramref name="frames"/> false
-        /// is the classic speedrun layout (<c>MM:SS.mmm</c> / <c>H:MM:SS</c>);
-        /// true is the frame layout (<c>MM:SSfFF</c> / <c>H:MM:SSfFF</c>).
+        /// is the classic speedrun layout (<c>MM:SS.mmm</c> / <c>H:MM:SS.mmm</c>,
+        /// milliseconds always shown); true is the frame layout
+        /// (<c>MM:SSfFF</c> / <c>H:MM:SSfFF</c>).
         /// </summary>
         public static string Format(double seconds, bool frames)
         {
@@ -168,6 +170,8 @@ namespace HSRTimer
                 return sb.ToString();
             }
             // Total hours/minutes/seconds, then milliseconds from the fraction.
+            // The millisecond field is appended in every branch: hour-length runs
+            // render as H:MM:SS.mmm, mirroring the frame layout's H:MM:SSfFF.
             int totalMs = (int)((seconds - (int)seconds) * 1000 + 0.5);
             if (totalMs >= 1000) { seconds += 1; totalMs -= 1000; }
             int totalSeconds = (int)seconds;
@@ -177,7 +181,8 @@ namespace HSRTimer
             if (hh > 0)
                 sb.Append(hh).Append(':').Append(Two(mm)).Append(':').Append(Two(ss));
             else
-                sb.Append(Two(mm)).Append(':').Append(Two(ss)).Append('.').Append(Three(totalMs));
+                sb.Append(Two(mm)).Append(':').Append(Two(ss));
+            sb.Append('.').Append(Three(totalMs));
             return sb.ToString();
         }
 

@@ -128,7 +128,7 @@ hsr status                          # frameTiming=on frameTimingLocked=off
 hsr locks                           # ForceFrameTiming locked=on/off + 提示
 hsr clock                           # frameTiming=on framesPerSecond=60;playableTicks
 hsr clock format 59.999             # 进位:  normal=00:59.999   frames=01:00f00
-hsr clock format 3661.5             # 小时:  normal=1:01:01     frames=1:01:01f30
+hsr clock format 3661.5             # 小时:  normal=1:01:01.500 frames=1:01:01f30
 hsr clock format 75.5               # 起身:  wakeUpFrames=75f30(不显示分钟/小时)
 hsr set force_frame_timing false    # 整局运行中被拒绝
 ```
@@ -396,7 +396,7 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr clock` 显示整数 tick,且 `hsr clock history` 对重复的相同操作记录到一致的 `dur=`(R1.11)。
 - [ ] `hsr clock history` 显示 `pass` 行(`Game.Fall` 通关检测)携带终点 tick,`zone` 标记 `Game.EnterPassZone`,`end` 关闭分段;重复的相同操作记录到一致的 `dur=`(R1.11.8)。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
-- [ ] `hsr clock format 59.999` 输出 `frames=01:00f00`(进位),`hsr clock format 3661.5` 输出 `frames=1:01:01f30`(小时分支)(R2.6)。
+- [ ] `hsr clock format 59.999` 输出 `frames=01:00f00`(进位),`hsr clock format 3661.5` 输出 `frames=1:01:01f30` 且 `normal=1:01:01.500`(小时分支在经典布局下仍保留毫秒)(R2.6/R2.6.5)。
 - [ ] 在菜单中 `hsr set force_frame_timing true` 后,游戏时间 HUD 行变为 `MM:SSfFF`、起身时间变为 `SSfFF`,而现实时间行仍为 `MM:SS.mmm`,`hsr status` 报告 `frameTiming=on`,`hsr locks` 报告锁定状态(R1.12)。
 - [ ] 整局运行期间 `hsr set force_frame_timing` 被拒绝,面板开关禁用并显示提示;本局结束(或重置)后可修改(R1.12.3)。
 - [ ] 开启帧计时后暂停,游戏时间行冻结而现实时间继续前进(R1.12.2)。

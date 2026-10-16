@@ -167,7 +167,7 @@ hsr status                          # frameTiming=on frameTimingLocked=off
 hsr locks                           # ForceFrameTiming locked=on/off + reason
 hsr clock                           # frameTiming=on framesPerSecond=60; playableTicks
 hsr clock format 59.999             # carry:  normal=00:59.999   frames=01:00f00
-hsr clock format 3661.5             # hour:   normal=1:01:01     frames=1:01:01f30
+hsr clock format 3661.5             # hour:   normal=1:01:01.500 frames=1:01:01f30
 hsr clock format 75.5               # wake-up frames=75f30 (no minutes/hours)
 hsr set force_frame_timing false    # refused while a run is in progress
 ```
@@ -537,7 +537,7 @@ Notes:
 - [ ] `hsr clock` shows integer ticks and `hsr clock history` records identical `dur=` for repeated identical runs (R1.11).
 - [ ] `hsr clock history` shows the `pass` line (the `Game.Fall` pass detection) carrying the end tick, with `zone` marking `Game.EnterPassZone` and `end` closing the segment; repeated identical runs record identical `dur=` (R1.11.8).
 - [ ] `hsr retry` reloads the current level (or the configured override).
-- [ ] `hsr clock format 59.999` prints `frames=01:00f00` (rounding carry) and `hsr clock format 3661.5` prints `frames=1:01:01f30` (hour branch) (R2.6).
+- [ ] `hsr clock format 59.999` prints `frames=01:00f00` (rounding carry) and `hsr clock format 3661.5` prints `frames=1:01:01f30` plus `normal=1:01:01.500` (hour branch keeps the millisecond field in the classic layout) (R2.6/R2.6.5).
 - [ ] `hsr set force_frame_timing true` at the menu flips the game-time HUD rows to `MM:SSfFF` / wake-up `SSfFF` while Real Time rows keep `MM:SS.mmm`, `hsr status` reports `frameTiming=on`, and `hsr locks` reports the lock state (R1.12).
 - [ ] While a run is in progress, `hsr set force_frame_timing` is refused and the panel toggle is disabled with the hint; after the run ends (or a reset) it succeeds (R1.12.3).
 - [ ] With frame timing on, pausing freezes the game-time rows while Real Time keeps advancing (R1.12.2).

@@ -60,6 +60,16 @@ row), and empty columns are simply hidden.
 > rewritten in the `[column.N]` format on the next save; nothing is migrated
 > or auto-modified at boot anymore.
 
+## Time format
+
+Every timer row (game-time rows, **Real Time** and **Prev RT**) uses the classic
+speedrun layout by default: `MM:SS.mmm` (e.g. `00:11.250`) under one hour and
+`H:MM:SS.mmm` (e.g. `1:01:01.500`) at or over one hour — the millisecond field
+is always shown, including hour-length runs. Under [Force frame
+timing](#force-frame-timing) the same rows switch to the frame layout
+(`MM:SSfFF` / `H:MM:SSfFF`); **Wake Up Time** is `SS:mmm` either way and never
+shows minutes/hours.
+
 ## Wake Up Time
 
 **Wake Up Time** is a regular HUD row (defaults below `LastRun` in the third
