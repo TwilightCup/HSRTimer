@@ -13,6 +13,7 @@
 ```ini
 [settings]
 auto_reset = true
+force_frame_timing = false
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
 retry_level_override_enabled = false
@@ -29,6 +30,7 @@ menu_key = Home
 | 键 | 取值 | 默认 | 说明 |
 |----|------|------|------|
 | `auto_reset` | true/false | true | R1.7.2 —— 退出到菜单 / 大厅时清零实时计时器与上一段快照,并保留上一局总时间 |
+| `force_frame_timing` | true/false | false | R1.12 —— 把所有**游戏时间**值显示为整数物理帧计数(`MM:SSfFF`、`H:MM:SSfFF`、起身时间 `SSfFF`、差值 `±MM:SSfFF`,见 [HUD.md](HUD.md)),并禁用暂停墙钟补时,使游戏时间仅随物理帧前进、暂停期间冻结。**现实时间与上关RT不受影响**:它们继续按墙钟累计并保持毫秒格式 `MM:SS.mmm`。subsegment / marker 的持久化时间仍为毫秒(R1.12.4)。整局运行中锁定:面板开关禁用并显示提示,`hsr set force_frame_timing` 被拒绝,直到本局结束(通关、返回菜单 / 大厅或重置)。开关位于 **常规 → 计时** 顶部。 |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 —— 在关卡内**暂停菜单**点击"重新开始"时清除可原谅的有效性标记(计时器继续计时,不重置)。一键重试则无条件清除(固定行为);整局重置会清除全部标记。 |
 | `retry_min_dwell` | 秒(≥0) | 0.5 | R6 重试时在空场景强制停留的最短时间,从按下重试键开始计。若关卡重载快于该值,则在空场景内等待到该时间后再重载;`0` 表示不强制停留。 |
 | `retry_level_override_enabled` | true/false | false | R6.5 —— 使用固定的重试关卡,而不是当前关卡 / 从菜单进入的战役起点关。关闭时保持现有的一键重试行为。 |
@@ -41,7 +43,7 @@ menu_key = Home
 | `retry_key` | KeyCode | R | 重试关卡键 |
 | `menu_key` | KeyCode | Home | 打开/关闭设置面板键 |
 
-> **暂停 / 菜单行为为固定行为**:暂停期间始终计时,菜单 / 大厅期间始终不计时。不存在 `count_in_pause` 或 `count_in_menu` 设置。
+> **暂停 / 菜单行为为固定行为**:暂停期间始终计时,菜单 / 大厅期间始终不计时。不存在 `count_in_pause` 或 `count_in_menu` 设置。唯一例外是 `force_frame_timing`(R1.12):开启后暂停时间完全不计入(游戏时间只随物理帧前进,暂停期间冻结)。
 
 > **作弊 / 变速 / 漂移检测(R5.1)始终开启,阈值为硬编码,刻意不可配置** —— `settings.ini` 中没有 `drift_tolerance` 或任何其他反作弊选项。
 

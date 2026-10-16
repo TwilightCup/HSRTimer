@@ -2,7 +2,7 @@
 
 > **中文版**: [zh/EXTENDING.md](zh/EXTENDING.md)
 
-HSRTimer exposes two extension points for other BepInEx plugins:
+HSRTimer exposes three extension points for other BepInEx plugins:
 
 - **Custom tag rules** (R3.7) — new validity logic that users opt into by
   enabling the tag id in the settings panel (persisted to `tags.ini`).
@@ -10,8 +10,11 @@ HSRTimer exposes two extension points for other BepInEx plugins:
   extra tab in HSRTimer's settings panel (one tab per plugin). Tabs can
   optionally follow HSRTimer's language selection (R9.2) and save their own
   config on HSRTimer's `SettingsSaved` event (R9.3).
+- **Setting locks** (R1.12.3) — register a setting that must not be changed
+  while a predicate holds; HSRTimer's panel and `hsr set` then refuse it
+  generically.
 
-Both are covered below.
+All three are covered below.
 
 ## Custom tag rules
 
@@ -338,6 +341,37 @@ Contract:
   particular panel tab is currently visible.
 - Unsubscribe in your plugin's `OnDestroy` if your plugin can be unloaded, so a
   stale delegate does not keep your object alive.
+
+## Registering a locked setting
+
+`SettingsLocks` (R1.12.3) is a small public registry for options that must not be
+changed while a condition holds — for example HSRTimer's own **Force frame
+timing** option, which is locked for the whole run in progress. Registering a
+setting makes both of HSRTimer's mutating surfaces honour the lock generically:
+
+```csharp
+SettingsLocks.Register(nameof(SettingsModel.SomeOption), () => TimerCore.IsRunInProgress,
+    "MY_SETTINGS_SOME_OPTION_LOCKED");
+```
+
+- **Key** — the public `SettingsModel` field name (use `nameof`); lookups are
+  case-insensitive. Re-registering the same field replaces the entry, so repeated
+  wiring is safe.
+- **Predicate** — evaluated live by the panel and the console. HSRTimer's shared
+  whole-run window is `TimerCore.IsRunInProgress`; any predicate is allowed.
+  If the predicate throws, the setting is treated as unlocked (HSRTimer logs a
+  warning) so a bug cannot break the panel or console.
+- **Hint key** — a localization key in your own language files; it is shown under
+  the disabled toggle and included in the console refusal message.
+
+Effects, with no further work from your plugin:
+
+- HSRTimer's settings panel draws a registered toggle disabled and shows the hint
+  (that path is only used for HSRTimer's own options; your tab can query
+  `SettingsLocks.IsLocked(fieldName)` and disable its own widget the same way).
+- `hsr set <key> <value>` is refused while the predicate holds.
+- `hsr locks` lists every registered lock with its live state and hint, which is
+  also the quickest way to test your registration from the game console.
 
 See [LOCALIZATION.md](LOCALIZATION.md) for the full file format,
 [CATEGORIES.md](CATEGORIES.md) for the built-in tags and

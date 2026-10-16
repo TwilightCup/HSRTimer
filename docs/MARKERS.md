@@ -140,6 +140,10 @@ In Markers mode:
   to that marker's PB (`+MM:SS.mmm` / `-MM:SS.mmm`), chosen by
   `markers_time_mode` in `layout.ini` `[leaderboard]` (default `Relative`).
   Without a PB entry, the relative row shows `--`.
+  With **Force frame timing** on (R1.12) the millisecond field becomes a
+  two-digit frame count (`MM:SSfFF` / `±MM:SSfFF`, see
+  [HUD.md](HUD.md#force-frame-timing)); the PB comparison itself stays in
+  milliseconds and the stored `t_ms` values are unchanged.
 - **Newest trigger is inserted directly under the title row**; older rows shift
   down (no re-sorting, no truncation).
 - The faster/slower/tie colors always apply: faster than PB = green, slower =

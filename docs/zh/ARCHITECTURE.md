@@ -65,6 +65,7 @@ Hud/
 Config/
   ConfigService.cs        门面
   PersistenceService.cs   容错 INI 读写
+  SettingsLocks.cs        可复用的"满足条件时锁定某设置"注册表(R1.12.3)
   SettingsModel.cs, EnabledTagsModel.cs, LayoutModel.cs
 Subsegment/
   SubsegmentModels.cs     采样/元数据/参考项/检测平面数据类型
@@ -98,15 +99,17 @@ LcIntegration.cs          可选的 LevelCollections 软集成
 
 `Update`(每渲染帧)负责:作弊码检查、**暂停补回**(因 `timeScale=0` 会使 `FixedUpdate` 停止,故在 `Paused` 期间 `PauseAccum += unscaledDeltaTime`),以及按键处理。
 
-暂停期间始终计时,菜单 / 大厅期间始终不计时。关卡加载屏(`LoadingLevel`)与客户端等待主机间隙(`ClientWaitServerLoad`)**始终不计入**。
+暂停期间始终计时,菜单 / 大厅期间始终不计时。关卡加载屏(`LoadingLevel`)与客户端等待主机间隙(`ClientWaitServerLoad`)**始终不计入**。唯一例外是**强制帧计时**(R1.12):开启后完全跳过暂停补回,游戏时间只随物理帧前进,暂停期间冻结。
 
 ### 纯 tick 时钟与精确边界(R1.11)
 
 引擎的游戏时钟是**整数物理帧 tick 计数器**,而非 `double` 秒累加器:
 
 - `RunState.PlayableTicks`(`ulong`)统计可游玩 `FixedUpdate` 帧数。所有分段快照(`SegmentStartTicks`、`LastSegmentTicks`、`TotalAtLastSegmentTicks`、`LastRunTicks`、`WakeUpTicks`)都是整数 tick。唯一例外是"上关RT"快照(`RunState.RealTimeAtLastSegment`):它定格的是墙钟 `RunState.RealTime`(本身就是秒),而非 tick。分段时间即纯整数差 `PlayableTicks - SegmentStartTicks`。
-- `RunState.PauseAccum`(`double`)是唯一非 tick 分量:暂停会停止 `FixedUpdate`,因此它按墙钟 `unscaledDeltaTime` 累计(R1.8.3)。
-- `Core/GameClock.cs` 是**唯一**读取 `Time.fixedDeltaTime` 的地方。它以一次乘法完成 tick→秒换算(`Seconds(ticks, pauseAccum)`),因此同一 tick 数永远得到同一秒值(无逐帧浮点累积漂移)。所有显示与持久化(HUD 行、`t_ms`、PB 比较)都经它换算;引擎每 tick 还会回填 `RunState.GameTimeSeconds` 缓存供只读消费方使用。
+- `RunState.PauseAccum`(`double`)是唯一非 tick 分量:暂停会停止 `FixedUpdate`,因此它按墙钟 `unscaledDeltaTime` 累计(R1.8.3)。开启**强制帧计时**(R1.12)时,`TimerCore.Update` 会完全跳过该补时,于是 `PauseAccum` 恒为 `0`,游戏时间只随物理帧前进(暂停期间冻结)。
+- `Core/GameClock.cs` 是**唯一**读取 `Time.fixedDeltaTime` 的地方。它以一次乘法完成 tick→秒换算(`Seconds(ticks, pauseAccum)`),因此同一 tick 数永远得到同一秒值(无逐帧浮点累积漂移)。所有显示与持久化(HUD 行、`t_ms`、PB 比较)都经它换算;引擎每 tick 还会回填 `RunState.GameTimeSeconds` 缓存供只读消费方使用。帧计时显示模式所用的帧域换算也归它所有(`FramesPerSecond = 60`、`ToFrames`、`MsToFrames`):游戏固定步进为 60 Hz,故一 tick = 一帧,帧计时的持久化值写作 `ToMs(ticks / 60) == frames × 1000 / 60`。
+
+**设置锁定(R1.12.3)。** `Config/SettingsLocks.cs` 是一个很小且无依赖的注册表:`SettingsModel` 字段名 → 锁定谓词 + 本地化键。`Plugin.Awake` 用共享的 `TimerCore.IsRunInProgress` 窗口(`RunState.RealTimeActive`)登记"强制帧计时"。两个通用消费方在完全不知道具体选项的情况下执行它:`SettingsPanel.LockedToggle` 在谓词为真时把已登记的开关画成禁用并显示提示,`ConsoleCommands.CmdSet` 拒绝已登记字段的 `hsr set`(`hsr locks` 列出注册表)。因此以后新增"整局运行中不可切换"的选项只需一次 `SettingsLocks.Register` 加一处 `LockedToggle` 调用,无需再写针对单个选项的守卫;谓词抛异常时按未锁定处理。
 
 **为什么需要边界 hook。** 分段的两个边界都是轮询只能晚一帧观察到的 `Game.state` 翻转,因此 `Patches/TimingBoundaryPatches.cs` 在权威赋值处精确记录 tick:
 
@@ -125,7 +128,7 @@ LcIntegration.cs          可选的 LevelCollections 软集成
 
 ### 现实时间计时器(R1.10)
 
-与 tick 游戏时钟分开,`RunState.RealTime` 是墙钟计时器:它在整个运行的第一个可玩分段开始时启动,只要 `RunState.RealTimeActive` 为真,就在 `TimerCore.Update` 中用 `Time.unscaledDeltaTime` 累计。由于它不受 `PlayingLevel` 门槛限制,因此能穿过 `LoadingLevel` 加载屏与暂停继续前进。它在 `TimerCore.EndSegment` 记录整局完成(R1.6)的同一时刻停表并定格;当本局退出到菜单/大厅(重试除外)时也会停止,避免在空闲界面里暗中累计。整局重置与一键重试会把它与活动游戏计时器一并清零。HUD 行显示在用户放置它的列中(默认在 `[column.2]` 的“游戏总时间”下方),但无论是否显示,时钟都保持后台活跃。
+与 tick 游戏时钟分开,`RunState.RealTime` 是墙钟计时器:它在整个运行的第一个可玩分段开始时启动,只要 `RunState.RealTimeActive` 为真,就在 `TimerCore.Update` 中用 `Time.unscaledDeltaTime` 累计。由于它不受 `PlayingLevel` 门槛限制,因此能穿过 `LoadingLevel` 加载屏与暂停继续前进。它在 `TimerCore.EndSegment` 记录整局完成(R1.6)的同一时刻停表并定格;当本局退出到菜单/大厅(重试除外)时也会停止,避免在空闲界面里暗中累计。整局重置与一键重试会把它与活动游戏计时器一并清零。HUD 行显示在用户放置它的列中(默认在 `[column.2]` 的“游戏总时间”下方),但无论是否显示,时钟都保持后台活跃。现实时间刻意排除在帧计时显示之外(R2.6.4):`RealTime`、`PrevRt` 与 `{realtime}` 始终使用经典 `MM:SS.mmm` 格式,只有游戏时间行切换为帧格式。
 
 **上关RT(`RunState.RealTimeAtLastSegment`)** 是 `TotalAtLastSegment` 的现实时间对应物:`RunState.EndSegment` 仅在分段 `completed` 时,把当前的 `RealTime` 值定格进 `RealTimeAtLastSegment`,于是 HUD 行显示上一关结束时整局累计的现实时间(R1.10.7)。它与 `TotalAtLastSegmentTicks` 走相同的清零路径(自动重置、从菜单开始新局、手动重置),重试保留。默认显示在第二列 `RealTime` 正下方的行。
 

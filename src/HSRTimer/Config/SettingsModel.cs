@@ -14,6 +14,13 @@ namespace HSRTimer
         // Pause time is always counted and menu/lobby time is never counted;
         // those are no longer user settings. The segment always ends at the
         // Game.Fall pass detection (R1.4.2) — there is no alternative standard.
+        // R1.12: force frame timing (default off). When on, all HUD times render
+        // as 60-frames-per-second frame counts (MM:SSfFF) and the wall-clock
+        // pause supplement is disabled so game time only follows physics frames.
+        // The option selects the time unit / pause behavior, so it is locked for
+        // the whole run in progress (SettingsLocks + TimerCore.IsRunInProgress).
+        public bool ForceFrameTiming = false;
+
         public bool AutoReset = true;             // R1.7.2 (default on)
         public bool RestartClearsForgivable = false; // R5.4.3 — pause-menu Restart clears forgivable flags (default off); the one-key retry always clears them (R5.4.2, fixed)
         public float RetryMinDwell = 0.5f;        // R6 minimum empty-scene dwell (seconds)
@@ -136,6 +143,7 @@ namespace HSRTimer
                 switch (key)
                 {
                     case "auto_reset": AutoReset = ParseBool(value, AutoReset); break;
+                    case "force_frame_timing": ForceFrameTiming = ParseBool(value, ForceFrameTiming); break;
                     case "restart_clears_forgivable": RestartClearsForgivable = ParseBool(value, RestartClearsForgivable); break;
                     case "retry_min_dwell": RetryMinDwell = ParseFloat(value, RetryMinDwell); break;
                     case "retry_level_override_enabled": RetryLevelOverrideEnable = ParseBool(value, RetryLevelOverrideEnable); break;
@@ -258,6 +266,7 @@ namespace HSRTimer
             var kv = new Dictionary<string, string>
             {
                 ["auto_reset"] = AutoReset ? "true" : "false",
+                ["force_frame_timing"] = ForceFrameTiming ? "true" : "false",
                 ["restart_clears_forgivable"] = RestartClearsForgivable ? "true" : "false",
                 ["retry_min_dwell"] = RetryMinDwell.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                 ["retry_level_override_enabled"] = RetryLevelOverrideEnable ? "true" : "false",

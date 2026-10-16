@@ -406,6 +406,14 @@ namespace HSRTimer
         private void DrawGeneral(ConfigService cfg, SettingsModel s, LocalizationService loc)
         {
             Section(loc.Get("PANEL_TIMING"));
+            // Top of the timing section: the time-unit / pause-behavior option
+            // (R1.12). It is registered as a locked setting (SettingsLocks,
+            // R1.12.3), so the generic LockedToggle disables it and shows the
+            // registry's hint for the whole run in progress.
+            s.ForceFrameTiming = LockedToggle(
+                nameof(SettingsModel.ForceFrameTiming),
+                "SETTINGS_FORCE_FRAME_TIMING",
+                s.ForceFrameTiming, loc);
             s.AutoReset = Toggle(loc.Get("SETTINGS_AUTO_RESET"), s.AutoReset);
             s.RestartClearsForgivable = Toggle(loc.Get("SETTINGS_RESTART_CLEARS_FORGIVABLE"), s.RestartClearsForgivable);
             // Free-form input (clamped ≥0 on apply); the slider's 5s cap was
@@ -936,6 +944,31 @@ namespace HSRTimer
         private bool Toggle(string label, bool value)
         {
             return GUILayout.Toggle(value, label, _toggle);
+        }
+
+        /// <summary>
+        /// A toggle for a setting registered with <see cref="SettingsLocks"/>
+        /// (R1.12.3): while the registry's predicate holds, the toggle is drawn
+        /// disabled and the entry's localized hint is shown under it. Settings
+        /// that are not registered behave exactly like <see cref="Toggle"/>.
+        /// This is the single panel-side implementation for every locked
+        /// option, so a future locked setting only needs a
+        /// <c>SettingsLocks.Register</c> call and a <c>LockedToggle</c> call
+        /// site.
+        /// </summary>
+        private bool LockedToggle(string fieldName, string labelKey, bool value, LocalizationService loc)
+        {
+            if (!SettingsLocks.TryGet(fieldName, out var entry))
+                return Toggle(loc.Get(labelKey), value);
+
+            bool locked = SettingsLocks.IsLocked(fieldName);
+            bool prevEnabled = GUI.enabled;
+            GUI.enabled = prevEnabled && !locked;
+            bool next = Toggle(loc.Get(labelKey), value);
+            GUI.enabled = prevEnabled;
+            if (locked)
+                GUILayout.Label(loc.Get(entry.HintKey), _small);
+            return next;
         }
 
         private float SliderRow(string label, float value, float min, float max)

@@ -70,76 +70,168 @@ namespace HSRTimer
     /// <summary>
     /// Formats durations for the HUD. Speedrun-style: HH:MM:SS for >= 1 hour,
     /// MM:SS.mmm otherwise. Negative or unset values render as "--:--".
+    /// <para>
+    /// With <see cref="FrameTiming"/> on (the "Force frame timing" option,
+    /// R1.12/R2.6) every duration renders as an integer physics-frame count with
+    /// 60 frames carrying into one second: <c>MM:SSfFF</c>, <c>H:MM:SSfFF</c>
+    /// (>= 1 hour), <c>SSfFF</c> for the wake-up row and <c>±MM:SSfFF</c> for a
+    /// signed diff. The <c>f</c> separator is a literal character, never
+    /// translated. Persisted values stay in milliseconds; a millisecond diff is
+    /// converted to frames here for display only. Every method has an explicit
+    /// <c>frames</c> overload so a caller (or the dev console) can render both
+    /// representations regardless of the live setting. Wall-clock values
+    /// (Real Time / Prev RT / the <c>{realtime}</c> template variable) are
+    /// deliberately rendered with <c>frames: false</c> even under frame timing
+    /// (R2.6.4) — only game-time values switch to frames.
+    /// </para>
     /// </summary>
     public static class TimeFormatter
     {
         /// <summary>
+        /// Live "Force frame timing" display mode (R1.12/R2.6): every displayed
+        /// time renders as a frame count while the setting is on. Read from the
+        /// live config so a panel/console toggle applies to the next drawn frame
+        /// without any call-site change.
+        /// </summary>
+        public static bool FrameTiming
+            => ConfigService.Instance != null
+               && ConfigService.Instance.Settings != null
+               && ConfigService.Instance.Settings.ForceFrameTiming;
+
+        /// <summary>
         /// Format a short per-level duration as SS:mmm (seconds and milliseconds
-        /// only, no minute/hour breakdown). Used for the Wake Up Time display.
+        /// only, no minute/hour breakdown) or SSfFF under frame timing. Used for
+        /// the Wake Up Time display.
         /// </summary>
         public static string FormatWakeUp(double? secondsNullable)
+            => FormatWakeUp(secondsNullable, FrameTiming);
+
+        /// <summary>Wake Up Time layout for an explicit mode (see <see cref="FormatWakeUp(double?)"/>).</summary>
+        public static string FormatWakeUp(double? secondsNullable, bool frames)
         {
             if (!secondsNullable.HasValue || secondsNullable.Value < 0d)
                 return "--:--";
             double seconds = secondsNullable.Value;
+            if (frames)
+            {
+                long totalFrames = FrameCount(seconds);
+                long totalSeconds = totalFrames / GameClock.FramesPerSecond;
+                long framePart = totalFrames % GameClock.FramesPerSecond;
+                return totalSeconds.ToString("D2", CultureInfo.InvariantCulture)
+                    + "f" + Two((int)framePart);
+            }
             int totalMs = (int)((seconds - (int)seconds) * 1000 + 0.5);
             if (totalMs >= 1000) { seconds += 1; totalMs -= 1000; }
-            int totalSeconds = (int)seconds;
-            return totalSeconds.ToString("D2", CultureInfo.InvariantCulture)
+            int secondsPart = (int)seconds;
+            return secondsPart.ToString("D2", CultureInfo.InvariantCulture)
                 + ":" + Three(totalMs);
         }
 
         public static string Format(double? secondsNullable)
+            => Format(secondsNullable, FrameTiming);
+
+        /// <summary>Nullable layout for an explicit mode (see <see cref="Format(double, bool)"/>).</summary>
+        public static string Format(double? secondsNullable, bool frames)
         {
             if (!secondsNullable.HasValue || secondsNullable.Value < 0d)
                 return "--:--";
-            return Format(secondsNullable.Value);
+            return Format(secondsNullable.Value, frames);
         }
 
         public static string Format(double seconds)
+            => Format(seconds, FrameTiming);
+
+        /// <summary>
+        /// Format a duration for an explicit mode. <paramref name="frames"/> false
+        /// is the classic speedrun layout (<c>MM:SS.mmm</c> / <c>H:MM:SS</c>);
+        /// true is the frame layout (<c>MM:SSfFF</c> / <c>H:MM:SSfFF</c>).
+        /// </summary>
+        public static string Format(double seconds, bool frames)
         {
             if (seconds < 0d) seconds = 0d;
+            var sb = new StringBuilder();
+            if (frames)
+            {
+                // Total frames first, then carry: a fraction that rounds up to a
+                // whole second must roll over instead of rendering "SSf60".
+                long totalFrames = FrameCount(seconds);
+                int framePart = (int)(totalFrames % GameClock.FramesPerSecond);
+                long total = totalFrames / GameClock.FramesPerSecond;
+                long h = total / 3600;
+                long m = (total % 3600) / 60;
+                long s = total % 60;
+                if (h > 0)
+                    sb.Append(h).Append(':').Append(Two((int)m)).Append(':').Append(Two((int)s));
+                else
+                    sb.Append(Two((int)m)).Append(':').Append(Two((int)s));
+                sb.Append('f').Append(Two(framePart));
+                return sb.ToString();
+            }
             // Total hours/minutes/seconds, then milliseconds from the fraction.
             int totalMs = (int)((seconds - (int)seconds) * 1000 + 0.5);
             if (totalMs >= 1000) { seconds += 1; totalMs -= 1000; }
-            int total = (int)seconds;
-            int h = total / 3600;
-            int m = (total % 3600) / 60;
-            int s = total % 60;
-            var sb = new StringBuilder();
-            if (h > 0)
-                sb.Append(h).Append(':').Append(Two(m)).Append(':').Append(Two(s));
+            int totalSeconds = (int)seconds;
+            int hh = totalSeconds / 3600;
+            int mm = (totalSeconds % 3600) / 60;
+            int ss = totalSeconds % 60;
+            if (hh > 0)
+                sb.Append(hh).Append(':').Append(Two(mm)).Append(':').Append(Two(ss));
             else
-                sb.Append(Two(m)).Append(':').Append(Two(s)).Append('.').Append(Three(totalMs));
+                sb.Append(Two(mm)).Append(':').Append(Two(ss)).Append('.').Append(Three(totalMs));
             return sb.ToString();
         }
 
         /// <summary>
         /// Format a signed millisecond diff as <c>+MM:SS.mmm</c> / <c>-MM:SS.mmm</c>
-        /// (R8.5.2.2, R10.7.3). Null or zero renders as <c>--</c>.
+        /// (R8.5.2.2, R10.7.3) or <c>±MM:SSfFF</c> under frame timing. Null or
+        /// zero renders as <c>--</c>; the sign and the caller's color always
+        /// follow the millisecond value, so a diff below half a frame still shows
+        /// the correct direction.
         /// </summary>
         public static string FormatSignedDiff(long? diffMs)
+            => FormatSignedDiff(diffMs, FrameTiming);
+
+        /// <summary>Signed-diff layout for an explicit mode (see <see cref="FormatSignedDiff(long?)"/>).</summary>
+        public static string FormatSignedDiff(long? diffMs, bool frames)
         {
             if (!diffMs.HasValue || diffMs.Value == 0)
                 return "--";
             long d = diffMs.Value;
             char sign = d < 0 ? '-' : d > 0 ? '+' : ' ';
             long abs = d < 0 ? -d : d;
-            long totalSeconds = abs / 1000L;
-            long ms = abs % 1000L;
+            long totalSeconds;
+            long fraction;
+            if (frames)
+            {
+                long totalFrames = GameClock.MsToFrames(abs);
+                totalSeconds = totalFrames / GameClock.FramesPerSecond;
+                fraction = totalFrames % GameClock.FramesPerSecond;
+            }
+            else
+            {
+                totalSeconds = abs / 1000L;
+                fraction = abs % 1000L;
+            }
             long minutes = totalSeconds / 60L;
             long seconds = totalSeconds % 60L;
             var sb = new StringBuilder();
-            if (sign != ' ')
-                sb.Append(sign);
-            else
-                sb.Append(' ');
+            // A true zero returned above, so the sign is always '+' or '-'.
+            sb.Append(sign == ' ' ? ' ' : sign);
             sb.Append(minutes.ToString("D2", CultureInfo.InvariantCulture));
             sb.Append(':');
             sb.Append(seconds.ToString("D2", CultureInfo.InvariantCulture));
-            sb.Append('.');
-            sb.Append(ms.ToString("D3", CultureInfo.InvariantCulture));
+            sb.Append(frames ? 'f' : '.');
+            sb.Append(frames
+                ? ((int)fraction).ToString("D2", CultureInfo.InvariantCulture)
+                : ((int)fraction).ToString("D3", CultureInfo.InvariantCulture));
             return sb.ToString();
+        }
+
+        /// <summary>Non-negative integer frame count for a duration.</summary>
+        private static long FrameCount(double seconds)
+        {
+            long frames = GameClock.ToFrames(seconds);
+            return frames < 0L ? 0L : frames;
         }
 
         private static string Two(int v) => v.ToString("D2", CultureInfo.InvariantCulture);

@@ -19,7 +19,7 @@ Each row renders one value:
 | `TotalAtLastSegment` | Run total frozen at the moment the last segment completed |
 | `LastSegment` | Duration of the last completed level |
 | `LastRun` | Total time of the last complete run — a regular row like any other (defaults into the third column), shown only while idle (hidden once a new run starts timing) |
-| `WakeUpTime` | **Wake Up Time** (defaults into the third column below `LastRun`): time from the most recent wake-up-relevant moment to the first time the local player leaves the soft/spawn state, formatted `SS:mmm` |
+| `WakeUpTime` | **Wake Up Time** (defaults into the third column below `LastRun`): time from the most recent wake-up-relevant moment to the first time the local player leaves the soft/spawn state, formatted `SS:mmm` (or `SSfFF` with [Force frame timing](#force-frame-timing) on — neither shows minutes/hours) |
 | `CurrentState` | The engine's detected game state (debug) |
 
 ## Columns
@@ -79,9 +79,10 @@ loads / level restarts do not reset the value. The value is cleared when the
 level is passed or exited.
 
 The value is formatted as `SS:mmm` (seconds and milliseconds, no minute/hour
-breakdown) and shows `--:--` before the first measurement of a level. Show or
-hide the row by toggling it in a column via the panel's **Interface → Timer
-HUD** column editor (or editing `layout.ini` directly).
+breakdown; `SSfFF` under [Force frame timing](#force-frame-timing), also with no
+minute/hour breakdown) and shows `--:--` before the first measurement of a
+level. Show or hide the row by toggling it in a column via the panel's
+**Interface → Timer HUD** column editor (or editing `layout.ini` directly).
 
 ## Real Time clock
 
@@ -97,6 +98,10 @@ appears in your chosen position, or remove it entirely — the clock keeps
 running in the background either way. Show or hide the row by toggling it in a
 column via the panel's **Interface → Timer HUD** column editor.
 
+Real Time is unaffected by the **Force frame timing** option: it keeps counting
+wall-clock time through pauses and keeps its `MM:SS.mmm` display, while the
+game-time rows switch to frames (see [Force frame timing](#force-frame-timing)).
+
 **Prev RT (`PrevRt`)** shows the Real Time clock value frozen at the moment the
 previous level completed (the same moment `TotalAtLastSegment` freezes the game
 time, R1.4.1). Like that row it is a cumulative snapshot of the whole run at
@@ -105,6 +110,48 @@ across the run and updates once per completed level. It is `--:--` before the
 first level is completed and is cleared by the same resets that clear
 `TotalAtLastSegment` (auto-reset, a new run from the menu, and the manual reset;
 a one-key retry keeps it).
+
+## Force frame timing
+
+The **Force frame timing** option (settings panel **General → Timing**, config
+key `force_frame_timing`, R1.12) switches the **game-time** rows from
+milliseconds to an integer physics-frame count. The game runs its physics step at
+**60 Hz**, so **60 frames = 1 second** and one frame is one `FixedUpdate` tick.
+
+While the option is on:
+
+| Row | Format |
+|---|---|
+| Any game-time row under one hour | `MM:SSfFF` — e.g. `00:11f25` |
+| Any game-time row of one hour or more | `H:MM:SSfFF` — e.g. `1:05:30f12` |
+| `WakeUpTime` | `SSfFF` — e.g. `75f30`; no minutes/hours, like `SS:mmm` |
+| Leaderboard signed diff / marker relative time | `+MM:SSfFF` / `-MM:SSfFF` |
+| `RealTime`, `PrevRt`, `{realtime}` | **unchanged** — still `MM:SS.mmm` (see below) |
+
+`f` is a literal separator (milliseconds become a two-digit frame count,
+`00`–`59`, carrying into one second at 60). Unset values keep their `--:--` /
+`--` sentinels. A diff whose sign comes from milliseconds keeps that sign and
+color even when it rounds to `+00:00f00`.
+
+The option also **disables the wall-clock pause supplement**: the game clock only
+advances on physics frames, so **game time freezes while paused** (R1.12.2).
+
+**Real Time is not affected.** `RealTime` and `PrevRt` are wall-clock values, not
+frame values: they keep accumulating with wall-clock time (through pauses and
+loading screens) and keep their millisecond display (`MM:SS.mmm`) — the same for
+the `{realtime}` custom-text variable. Frame timing only changes the game-time
+side (its display and the pause supplement).
+
+Persisted subsegment/marker times stay in **milliseconds** (R1.12.4): the frame
+count is converted through the same conversion facade (`ms = round(frames × 1000 /
+60)`), and PB comparison remains in the millisecond domain, so no data file
+changes shape. Values recorded before the option was enabled are re-rendered in
+the new unit without being migrated.
+
+The option is **locked for the whole run in progress**: the settings-panel toggle
+is disabled with a hint and `hsr set force_frame_timing` is refused until the run
+ends (complete it, return to the menu/lobby, or reset the run). At the menu —
+and after the run ends — it can be toggled freely.
 
 ## Colors & gradient
 

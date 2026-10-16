@@ -54,7 +54,9 @@ namespace HSRTimer
                 case "gametime":
                     return TimeFormatter.Format(gameTime);
                 case "realtime":
-                    return TimeFormatter.Format(realTime);
+                    // Real Time stays wall-clock and millisecond-formatted even
+                    // under "Force frame timing" (R1.12.4).
+                    return TimeFormatter.Format(realTime, frames: false);
                 case "collection":
                     return CollectionName(cfg);
                 case "category":

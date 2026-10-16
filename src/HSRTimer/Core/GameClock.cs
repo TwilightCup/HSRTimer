@@ -66,6 +66,27 @@ namespace HSRTimer
 
         public static long ToMs(double seconds) => (long)System.Math.Round(seconds * 1000.0);
 
+        // ── Frame domain (R1.12/R2.6) ─────────────────────────────────────
+        // The game's physics step is 60 Hz, so one tick is exactly one frame
+        // and 60 frames are one second. "Force frame timing" (R1.12) displays
+        // every duration as an integer frame count; persistence/comparison stay
+        // in milliseconds, converted through this same facade (a frame-derived
+        // duration is written as ToMs(ticks / 60) == frames × 1000 / 60).
+
+        /// <summary>Physics frames per second (the game runs the fixed step at 60 Hz).</summary>
+        public const int FramesPerSecond = 60;
+
+        /// <summary>Convert a duration in seconds to an integer frame count (display only).</summary>
+        public static long ToFrames(double seconds)
+            => (long)System.Math.Round(seconds * FramesPerSecond);
+
+        /// <summary>
+        /// Convert a persisted millisecond value to an integer frame count
+        /// (display only; e.g. a subsegment/marker PB time or a diff).
+        /// </summary>
+        public static long MsToFrames(long ms)
+            => (long)System.Math.Round(ms * (double)FramesPerSecond / 1000.0);
+
         // ── RunState snapshots, converted on demand (display/persistence) ──
 
         /// <summary>Total at the start of the current segment, in seconds.</summary>

@@ -28,10 +28,11 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 | `hsr` | 打印完整命令摘要 |
 | `hsr help [topic]` | 打印某个主题的帮助 |
 | `hsr status` | 输出计时器 / 配置 / HUD / 分段 / 标记 / LC 的实时状态 |
-| `hsr clock [status\|history [n]\|clear]` | 查看纯 tick 游戏时钟与分段边界(R1.11) |
+| `hsr clock [status\|history [n]\|clear\|format <seconds>]` | 查看纯 tick 游戏时钟、分段边界,以及某个时长的经典 / 帧格式(R1.11、R2.6) |
 | `hsr keys` | 列出所有可设置的 settings/layout 键 |
+| `hsr locks` | 列出已登记的设置锁定项及其实时状态(R1.12.3) |
 | `hsr get <key>` / `hsr get all` | 读取单个配置值,或全部配置值 |
-| `hsr set <key> <value>` | 设置并保存一个配置值 |
+| `hsr set <key> <value>` | 设置并保存一个配置值(已锁定的设置会被拒绝) |
 | `hsr reload` | 从磁盘重新读取所有配置文件与语言文件 |
 | `hsr save` | 保存当前内存中的配置 |
 | `hsr reset` | 整局重置(等同于重置键) |
@@ -56,7 +57,7 @@ HSRTimer 在插件加载时向游戏的 `Shell` 控制台注册了一套 `hsr ..
 
 命令使用 `SettingsModel` 与 `LayoutModel` 公共字段的 snake_case 形式。常见示例:
 
-- `auto_reset`、`restart_clears_forgivable`、`retry_min_dwell`
+- `auto_reset`、`force_frame_timing`、`restart_clears_forgivable`、`retry_min_dwell`
 - `retry_level_override_enabled`、`retry_level_override`
 - `show_hud`
 - `only_record_first_wake_up_time`、`center_loading_saving`、`language`
@@ -117,6 +118,27 @@ hsr pass real              # 传送到判定箱,让游戏自身完成过关
 `pass` 行是 `Game.Fall` 通关检测的 tick,携带锁存的终点 tick,`pass` **就是**终点 tick。`zone` 行标记 `Game.EnterPassZone`(它通常在 `Game.Fall` 之前就锁存 `LevelPassed`)。
 
 起点侧同理:`load` 是 `Game.AfterLoad` hook 帧(权威分段起点),紧随其后的 `start` 行是轮询消费该闩锁的结果。`start` 的 tick 等于 `load` 的 tick 而 `step=` 更大,即证明起点边界不再取决于轮询何时发现它。
+
+**强制帧计时(R1.12/R2.6)。** `force_frame_timing` 把显示的**游戏时间**行改为每秒 60 帧的帧计数,并禁用暂停墙钟补时。现实时间 / 上关RT 刻意排除在外。
+
+```text
+hsr set force_frame_timing true     # 仅允许在菜单中 / 本局结束后设置
+hsr get force_frame_timing          # true
+hsr status                          # frameTiming=on frameTimingLocked=off
+hsr locks                           # ForceFrameTiming locked=on/off + 提示
+hsr clock                           # frameTiming=on framesPerSecond=60;playableTicks
+hsr clock format 59.999             # 进位:  normal=00:59.999   frames=01:00f00
+hsr clock format 3661.5             # 小时:  normal=1:01:01     frames=1:01:01f30
+hsr clock format 75.5               # 起身:  wakeUpFrames=75f30(不显示分钟/小时)
+hsr set force_frame_timing false    # 整局运行中被拒绝
+```
+
+- 计时器 HUD 的游戏时间行显示 `MM:SSfFF`(≥ 1 小时为 `H:MM:SSfFF`);帧计时下帧数等于本局的 `playableTicks`。
+- `RealTime`、`PrevRt` 与 `{realtime}` 保持墙钟数值与 `MM:SS.mmm` 显示(R2.6.4)。
+- 起身时间显示 `SSfFF`,不显示分钟 / 小时。
+- 暂停时游戏时间行冻结(不增 tick),现实时间继续前进;恢复后从冻结的 tick 继续。
+- 整局运行期间,`hsr set force_frame_timing` 与面板开关都显示同一提示并拒绝修改,直到本局结束、返回菜单 / 大厅或重置本局。
+- subsegment / marker 的 PB 文件仍为毫秒(`t_ms` / `total_ms` 不变);记录的毫秒在 60 Hz 下等于帧计数(`round(frames × 1000 / 60)`),排行榜把这些值渲染为 `±MM:SSfFF`。
 
 ### 2. 有效性标记(R5)
 
@@ -374,6 +396,11 @@ hsr update base clear                         # 恢复真实仓库基地址
 - [ ] `hsr clock` 显示整数 tick,且 `hsr clock history` 对重复的相同操作记录到一致的 `dur=`(R1.11)。
 - [ ] `hsr clock history` 显示 `pass` 行(`Game.Fall` 通关检测)携带终点 tick,`zone` 标记 `Game.EnterPassZone`,`end` 关闭分段;重复的相同操作记录到一致的 `dur=`(R1.11.8)。
 - [ ] `hsr retry` 重载当前关卡(或配置的重定向目标)。
+- [ ] `hsr clock format 59.999` 输出 `frames=01:00f00`(进位),`hsr clock format 3661.5` 输出 `frames=1:01:01f30`(小时分支)(R2.6)。
+- [ ] 在菜单中 `hsr set force_frame_timing true` 后,游戏时间 HUD 行变为 `MM:SSfFF`、起身时间变为 `SSfFF`,而现实时间行仍为 `MM:SS.mmm`,`hsr status` 报告 `frameTiming=on`,`hsr locks` 报告锁定状态(R1.12)。
+- [ ] 整局运行期间 `hsr set force_frame_timing` 被拒绝,面板开关禁用并显示提示;本局结束(或重置)后可修改(R1.12.3)。
+- [ ] 开启帧计时后暂停,游戏时间行冻结而现实时间继续前进(R1.12.2)。
+- [ ] 帧计时下 `hsr pass` 记录的 subsegment/marker 毫秒值与 60 Hz 下的帧计数一致,排行榜以帧格式显示差值(R1.12.4/R2.6.3)。
 - [ ] `hsr pass` 完成当前关卡;`hsr status` 显示记录的分段、定格的 `prevRt`(该关结束时的现实时间)与(最后一关时)`lastRun`,且 subsegment/marker 的 PB 文件未变化。
 - [ ] `hsr pass real` 把玩家传送到判定箱,由游戏自身的触发器链路完成过关(且 `LevelPassed` 已锁定);PB 同样不写入。
 - [ ] `hsr hud off/on` 隐藏 / 显示计时 HUD。

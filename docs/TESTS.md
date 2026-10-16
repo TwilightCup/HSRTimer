@@ -39,10 +39,11 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 | `hsr` | Print the full command summary |
 | `hsr help [topic]` | Print help for one topic |
 | `hsr status` | Dump live timer/config/HUD/subsegment/marker/LC state |
-| `hsr clock [status\|history [n]\|clear]` | Inspect the pure-tick game clock and segment boundaries (R1.11) |
+| `hsr clock [status\|history [n]\|clear\|format <seconds>]` | Inspect the pure-tick game clock, segment boundaries, and the classic/frame format of one duration (R1.11, R2.6) |
 | `hsr keys` | List every settable settings/layout key |
+| `hsr locks` | List the registered setting locks with their live state (R1.12.3) |
 | `hsr get <key>` / `hsr get all` | Read one config value, or all values |
-| `hsr set <key> <value>` | Set and save a config value |
+| `hsr set <key> <value>` | Set and save a config value (a locked setting is refused) |
 | `hsr reload` | Re-read all config + language files from disk |
 | `hsr save` | Save current in-memory config |
 | `hsr reset` | Full-run reset (same as the reset key) |
@@ -68,7 +69,7 @@ persist to the normal `settings.ini` / `tags.ini` / `layout.ini` files.
 The command uses snake_case versions of the public fields in `SettingsModel`
 and `LayoutModel`. Common examples:
 
-- `auto_reset`, `restart_clears_forgivable`, `retry_min_dwell`
+- `auto_reset`, `force_frame_timing`, `restart_clears_forgivable`, `retry_min_dwell`
 - `retry_level_override_enabled`, `retry_level_override`
 - `show_hud`
 - `only_record_first_wake_up_time`, `center_loading_saving`, `language`
@@ -154,6 +155,36 @@ The start side works the same way: `load` is the `Game.AfterLoad` hook frame
 (the authoritative segment start) and the following `start` line is the polling
 loop consuming that latch. A `start tick` equal to `load tick` with a larger
 `step=` proves the start boundary no longer depends on when the poll noticed it.
+
+**Frame timing (R1.12/R2.6).** `force_frame_timing` switches the displayed
+**game-time** rows to a 60-frames-per-second frame count and disables the pause
+wall-clock supplement. Real Time / Prev RT are deliberately excluded.
+
+```text
+hsr set force_frame_timing true     # allowed at the menu / after a run ends
+hsr get force_frame_timing          # true
+hsr status                          # frameTiming=on frameTimingLocked=off
+hsr locks                           # ForceFrameTiming locked=on/off + reason
+hsr clock                           # frameTiming=on framesPerSecond=60; playableTicks
+hsr clock format 59.999             # carry:  normal=00:59.999   frames=01:00f00
+hsr clock format 3661.5             # hour:   normal=1:01:01     frames=1:01:01f30
+hsr clock format 75.5               # wake-up frames=75f30 (no minutes/hours)
+hsr set force_frame_timing false    # refused while a run is in progress
+```
+
+- The game-time HUD rows show `MM:SSfFF` (`H:MM:SSfFF` at/over one hour); the
+  frame count equals the run's `playableTicks` for a frame-timed run.
+- `RealTime`, `PrevRt` and `{realtime}` keep their wall-clock value and their
+  `MM:SS.mmm` display (R2.6.4).
+- Wake Up Time shows `SSfFF` with no minute/hour breakdown.
+- Pausing freezes the game-time rows (no tick advances) while Real Time keeps
+  advancing; resuming continues from the frozen tick.
+- Mid-run, both `hsr set force_frame_timing` and the panel toggle are locked with
+  the same hint until the run completes, returns to the menu/lobby, or is reset.
+- Subsegment/marker PB files keep millisecond values (`t_ms` / `total_ms`
+  unchanged); the recorded ms matches the frame count at 60 Hz
+  (`round(frames × 1000 / 60)`), and the leaderboard renders those values as
+  `±MM:SSfFF`.
 
 ### 2. Validity flags (R5)
 
@@ -506,6 +537,11 @@ Notes:
 - [ ] `hsr clock` shows integer ticks and `hsr clock history` records identical `dur=` for repeated identical runs (R1.11).
 - [ ] `hsr clock history` shows the `pass` line (the `Game.Fall` pass detection) carrying the end tick, with `zone` marking `Game.EnterPassZone` and `end` closing the segment; repeated identical runs record identical `dur=` (R1.11.8).
 - [ ] `hsr retry` reloads the current level (or the configured override).
+- [ ] `hsr clock format 59.999` prints `frames=01:00f00` (rounding carry) and `hsr clock format 3661.5` prints `frames=1:01:01f30` (hour branch) (R2.6).
+- [ ] `hsr set force_frame_timing true` at the menu flips the game-time HUD rows to `MM:SSfFF` / wake-up `SSfFF` while Real Time rows keep `MM:SS.mmm`, `hsr status` reports `frameTiming=on`, and `hsr locks` reports the lock state (R1.12).
+- [ ] While a run is in progress, `hsr set force_frame_timing` is refused and the panel toggle is disabled with the hint; after the run ends (or a reset) it succeeds (R1.12.3).
+- [ ] With frame timing on, pausing freezes the game-time rows while Real Time keeps advancing (R1.12.2).
+- [ ] A frame-timed `hsr pass` records millisecond subsegment/marker values equal to the frame count at 60 Hz, and the leaderboard shows frame-format diffs (R1.12.4/R2.6.3).
 - [ ] `hsr pass` completes the current level; `hsr status` shows the recorded segment, a frozen `prevRt` (the Real Time at that level's end) and (on the final level) `lastRun`, and no subsegment/marker PB file changed.
 - [ ] `hsr pass real` teleports the player into the pass zone and the game's own trigger flow completes the level (with `LevelPassed` latched); PBs still not written.
 - [ ] `hsr hud off/on` hides/shows the timer HUD.

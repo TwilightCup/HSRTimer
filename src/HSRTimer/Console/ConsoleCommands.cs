@@ -102,6 +102,7 @@ namespace HSRTimer
                     case "status": CmdStatus(); break;
                     case "clock": CmdClock(rest); break;
                     case "keys": CmdKeys(); break;
+                    case "locks": CmdLocks(); break;
                     case "get": CmdGet(rest); break;
                     case "set": CmdSet(rest); break;
                     case "reload": CmdReload(); break;
@@ -163,7 +164,7 @@ namespace HSRTimer
 
             if (state != null)
             {
-                sb.AppendLine($"segment={state.InSegment} timing={state.TimingActive} retrying={state.Retrying} realTimeActive={state.RealTimeActive}");
+                sb.AppendLine($"segment={state.InSegment} timing={state.TimingActive} retrying={state.Retrying} realTimeActive={state.RealTimeActive} frameTiming={(s.ForceFrameTiming ? "on" : "off")} frameTimingLocked={(SettingsLocks.IsLocked(nameof(SettingsModel.ForceFrameTiming)) ? "on" : "off")}");
                 sb.AppendLine($"gameTime={FormatNumber(state.GameTimeSeconds)} segmentTime={FormatNumber(GameClock.SegmentSeconds(state))} realTime={FormatNumber(state.RealTime)}");
                 sb.AppendLine($"lastSegment={FormatNullable(GameClock.LastSegmentSeconds(state))} totalAtLastSegment={FormatNullable(GameClock.TotalAtLastSegmentSeconds(state))} prevRt={FormatNullable(GameClock.RealTimeAtLastSegmentSeconds(state))} lastRun={FormatNullable(GameClock.LastRunSeconds(state))} wakeUp={FormatNullable(GameClock.WakeUpSeconds(state))}");
                 sb.AppendLine($"level={state.CurrentLevelNumber} type={state.CurrentLevelType} cp={(game != null ? game.currentCheckpointNumber : -1)} prevCp={state.PrevCheckpoint} maxCp={state.MaxCheckpointThisLevel} campaignRetryLevel={state.CampaignRetryLevel}");
@@ -250,6 +251,7 @@ namespace HSRTimer
                     if (state == null) { Print("HSRTimer state is not ready."); return; }
                     var sb = new StringBuilder();
                     sb.AppendLine("clock: game time is integer physics ticks; seconds are derived only for display (TB-1/TB-2).");
+                    sb.AppendLine($"frameTiming={(TimeFormatter.FrameTiming ? "on" : "off")} framesPerSecond={GameClock.FramesPerSecond}");
                     sb.AppendLine($"currentTick={GameClock.CurrentTick} tickSeconds={FormatNumber(GameClock.TickSeconds)}");
                     sb.AppendLine($"playableTicks={state.PlayableTicks} pauseAccum={FormatNumber(state.PauseAccum)} gameTimeSeconds={FormatNumber(state.GameTimeSeconds)}");
                     sb.AppendLine($"segmentStartTicks={state.SegmentStartTicks} segmentStartPause={FormatNumber(state.SegmentStartPause)} segmentTicks={SafeSub(state.PlayableTicks, state.SegmentStartTicks)} segmentSeconds={FormatNumber(GameClock.SegmentSeconds(state))}");
@@ -278,8 +280,29 @@ namespace HSRTimer
                     TimerCore.ClearBoundaryLog();
                     Print("boundary history cleared.");
                     break;
+                case "format":
+                {
+                    // Read-only formatter probe (R2.6): render a duration in both
+                    // representations regardless of the live setting, so the frame
+                    // layout (including the >= 1 hour branch and rounding carry)
+                    // can be checked from the log without playing an hour.
+                    if (args.Count < 2
+                        || !double.TryParse(args[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds)
+                        || seconds < 0d)
+                    {
+                        Print("usage: hsr clock format <seconds>");
+                        break;
+                    }
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"format input={seconds.ToString("0.###", CultureInfo.InvariantCulture)} frameTiming={(TimeFormatter.FrameTiming ? "on" : "off")}");
+                    sb.AppendLine($"  normal={TimeFormatter.Format(seconds, frames: false)}");
+                    sb.AppendLine($"  frames={TimeFormatter.Format(seconds, frames: true)}");
+                    sb.AppendLine($"  wakeUpFrames={TimeFormatter.FormatWakeUp(seconds, frames: true)}");
+                    Print(sb.ToString());
+                    break;
+                }
                 default:
-                    Print("usage: hsr clock [status|history [n]|clear]");
+                    Print("usage: hsr clock [status|history [n]|clear|format <seconds>]");
                     break;
             }
         }
@@ -303,6 +326,40 @@ namespace HSRTimer
                 if (IsLayoutCollection(f))
                     continue; // managed by 'hsr layout row/text'
                 sb.Append("  ").AppendLine(FieldName(f.Name));
+            }
+            Print(sb.ToString());
+        }
+
+        /// <summary>
+        /// <c>hsr locks</c> — list every setting registered with
+        /// <see cref="SettingsLocks"/> (R1.12.3) and its live lock state, so a
+        /// "locked while a run is in progress" option can be verified without
+        /// the panel.
+        /// </summary>
+        private static void CmdLocks()
+        {
+            var cfg = ConfigService.Instance;
+            var sb = new StringBuilder();
+            var entries = SettingsLocks.All;
+            sb.AppendLine($"registered setting locks ({entries.Count}):");
+            if (entries.Count == 0)
+            {
+                sb.AppendLine("  (none)");
+            }
+            else
+            {
+                foreach (var entry in entries)
+                {
+                    bool locked = SettingsLocks.IsLocked(entry.FieldName);
+                    string reason = cfg != null && !string.IsNullOrEmpty(entry.HintKey)
+                        ? cfg.Localization.Get(entry.HintKey)
+                        : entry.HintKey;
+                    sb.Append("  ").Append(entry.FieldName)
+                      .Append(" key=").Append(FieldName(entry.FieldName))
+                      .Append(" locked=").Append(locked ? "on" : "off")
+                      .Append(" reason=\"").Append(reason).Append('"')
+                      .AppendLine();
+                }
             }
             Print(sb.ToString());
         }
@@ -355,6 +412,22 @@ namespace HSRTimer
             if (!TryFindField(key, out FieldInfo field, out object owner))
             {
                 Print($"Unknown HSRTimer key: {key}. Try 'hsr keys' or 'hsr get all'.");
+                return;
+            }
+
+            // Generic setting-lock guard (R1.12.3): a setting registered with
+            // SettingsLocks cannot be changed while its predicate holds (e.g.
+            // "Force frame timing" for the whole run in progress). The panel
+            // disables the same toggle through LockedToggle, so the two
+            // surfaces can never disagree.
+            if (ReferenceEquals(owner, cfg.Settings)
+                && SettingsLocks.TryGet(field.Name, out var lockEntry)
+                && SettingsLocks.IsLocked(field.Name))
+            {
+                string reason = !string.IsNullOrEmpty(lockEntry.HintKey)
+                    ? cfg.Localization.Get(lockEntry.HintKey)
+                    : "locked";
+                Print($"Cannot change {FieldName(field.Name)} while locked: {reason}");
                 return;
             }
 
@@ -2289,8 +2362,8 @@ namespace HSRTimer
         {
             var sb = new StringBuilder();
             sb.AppendLine("HSRTimer console commands. Use 'hsr help <topic>' for details.");
-            sb.AppendLine("  hsr status | keys | get <key> | set <key> <value> | reload | save");
-            sb.AppendLine("  hsr clock [status|history [n]|clear]");
+            sb.AppendLine("  hsr status | keys | locks | get <key> | set <key> <value> | reload | save");
+            sb.AppendLine("  hsr clock [status|history [n]|clear|format <seconds>]");
             sb.AppendLine("  hsr reset | retry | pass [real]");
             sb.AppendLine("  hsr hud [on|off|toggle|status] | panel [open|close|toggle|status]");
             sb.AppendLine("  hsr leaderboard [cycle|show|hide|mode <Subsegment|Markers>|status]");
@@ -2317,13 +2390,15 @@ namespace HSRTimer
                 case "status":
                     return "hsr status\r\nPrint the full live state of the timer engine, config, tags, HUD, subsegment, markers, leaderboard, LC and config paths.";
                 case "clock":
-                    return "hsr clock [status|history [n]|clear]\r\nInspect the pure-tick game clock and the precise segment boundaries (TB-1/TB-3). 'history' lists the last segment start/end ticks so repeated level loads/passes can be checked for zero jitter (TB-5).";
+                    return "hsr clock [status|history [n]|clear|format <seconds>]\r\nInspect the pure-tick game clock and the precise segment boundaries (TB-1/TB-3). 'history' lists the last segment start/end ticks so repeated level loads/passes can be checked for zero jitter (TB-5). 'format <seconds>' renders one duration in both the classic (MM:SS.mmm) and frame (MM:SSfFF) layouts, so the frame format - including the >= 1 hour branch and rounding carry - can be checked without playing for an hour (R2.6).";
                 case "keys":
                     return "hsr keys\r\nList all settable settings.ini / layout.ini keys accepted by 'hsr get/set'.";
+                case "locks":
+                    return "hsr locks\r\nList the settings registered as locked (SettingsLocks, R1.12.3) with their live lock state and hint. A registered setting is refused by 'hsr set' and disabled in the settings panel while its predicate holds (e.g. force_frame_timing for the whole run in progress).";
                 case "get":
                     return "hsr get <key>\r\nPrint one config value. 'hsr get all' prints every config value.";
                 case "set":
-                    return "hsr set <key> <value>\r\nSet a config value and save. Boolean keys accept true/false/1/0/on/off/yes/no.";
+                    return "hsr set <key> <value>\r\nSet a config value and save. Boolean keys accept true/false/1/0/on/off/yes/no. A setting registered as locked (see 'hsr locks') is refused while its lock predicate holds.";
                 case "reload":
                     return "hsr reload\r\nRe-read all config files and language files from disk.";
                 case "save":

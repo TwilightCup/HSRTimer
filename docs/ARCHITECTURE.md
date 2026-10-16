@@ -89,6 +89,7 @@ Hud/
 Config/
   ConfigService.cs        facade
   PersistenceService.cs   tolerant INI reader/writer
+  SettingsLocks.cs        reusable "setting locked while <predicate>" registry (R1.12.3)
   SettingsModel.cs, EnabledTagsModel.cs, LayoutModel.cs
 Subsegment/
   SubsegmentModels.cs      sample/meta/reference/plane data types
@@ -131,7 +132,10 @@ supplement** (`PauseAccum += unscaledDeltaTime` while `Paused`, since
 `timeScale=0` halts `FixedUpdate`), and keybinds.
 
 Pause time is always counted; menu/lobby time is never counted. `LoadingLevel`
-and the client-wait gap (`ClientWaitServerLoad`) **never** count either.
+and the client-wait gap (`ClientWaitServerLoad`) **never** count either. The one
+exception is **Force frame timing** (R1.12): while it is on the pause supplement
+is skipped entirely, so game time only follows physics frames and freezes while
+paused.
 
 ### Pure-tick clock and precise boundaries (R1.11)
 
@@ -148,13 +152,30 @@ The engine's game clock is an **integer physics-tick counter**, not a
   `PlayableTicks - SegmentStartTicks`.
 - `RunState.PauseAccum` (`double`) is the one non-tick component: pausing halts
   `FixedUpdate`, so it accumulates wall-clock `unscaledDeltaTime` (R1.8.3).
+  With **Force frame timing** on (R1.12) that supplement is skipped entirely in
+  `TimerCore.Update`, so `PauseAccum` stays `0` and game time only ever follows
+  physics frames (frozen while paused).
 - `Core/GameClock.cs` is the **only** place that reads `Time.fixedDeltaTime`.
   It converts a tick count to seconds with a single multiply
   (`Seconds(ticks, pauseAccum)`), so the same tick count always yields the same
   seconds value (no per-frame float accumulation drift). All display and
   persistence (HUD rows, `t_ms`, PB comparison) convert through it; the engine
   also writes the `RunState.GameTimeSeconds` cache each tick for cheap
-  read-only consumers.
+  read-only consumers. It also owns the frame-domain conversions used by the
+  frame display mode (`FramesPerSecond = 60`, `ToFrames`, `MsToFrames`): the
+  game's fixed step is 60 Hz, so one tick is one frame and a frame-derived
+  duration is written as `ToMs(ticks / 60) == frames × 1000 / 60`.
+
+**Locked settings (R1.12.3).** `Config/SettingsLocks.cs` is a small,
+dependency-free registry: a `SettingsModel` field name → lock predicate +
+localization key. `Plugin.Awake` registers "Force frame timing" with the shared
+`TimerCore.IsRunInProgress` window (`RunState.RealTimeActive`). Two generic
+consumers enforce it without knowing the option: `SettingsPanel.LockedToggle`
+draws a registered toggle disabled with the entry's hint while the predicate
+holds, and `ConsoleCommands.CmdSet` refuses `hsr set` for a registered field
+(`hsr locks` lists the registry). Adding a future "do not change mid-run" option
+therefore needs only a `SettingsLocks.Register` call plus a `LockedToggle` call
+site, not a new per-option guard; a throwing predicate is treated as unlocked.
 
 **Why the boundary hooks exist.** Both segment boundaries are `Game.state`
 flips that the polling loop can only observe a step late, so
@@ -197,7 +218,9 @@ is recorded (R1.6), and also stopped when the run exits to a menu or lobby
 (unless a retry is in progress) so it does not silently count idle time. Full resets and one-key retries zero it along with the live
 game timers. The HUD shows the row wherever the user placed it in a column
 (default below Game Time in `[column.2]`); the clock remains active regardless
-of whether the row is displayed.
+of whether the row is displayed. Real Time is deliberately outside the frame
+display mode (R2.6.4): `RealTime`, `PrevRt` and `{realtime}` always render with
+the classic `MM:SS.mmm` formatter, while the game-time rows switch to frames.
 
 **Prev RT (`RunState.RealTimeAtLastSegment`)** is the real-time counterpart of
 `TotalAtLastSegment`: in `RunState.EndSegment` (only when the segment

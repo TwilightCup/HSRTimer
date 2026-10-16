@@ -2,10 +2,11 @@
 
 > **English (source of truth)**: [../EXTENDING.md](../EXTENDING.md)
 
-HSRTimer 为其它 BepInEx 插件提供两个扩展点:
+HSRTimer 为其它 BepInEx 插件提供三个扩展点:
 
 - **自定义标签规则**(R3.7)—— 新的有效性逻辑,用户在设置面板中勾选该标签 id 即可启用(持久化到 `tags.ini`)。
 - **设置面板标签页** —— 把使用 Unity IMGUI 编写的配置界面注册为 HSRTimer 设置面板中的额外标签页(每个插件最多一个);标签页可选择跟随 HSRTimer 的语言选择(R9.2),并可在 HSRTimer 的 `SettingsSaved` 事件中保存自身配置(R9.3)。
+- **设置锁定**(R1.12.3)—— 登记一个"谓词为真时不可修改"的设置;HSRTimer 的面板与 `hsr set` 会通用地拒绝它。
 
 下面分别说明。
 
@@ -278,5 +279,24 @@ public class MyPlugin : BaseUnityPlugin
 - 多个处理器依次执行。若某个处理器抛出异常,HSRTimer 会记录该异常并继续保存/通知其它插件;单个插件的错误不会阻断 HSRTimer 自身的持久化。
 - 该事件仅用于持久化,不要在处理器里绘制 UI,也不要假设某个标签页当前可见。
 - 若插件可能被卸载,请在 `OnDestroy` 中取消订阅,避免残留委托导致对象无法释放。
+
+## 登记一个锁定设置
+
+`SettingsLocks`(R1.12.3)是一个很小的公开注册表,用于"满足条件时不可修改"的设置 —— 例如 HSRTimer 自身的**强制帧计时**,在整局运行期间锁定。登记后,HSRTimer 的两个修改入口都会通用地执行该锁定:
+
+```csharp
+SettingsLocks.Register(nameof(SettingsModel.SomeOption), () => TimerCore.IsRunInProgress,
+    "MY_SETTINGS_SOME_OPTION_LOCKED");
+```
+
+- **键** —— `SettingsModel` 的公开字段名(用 `nameof`);查找不区分大小写。重复登记同一字段会替换原条目,因此重复接线是安全的。
+- **谓词** —— 由面板与控制台实时求值。HSRTimer 共享的整局窗口是 `TimerCore.IsRunInProgress`;也可以使用任意谓词。若谓词抛异常,该设置按未锁定处理(HSRTimer 记录一条警告),因此插件缺陷不会拖垮面板或控制台。
+- **提示键** —— 你自己语言文件中的本地化键;锁定期间显示在禁用开关下方,并写入控制台拒绝信息。
+
+无需插件再做任何事,即得到:
+
+- HSRTimer 设置面板把已登记的开关画成禁用并显示提示(该路径只用于 HSRTimer 自身的选项;你的标签页可用 `SettingsLocks.IsLocked(fieldName)` 查询并同样禁用自家控件)。
+- 谓词为真时,`hsr set <key> <value>` 被拒绝。
+- `hsr locks` 会列出所有已登记的锁定项及其实时状态与提示,这也是在游戏内验证登记的最快方式。
 
 完整文件格式见 [LOCALIZATION.md](LOCALIZATION.md),内置标签见 [CATEGORIES.md](CATEGORIES.md),引擎生命周期见 [ARCHITECTURE.md](ARCHITECTURE.md)。

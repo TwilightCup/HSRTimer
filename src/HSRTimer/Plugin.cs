@@ -69,6 +69,13 @@ namespace HSRTimer
             //     load/repair so the default snapshot reflects the effective config.
             PresetStore.EnsureInitialized(config);
 
+            // 1.7 Setting locks (R1.12.3): the reusable "do not change mid-run"
+            //     registry. Register HSRTimer's own locked options here; the
+            //     settings panel and the dev console both honour the registry
+            //     generically (panel toggle disabled + hint, `hsr set` refused).
+            SettingsLocks.Register(nameof(SettingsModel.ForceFrameTiming),
+                () => TimerCore.IsRunInProgress, "SETTINGS_FORCE_FRAME_TIMING_LOCKED");
+
             // 2. Register built-in tag rules (R3.7 extension point).
             var registry = new TagRuleRegistry();
             TagRuleRegistry.Init(registry);

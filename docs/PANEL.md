@@ -45,7 +45,9 @@ HSRTimer saves.
 
 ## General
 
-- **Timing** — `auto_reset`,
+- **Timing** — `force_frame_timing` (at the top of the section; R1.12 — see
+  [HUD.md](HUD.md) for the frame display format and
+  [CONFIG.md](CONFIG.md) for the setting), `auto_reset`,
   `restart_clears_forgivable` (clears forgivable flags on a pause-menu
   restart; see [CONFIG.md](CONFIG.md)), and the retry target override
   (`retry_level_override_enabled` + `retry_level_override`). When the override
@@ -53,7 +55,13 @@ HSRTimer saves.
   name (case-insensitive) or Workshop numeric id. Invalid values show a red
   HUD hint when Retry is pressed; from the main menu, a valid value lets Retry
   directly enter the specified level. Pause time is always counted and
-  menu/lobby time is never counted; there are no toggles for them.
+  menu/lobby time is never counted; there are no toggles for them (except
+  `force_frame_timing`, which stops counting pause time entirely).
+  Settings registered as **locked** (see
+  `SettingsLocks` in [ARCHITECTURE.md](ARCHITECTURE.md)) are drawn disabled
+  while their lock predicate holds, with the registry's hint shown underneath;
+  `force_frame_timing` is locked for the whole run in progress, so finish the
+  run, return to the menu/lobby, or reset it to change it.
 - **Language** — pick the active language from the loaded set (single-select).
   "Reload language files" re-scans `lang/*.txt`. External tabs that implement
   `ILocalizableSettingsPanelTab` follow this selection automatically.

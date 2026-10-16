@@ -38,6 +38,8 @@ SETTINGS_RESET_KEY:Reset Key
 SETTINGS_RETRY_KEY:Retry Key
 SETTINGS_MENU_KEY:Settings Panel Key
 SETTINGS_AUTO_RESET:Auto-reset run
+SETTINGS_FORCE_FRAME_TIMING:Force frame timing
+SETTINGS_FORCE_FRAME_TIMING_LOCKED:Locked while a run is in progress. Reset the run or leave the level to change it.
 SETTINGS_RESTART_CLEARS_FORGIVABLE:Clear forgivable flags on pause-menu restart
 SETTINGS_RETRY_MIN_DWELL:Retry empty-scene dwell (s)
 SETTINGS_RETRY_LEVEL_OVERRIDE_ENABLE:Specify retry level

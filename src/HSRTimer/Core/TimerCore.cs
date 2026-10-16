@@ -72,6 +72,22 @@ namespace HSRTimer
         public static bool HasProcessedCurrentPhysicsStep
             => Instance != null && Instance._lastFixedTime == Time.fixedTime;
 
+        /// <summary>
+        /// True while a run is in progress, i.e. the timer is running. Exposed as
+        /// the shared "whole run" window for settings that must not change
+        /// mid-run (registered through <see cref="SettingsLocks"/>; R1.12.3).
+        /// <para>
+        /// The window is <see cref="RunState.RealTimeActive"/>: it starts with
+        /// the run's first playable segment, stays true across level-loading
+        /// transitions, pauses and retries (so a mid-campaign run cannot be
+        /// changed between levels either), and only clears when the run
+        /// completes or the player returns to the menu/lobby. A manual reset
+        /// also ends the run and releases the lock. This is only a guard for the
+        /// mutating surfaces — the engine still re-reads the setting live.
+        /// </para>
+        /// </summary>
+        public static bool IsRunInProgress => State != null && State.RealTimeActive;
+
         private void Awake()
         {
             Instance = this;
@@ -159,12 +175,19 @@ namespace HSRTimer
             // Generic always-on validity check (R5.1): cheat codes.
             GenericValidators.CheckCheat(State.Flags);
 
-            // B.2 pause supplement (always on; runs here because FixedUpdate is
-            // paused when timeScale=0). Pause time is wall-clock, the one
-            // non-tick game-time component (R1.8.3/TB-6). Once the pass tick
-            // has been latched the run's game clock is already frozen, so a
-            // pause in the short post-pass window must not extend it either.
-            if (!State.PendingEndTicks.HasValue
+            // B.2 pause supplement (runs here because FixedUpdate is paused when
+            // timeScale=0). Pause time is wall-clock, the one non-tick game-time
+            // component (R1.8.3/TB-6). Once the pass tick has been latched the
+            // run's game clock is already frozen, so a pause in the short
+            // post-pass window must not extend it either.
+            //
+            // R1.12.2: with "Force frame timing" enabled the supplement is
+            // disabled entirely, so the game clock only ever follows physics
+            // frames and freezes while paused. The live settings model is read
+            // (not the tick-refreshed _opt cache) so a toggle at the menu takes
+            // effect immediately; the option itself is locked mid-run.
+            if (!_cfg.Settings.ForceFrameTiming
+                && !State.PendingEndTicks.HasValue
                 && SegmentLogic.ShouldAccumulatePause(gState, State.TimingActive))
             {
                 State.PauseAccum += Time.unscaledDeltaTime;

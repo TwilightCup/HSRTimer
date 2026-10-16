@@ -17,6 +17,7 @@ defaults.
 ```ini
 [settings]
 auto_reset = true
+force_frame_timing = false
 restart_clears_forgivable = false
 retry_min_dwell = 0.5
 retry_level_override_enabled = false
@@ -34,6 +35,7 @@ menu_key = Home
 | Key | Values | Default | Notes |
 |-----|--------|---------|-------|
 | `auto_reset` | true/false | true | R1.7.2 — reset the live timers and last-segment snapshots when leaving to the menu/lobby; keeps the last completed run total |
+| `force_frame_timing` | true/false | false | R1.12 — display every **game-time** value as an integer physics-frame count (`MM:SSfFF`, `H:MM:SSfFF`, `SSfFF` for wake-up, `±MM:SSfFF` for diffs; see [HUD.md](HUD.md)) and disable the wall-clock pause supplement, so game time only follows physics frames and freezes while paused. **Real Time and Prev RT are unaffected**: they keep their wall-clock accumulation and their millisecond `MM:SS.mmm` display. Persisted subsegment/marker times stay in milliseconds (R1.12.4). Locked for the whole run in progress: the panel toggle is disabled with a hint and `hsr set force_frame_timing` is refused until the run ends (complete it, return to the menu/lobby, or reset). Toggled at the top of **General → Timing**. |
 | `restart_clears_forgivable` | true/false | false | R5.4.3 — clear forgivable validity flags when the level is restarted from the in-level **pause menu** (the run's timers keep running). The one-key retry clears them unconditionally (fixed behavior), and a full-run reset clears all flags. |
 | `retry_min_dwell` | seconds (≥0) | 0.5 | R6 — minimum time held in the empty scene on retry, measured from the key press. If the level reloads faster, the empty scene is held until this elapses; `0` disables the hold. |
 | `retry_level_override_enabled` | true/false | false | R6.5 — use a fixed retry target instead of the current/campaign-start level. Disabled keeps the normal one-key retry behavior. |
@@ -49,7 +51,9 @@ menu_key = Home
 
 > **Pause/menu behavior is fixed**: time while paused is always counted, and
 > menu/lobby time is never counted. There are no `count_in_pause` or
-> `count_in_menu` settings.
+> `count_in_menu` settings. The one exception is `force_frame_timing` (R1.12):
+> with it on, pause time is not counted at all (the game clock freezes while
+> paused, because it only follows physics frames).
 
 > **Cheat/speed/drift detection (R5.1) is always on with hardcoded thresholds
 > and is intentionally not configurable** — there is no `drift_tolerance` or any

@@ -391,11 +391,16 @@ namespace HSRTimer
                     break;
                 case RowType.RealTime:
                     label = loc.Get("TIMER_REAL_TIME");
-                    value = TimeFormatter.Format(state.RealTime);
+                    // Real Time is a wall-clock clock, not a frame clock: it keeps
+                    // its wall-clock accumulation and its millisecond display even
+                    // under "Force frame timing" (R1.12.4).
+                    value = TimeFormatter.Format(state.RealTime, frames: false);
                     break;
                 case RowType.PrevRt:
                     label = loc.Get("TIMER_PREV_RT");
-                    value = TimeFormatter.Format(GameClock.RealTimeAtLastSegmentSeconds(state));
+                    // Prev RT is an already-frozen Real Time value, so it keeps
+                    // the Real Time millisecond format too (R1.12.4).
+                    value = TimeFormatter.Format(GameClock.RealTimeAtLastSegmentSeconds(state), frames: false);
                     break;
                 case RowType.CurrentSegment:
                     label = loc.Get("TIMER_SEGMENT_TIME");
